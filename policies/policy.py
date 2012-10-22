@@ -339,6 +339,10 @@ class AgePolicy(BasePolicy):
         except AttributeError:
             filename = fallback_filename
 
+        if not os.path.exists(filename):
+            self.log("%s missing; using default for all packages" % filename)
+            return
+
         with open(filename, errors='surrogateescape', encoding='ascii') as fd:
             for line in fd:
                 # <source> <version> <urgency>
