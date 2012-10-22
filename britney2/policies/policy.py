@@ -460,8 +460,13 @@ class AgePolicy(BasePolicy):
         fallback_filename = os.path.join(self.suite_info.target_suite.path, 'Urgency')
         try:
             filename = os.path.join(self.state_dir, 'age-policy-urgencies')
-            if not os.path.exists(filename) and os.path.exists(fallback_filename):
-                filename = fallback_filename
+            if not os.path.exists(filename):
+                if os.path.exists(fallback_filename):
+                    filename = fallback_filename
+                else:
+                    self.logger.info("%s and %s missing; using default for all packages" %
+                                     (filename, fallback_filename))
+                    return
         except AttributeError:
             filename = fallback_filename
 
