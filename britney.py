@@ -766,31 +766,34 @@ class Britney(object):
         urgencies = {}
         filename = os.path.join(basedir, "Urgency")
         self.__log("Loading upload urgencies from %s" % filename)
-        for line in open(filename):
-            l = line.split()
-            if len(l) != 3: continue
+        try:
+            for line in open(filename):
+                l = line.split()
+                if len(l) != 3: continue
 
-            # read the minimum days associated with the urgencies
-            urgency_old = urgencies.get(l[0], self.options.default_urgency)
-            mindays_old = self.MINDAYS.get(urgency_old, self.MINDAYS[self.options.default_urgency])
-            mindays_new = self.MINDAYS.get(l[2], self.MINDAYS[self.options.default_urgency])
+                # read the minimum days associated with the urgencies
+                urgency_old = urgencies.get(l[0], self.options.default_urgency)
+                mindays_old = self.MINDAYS.get(urgency_old, self.MINDAYS[self.options.default_urgency])
+                mindays_new = self.MINDAYS.get(l[2], self.MINDAYS[self.options.default_urgency])
 
-            # if the new urgency is lower (so the min days are higher), do nothing
-            if mindays_old <= mindays_new:
-                continue
+                # if the new urgency is lower (so the min days are higher), do nothing
+                if mindays_old <= mindays_new:
+                    continue
 
-            # if the package exists in testing and it is more recent, do nothing
-            tsrcv = self.sources['testing'].get(l[0], None)
-            if tsrcv and apt_pkg.version_compare(tsrcv[VERSION], l[1]) >= 0:
-                continue
+                # if the package exists in testing and it is more recent, do nothing
+                tsrcv = self.sources['testing'].get(l[0], None)
+                if tsrcv and apt_pkg.version_compare(tsrcv[VERSION], l[1]) >= 0:
+                    continue
 
-            # if the package doesn't exist in unstable or it is older, do nothing
-            usrcv = self.sources['unstable'].get(l[0], None)
-            if not usrcv or apt_pkg.version_compare(usrcv[VERSION], l[1]) < 0:
-                continue
+                # if the package doesn't exist in unstable or it is older, do nothing
+                usrcv = self.sources['unstable'].get(l[0], None)
+                if not usrcv or apt_pkg.version_compare(usrcv[VERSION], l[1]) < 0:
+                    continue
 
-            # update the urgency for the package
-            urgencies[l[0]] = l[2]
+                # update the urgency for the package
+                urgencies[l[0]] = l[2]
+        except IOError:
+            self.__log("%s missing; using default for all packages" % filename)
 
         return urgencies
 
