@@ -2430,14 +2430,15 @@ class Britney(object):
         self.auto_hinter()
 
         # obsolete source packages  
-        self.__log("> Removing obsolete source packages from testing", type="I")
-        removals = []
-        sources = self.sources['testing']
-        removals = [ HintItem("-%s/%s" % (source, sources[source][VERSION])) for \
-                     source in sources if len(sources[source][BINARIES]) == 0 ]
-        if len(removals) > 0:
-            self.output_write("Removing obsolete source packages from testing (%d):\n" % (len(removals)))
-            self.do_all(actions=removals)
+        if getattr(self.options, "remove_obsolete", "yes") == "yes":
+            self.__log("> Removing obsolete source packages from testing", type="I")
+            removals = []
+            sources = self.sources['testing']
+            removals = [ HintItem("-%s/%s" % (source, sources[source][VERSION])) for \
+                         source in sources if len(sources[source][BINARIES]) == 0 ]
+            if len(removals) > 0:
+                self.output_write("Removing obsolete source packages from testing (%d):\n" % (len(removals)))
+                self.do_all(actions=removals)
                                                                                                                                      
         # smooth updates
         if len(self.options.smooth_updates) > 0:
