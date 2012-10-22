@@ -924,6 +924,28 @@ class Britney(object):
 
         f.close()
 
+    def write_delta(self, filename):
+        """Write the output delta
+
+        This method writes the packages to be upgraded, in the form:
+        <src-name> <src-version>
+        or (if the source is to be removed):
+        <src-name>
+
+        The order corresponds to that shown in update_output.
+        """
+        self.__log("Writing delta to %s" % filename)
+        f = open(filename, "w")
+
+        sources = self.sources['testing']
+        for src_name in self.all_selected:
+            if src_name in sources:
+                f.write('%s %s\n' % (src_name, sources[src_name][VERSION]))
+            else:
+                f.write('%s\n' % src_name)
+
+        f.close()
+
     def write_controlfiles(self, basedir, suite):
         """Write the control files
 
@@ -2287,6 +2309,7 @@ class Britney(object):
                 self.output_write(self.eval_uninst(self.newlyuninst(nuninst_start, nuninst_end)) + "\n")
             self.output_write("SUCCESS (%d/%d)\n" % (len(actions or self.upgrade_me), len(extra)))
             self.nuninst_orig = nuninst_end
+            self.all_selected += [x.uvname for x in selected]
             if not actions:
                 if recurse:
                     self.upgrade_me = sorted(extra)
@@ -2385,6 +2408,7 @@ class Britney(object):
         self.nuninst_orig = self.get_nuninst()
         # nuninst_orig may get updated during the upgrade process
         self.nuninst_orig_save = self.get_nuninst()
+        self.all_selected = []
 
         if not self.options.actions:
             # process `easy' hints
@@ -2472,6 +2496,9 @@ class Britney(object):
             # write HeidiResult
             self.write_heidi(self.options.heidi_output)
 
+            # write Delta
+            self.write_delta(self.options.delta_output)
+
         self.printuninstchange()
         self.__log("Test completed!", type="I")
 
@@ -2492,6 +2519,7 @@ class Britney(object):
         self.__log("> Calculating current uninstallability counters", type="I")
         self.nuninst_orig = self.get_nuninst()
         self.nuninst_orig_save = self.get_nuninst()
+        self.all_selected = []
 
         import readline
         from completer import Completer
