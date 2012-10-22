@@ -11,7 +11,7 @@ clean :
 	rm -f freelist aptvercmp checklib libajdpkg.a
 
 checklib : checklib.o dpkg.o dpkg-lib.o memory3.o freelist.o assert.o
-	$(CC) $(CFLAGS) -o checklib -lapt-pkg $^ # -lccmalloc -ldl
+	$(CC) $(CFLAGS) -o checklib $^ -lapt-pkg # -lccmalloc -ldl
 
 aptvercmp : dpkg-lib.cpp
 	$(CXX) $(CFLAGS) -DTESTBIN -o aptvercmp dpkg-lib.cpp -lapt-pkg
