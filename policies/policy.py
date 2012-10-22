@@ -528,6 +528,10 @@ class RCBugPolicy(BasePolicy):
         name and the value is the list of open RC bugs for it.
         """
         bugs = {}
+        if not os.path.exists(filename):
+            self.log("%s missing; skipping bug-based processing" % filename)
+            return bugs
+
         self.log("Loading RC bugs data from %s" % filename)
         for line in open(filename, encoding='ascii'):
             l = line.split()
