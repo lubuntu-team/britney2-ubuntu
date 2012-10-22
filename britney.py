@@ -308,7 +308,10 @@ class Britney(object):
         if 'testing' not in self.sources:
             self.sources['testing'] = self.read_sources(self.options.testing)
         self.sources['unstable'] = self.read_sources(self.options.unstable)
-        self.sources['tpu'] = self.read_sources(self.options.tpu)
+        if hasattr(self.options, 'tpu'):
+            self.sources['tpu'] = self.read_sources(self.options.tpu)
+        else:
+            self.sources['tpu'] = {}
 
         if hasattr(self.options, 'pu'):
             self.sources['pu'] = self.read_sources(self.options.pu)
@@ -325,7 +328,8 @@ class Britney(object):
             if arch not in self.binaries['testing']:
                 self.binaries['testing'][arch] = self.read_binaries(self.options.testing, "testing", arch)
             self.binaries['unstable'][arch] = self.read_binaries(self.options.unstable, "unstable", arch)
-            self.binaries['tpu'][arch] = self.read_binaries(self.options.tpu, "tpu", arch)
+            if hasattr(self.options, 'tpu'):
+                self.binaries['tpu'][arch] = self.read_binaries(self.options.tpu, "tpu", arch)
             if hasattr(self.options, 'pu'):
                 self.binaries['pu'][arch] = self.read_binaries(self.options.pu, "pu", arch)
             # build the testing system
