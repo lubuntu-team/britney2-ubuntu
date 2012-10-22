@@ -635,14 +635,18 @@ class Britney(object):
         bugs = {}
         filename = os.path.join(basedir, "BugsV")
         self.__log("Loading RC bugs data from %s" % filename)
-        for line in open(filename):
-            l = line.split()
-            if len(l) != 2:
-                self.__log("Malformed line found in line %s" % (line), type='W')
-                continue
-            pkg = l[0]
-            bugs.setdefault(pkg, [])
-            bugs[pkg] += l[1].split(",")
+        try:
+            for line in open(filename):
+                l = line.split()
+                if len(l) != 2:
+                    self.__log("Malformed line found in line %s" % (line),
+                               type='W')
+                    continue
+                pkg = l[0]
+                bugs.setdefault(pkg, [])
+                bugs[pkg] += l[1].split(",")
+        except IOError:
+            self.__log("%s missing; skipping bug-based processing" % filename)
         return bugs
 
     def write_bugs(self, basedir, bugs):
