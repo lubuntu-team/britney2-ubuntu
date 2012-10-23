@@ -1407,7 +1407,7 @@ class Britney(object):
                     base = 'testing'
                 else:
                     base = 'stable'
-                text = "Not yet built on <a href=\"http://buildd.debian.org/status/logs.php?arch=%s&pkg=%s&ver=%s&suite=%s\" target=\"_blank\">%s</a> (relative to testing)" % (urllib.quote(arch), urllib.quote(src), urllib.quote(source_u[VERSION]), base, arch)
+                text = "Not yet built on <a href=\"https://launchpad.net/ubuntu/+source/%s/%s\" target=\"_blank\">%s</a> (relative to testing)" % (urllib.quote(src), urllib.quote(source_u[VERSION]), arch)
 
                 if arch in self.options.fucked_arches.split():
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
@@ -1449,12 +1449,12 @@ class Britney(object):
                 oodtxt = ""
                 for v in oodbins.keys():
                     if oodtxt: oodtxt = oodtxt + "; "
-                    oodtxt = oodtxt + "%s (from <a href=\"http://buildd.debian.org/status/logs.php?" \
-                        "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>)" % \
-                        (", ".join(sorted(oodbins[v])), urllib.quote(arch), urllib.quote(src), urllib.quote(v), v)
-                text = "out of date on <a href=\"http://buildd.debian.org/status/logs.php?" \
-                    "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>: %s" % \
-                    (urllib.quote(arch), urllib.quote(src), urllib.quote(source_u[VERSION]), arch, oodtxt)
+                    oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/ubuntu/+source/" \
+                        "%s/%s\" target=\"_blank\">%s</a>)" % \
+                        (", ".join(sorted(oodbins[v])), urllib.quote(src), urllib.quote(v), v)
+                text = "out of date on <a href=\"https://launchpad.net/ubuntu/+source/" \
+                    "%s/%s\" target=\"_blank\">%s</a>: %s" % \
+                    (urllib.quote(src), urllib.quote(source_u[VERSION]), arch, oodtxt)
 
                 if arch in self.options.fucked_arches.split():
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
