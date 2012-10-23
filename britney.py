@@ -1701,7 +1701,7 @@ class Britney(object):
                     base = 'testing'
                 else:
                     base = 'stable'
-                text = "Not yet built on <a href=\"https://buildd.debian.org/status/logs.php?arch=%s&pkg=%s&ver=%s&suite=%s\" target=\"_blank\">%s</a> (relative to testing)" % (quote(arch), quote(src), quote(source_u.version), base, arch)
+                text = "Not yet built on <a href=\"https://launchpad.net/%s/+source/%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a> (relative to testing)" % (self.options.distribution, quote(src.split("/")[0]), quote(source_u.version), quote(arch), arch)
 
                 if arch in self.options.outofsync_arches:
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
@@ -1757,17 +1757,17 @@ class Britney(object):
                 oodtxt = ""
                 for v in oodbins.keys():
                     if oodtxt: oodtxt = oodtxt + "; "
-                    oodtxt = oodtxt + "%s (from <a href=\"https://buildd.debian.org/status/logs.php?" \
-                        "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>)" % \
-                        (", ".join(sorted(oodbins[v])), quote(arch), quote(src), quote(v), v)
+                    oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/%s/+source/" \
+                        "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>)" % \
+                        (", ".join(sorted(oodbins[v])), self.options.distribution, quote(src.split("/")[0]), quote(v), quote(arch), v)
                 if uptodatebins:
-                    text = "old binaries left on <a href=\"https://buildd.debian.org/status/logs.php?" \
-                        "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>: %s" % \
-                        (quote(arch), quote(src), quote(source_u.version), arch, oodtxt)
+                    text = "old binaries left on <a href=\"https://launchpad.net/%s/+source/" \
+                        "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>: %s" % \
+                        (self.options.distribution, quote(src.split("/")[0]), quote(source_u.version), quote(arch), arch, oodtxt)
                 else:
-                    text = "missing build on <a href=\"https://buildd.debian.org/status/logs.php?" \
-                        "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>: %s" % \
-                        (quote(arch), quote(src), quote(source_u.version), arch, oodtxt)
+                    text = "missing build on <a href=\"https://launchpad.net/%s/+source/" \
+                        "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>: %s" % \
+                        (self.options.distribution, quote(src.split("/")[0]), quote(source_u.version), quote(arch), arch, oodtxt)
 
                 if arch in self.options.outofsync_arches:
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
