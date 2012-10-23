@@ -372,17 +372,33 @@ class ExcuseFinder(object):
                 for v in sorted(oodbins):
                     if oodtxt:
                         oodtxt = oodtxt + "; "
-                    oodtxt = oodtxt + "%s (from <a href=\"https://buildd.debian.org/status/logs.php?" \
-                                      "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>)" % \
-                                      (", ".join(sorted(oodbins[v])), quote(arch), quote(src), quote(v), v)
+                    if self.options.distribution != "ubuntu":
+                        oodtxt = oodtxt + "%s (from <a href=\"https://buildd.debian.org/status/logs.php?" \
+                                        "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>)" % \
+                                        (", ".join(sorted(oodbins[v])), quote(arch), quote(src), quote(v), v)
+                    else:
+                        oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/%s/+source/" \
+                            "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>)" % \
+                            (", ".join(sorted(oodbins[v])), self.options.distribution, quote(src.split("/")[0]),
+                             quote(v), quote(arch), v)
                 if uptodatebins:
                     text = "old binaries left on <a href=\"https://buildd.debian.org/status/logs.php?" \
                            "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>: %s" % \
                            (quote(arch), quote(src), quote(source_u.version), arch, oodtxt)
+                    if self.options.distribution == "ubuntu":
+                        text = "old binaries left on <a href=\"https://launchpad.net/%s/+source/" \
+                            "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>: %s" % \
+                            (self.options.distribution, quote(src.split("/")[0]), quote(source_u.version),
+                             quote(arch), arch, oodtxt)
                 else:
                     text = "missing build on <a href=\"https://buildd.debian.org/status/logs.php?" \
                            "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>" % \
                            (quote(arch), quote(src), quote(source_u.version), arch)
+                    if self.options.distribution == "ubuntu":
+                        text = "missing build on <a href=\"https://launchpad.net/%s/+source/" \
+                            "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>: %s" % \
+                            (self.options.distribution, quote(src.split("/")[0]), quote(source_u.version),
+                             quote(arch), arch, oodtxt)
 
                 if arch in self.options.outofsync_arches:
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
@@ -440,6 +456,11 @@ class ExcuseFinder(object):
                     "arch=%s&pkg=%s&ver=%s&suite=%s\" target=\"_blank\">%s</a> "\
                     "(relative to target suite)" % \
                     (quote(arch), quote(src), quote(source_u.version), base, arch)
+                if self.options.distribution == "ubuntu":
+                    text = "Not yet built on "\
+                        "<a href=\"https://launchpad.net/%s/+source/%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a> "\
+                        "(relative to target suite)" % \
+                        (self.options.distribution, quote(src.split("/")[0]), quote(source_u.version), quote(arch), arch)
 
                 if arch in self.options.outofsync_arches:
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)

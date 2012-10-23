@@ -432,6 +432,22 @@ class Excuse(object):
         """Render the excuse in HTML"""
         res = "<a id=\"%s\" name=\"%s\">%s</a> (%s to %s)\n<ul>\n" % \
             (self.uvname, self.uvname, self.uvname, self.ver[0], self.ver[1])
+        if self.distribution == "ubuntu":
+            lp_pkg = "https://launchpad.net/%s/+source/%s" % \
+                     (self.distribution, self.name.split("/")[0])
+
+            def lp_linkify(version):
+                if version == "-":
+                    return version
+
+                return "<a href=\"%s/%s\">%s</a>" % \
+                       (lp_pkg, version, version)
+
+            res = (
+                "<a id=\"%s\" name=\"%s\" href=\"%s\">%s</a> (%s to %s)\n<ul>\n" %
+                (self.uvname, self.uvname, lp_pkg, self.uvname,
+                 lp_linkify(self.ver[0]), lp_linkify(self.ver[1])))
+
         info = self._text(excuses)
         for l in info:
             res += "<li>%s\n" % l
