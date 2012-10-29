@@ -938,11 +938,20 @@ class Britney(object):
         f = open(filename, "w")
 
         sources = self.sources['testing']
-        for src_name in self.all_selected:
-            if src_name in sources:
-                f.write('%s %s\n' % (src_name, sources[src_name][VERSION]))
+        binaries = self.binaries['testing']
+        for name in self.all_selected:
+            if "/" in name:
+                pkg_name, arch = name.split('/', 1)
+                if arch in binaries and pkg_name in binaries[arch][0]:
+                    f.write('%s %s\n' %
+                            (name, binaries[arch][0][pkg_name][VERSION]))
+                else:
+                    f.write('%s\n' % name)
             else:
-                f.write('%s\n' % src_name)
+                if name in sources:
+                    f.write('%s %s\n' % (name, sources[name][VERSION]))
+                else:
+                    f.write('%s\n' % name)
 
         f.close()
 
