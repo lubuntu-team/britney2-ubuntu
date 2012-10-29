@@ -2504,7 +2504,8 @@ class Britney(object):
             self.write_heidi(self.options.heidi_output)
 
             # write Delta
-            self.write_delta(self.options.delta_output)
+            if hasattr(self.options, 'delta_output'):
+                self.write_delta(self.options.delta_output)
 
         self.printuninstchange()
         self.__log("Test completed!", type="I")
