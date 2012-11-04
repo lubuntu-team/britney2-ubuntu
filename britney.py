@@ -308,6 +308,8 @@ class Britney(object):
         if 'testing' not in self.sources:
             self.sources['testing'] = self.read_sources(self.options.testing)
         self.sources['unstable'] = self.read_sources(self.options.unstable)
+        if hasattr(self.options, 'partial_unstable'):
+            self.merge_sources('testing', 'unstable')
         if hasattr(self.options, 'tpu'):
             self.sources['tpu'] = self.read_sources(self.options.tpu)
         else:
@@ -328,6 +330,8 @@ class Britney(object):
             if arch not in self.binaries['testing']:
                 self.binaries['testing'][arch] = self.read_binaries(self.options.testing, "testing", arch)
             self.binaries['unstable'][arch] = self.read_binaries(self.options.unstable, "unstable", arch)
+            if hasattr(self.options, 'partial_unstable'):
+                self.merge_binaries('testing', 'unstable', arch)
             if hasattr(self.options, 'tpu'):
                 self.binaries['tpu'][arch] = self.read_binaries(self.options.tpu, "tpu", arch)
             if hasattr(self.options, 'pu'):
@@ -623,7 +627,73 @@ class Britney(object):
                             if i not in packages: continue
                             if not check_doubles or pkg not in packages[i][RCONFLICTS]:
                                 packages[i][RCONFLICTS].append(pkg)
-     
+
+    def merge_sources(self, source, target):
+        """Merge sources from `source' into partial suite `target'."""
+        source_sources = self.sources[source]
+        target_sources = self.sources[target]
+        for pkg, value in source_sources.items():
+            if pkg in target_sources:
+                continue
+            target_sources[pkg] = value
+            target_sources[pkg][BINARIES] = list(
+                target_sources[pkg][BINARIES])
+
+    def merge_binaries(self, source, target, arch):
+        """Merge `arch' binaries from `source' into partial suite `target'."""
+        source_sources = self.sources[source]
+        source_binaries, _ = self.binaries[source][arch]
+        target_sources = self.sources[target]
+        target_binaries, target_provides = self.binaries[target][arch]
+        oodsrcs = set()
+        for pkg, value in source_binaries.items():
+            if pkg in target_binaries:
+                continue
+
+            # Don't merge binaries rendered stale by new sources in target
+            # that have built on this architecture.
+            if value[SOURCE] not in oodsrcs:
+                source_version = source_sources[value[SOURCE]][VERSION]
+                target_version = target_sources[value[SOURCE]][VERSION]
+                if source_version != target_version:
+                    current_arch = value[ARCHITECTURE]
+                    built = False
+                    for b in target_sources[value[SOURCE]][BINARIES]:
+                        binpkg, binarch = b.split('/')
+                        if binarch == arch:
+                            target_value = target_binaries[binpkg]
+                            if current_arch == target_value[ARCHITECTURE]:
+                                built = True
+                                break
+                    if built:
+                        continue
+                oodsrcs.add(value[SOURCE])
+
+            if pkg in target_binaries:
+                for p in target_binaries[pkg][PROVIDES]:
+                    target_provides[p].remove(pkg)
+                    if not target_provides[p]:
+                        del target_provides[p]
+
+            target_binaries[pkg] = value
+
+            pkg_arch = pkg + "/" + arch
+            if pkg_arch not in target_sources[value[SOURCE]][BINARIES]:
+                target_sources[value[SOURCE]][BINARIES].append(pkg_arch)
+
+            for p in value[PROVIDES]:
+                if p not in target_provides:
+                    target_provides[p] = []
+                target_provides[p].append(pkg)
+
+        for pkg, value in target_binaries.items():
+            value[RDEPENDS] = []
+            value[RCONFLICTS] = []
+        register_reverses = self.register_reverses
+        for pkg in target_binaries:
+            register_reverses(
+                pkg, target_binaries, target_provides, check_doubles=False)
+
     def read_bugs(self, basedir):
         """Read the release critial bug summary from the specified directory
         
