@@ -1,5 +1,7 @@
 from abc import abstractmethod
+from collections import defaultdict
 import apt_pkg
+import copy
 import logging
 import os
 import sys
@@ -115,7 +117,22 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
             sources = self._read_sources(suite.path)
             self._update_suite_name(suite)
             suite.sources = sources
+
+        if hasattr(self._base_config, 'partial_unstable'):
+            testing = suites[0]
+            unstable = suites[1]
+            # We need the sources from the target suite available when reading
+            # Packages files, so the binaries for binary-only migrations can be
+            # added to the right SourcePackage.
+            self._merge_sources(testing, unstable)
+
+        for suite in suites:
             (suite.binaries, suite.provides_table) = self._read_binaries(suite, self._architectures)
+
+        if hasattr(self._base_config, 'partial_unstable'):
+            # _read_binaries might have created 'faux' packages, and these need merging too.
+            self._merge_sources(testing, unstable)
+            self._merge_binaries(testing, unstable, self._architectures)
 
         return Suites(suites[0], suites[1:])
 
@@ -206,6 +223,73 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
             sources = read_sources_file(filename)
 
         return sources
+
+    def _merge_sources(self, target, source):
+        """Merge sources from `target' into partial suite `source'."""
+        target_sources = target.sources
+        source_sources = source.sources
+        # we need complete copies here, as we might later find some binaries
+        # which are only in unstable
+        for pkg, value in target_sources.items():
+            if pkg not in source_sources:
+                source_sources[pkg] = copy.deepcopy(value)
+
+    def _merge_binaries(self, target, source, arches):
+        """Merge `arches' binaries from `target' into partial suite
+        `source'."""
+        target_sources = target.sources
+        target_binaries = target.binaries
+        source_sources = source.sources
+        source_binaries = source.binaries
+        source_provides = source.provides_table
+        oodsrcs = defaultdict(set)
+
+        def _merge_binaries_arch(arch):
+            for pkg, value in target_binaries[arch].items():
+                if pkg in source_binaries[arch]:
+                    continue
+
+                # Don't merge binaries rendered stale by new sources in source
+                # that have built on this architecture.
+                if value.source not in oodsrcs[arch]:
+                    target_version = target_sources[value.source].version
+                    try:
+                        source_version = source_sources[value.source].version
+                    except KeyError:
+                        self.logger.info("merge_binaries: pkg %s has no source, NBS?" % pkg)
+                        continue
+                    if target_version != source_version:
+                        current_arch = value.architecture
+                        built = False
+                        for b in source_sources[value.source].binaries:
+                            if b.architecture == arch:
+                                source_value = source_binaries[arch][b.package_name]
+                                if current_arch in (
+                                        source_value.architecture, 'all'):
+                                    built = True
+                                    break
+                        if built:
+                            continue
+                    oodsrcs[arch].add(value.source)
+
+                if pkg in source_binaries[arch]:
+                    for p in source_binaries[arch][pkg].provides:
+                        source_provides[arch][p].remove(pkg)
+                        if not source_provides[arch][p]:
+                            del source_provides[arch][p]
+
+                source_binaries[arch][pkg] = value
+
+                if value.pkg_id not in source_sources[value.source].binaries:
+                    source_sources[value.source].binaries.add(value.pkg_id)
+
+                for p in value.provides:
+                    if p not in source_provides[arch]:
+                        source_provides[arch][p] = []
+                    source_provides[arch][p].append(pkg)
+
+        for arch in arches:
+            _merge_binaries_arch(arch)
 
     @staticmethod
     def merge_fields(get_field, *field_names, separator=', '):
