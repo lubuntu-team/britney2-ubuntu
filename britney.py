@@ -183,6 +183,7 @@ import optparse
 import os
 import sys
 import time
+import copy
 from collections import defaultdict
 from functools import reduce
 from operator import attrgetter
@@ -283,6 +284,8 @@ class Britney(object):
         # read the source and binary packages for the involved distributions
         self.sources['testing'] = self.read_sources(self.suite_info['testing'].path)
         self.sources['unstable'] = self.read_sources(self.suite_info['unstable'].path)
+        if hasattr(self.options, 'partial_unstable'):
+            self.merge_sources('testing', 'unstable')
         for suite in ('tpu', 'pu'):
             if hasattr(self.options, suite):
                 self.sources[suite] = self.read_sources(getattr(self.options, suite))
@@ -307,6 +310,9 @@ class Britney(object):
         # Load testing last as some live-data tests have more complete information in
         # unstable
         self.binaries['testing'] = self.read_binaries(self.suite_info['testing'].path, "testing", self.options.architectures)
+        if hasattr(self.options, 'partial_unstable'):
+            for arch in self.options.architectures:
+                self.merge_binaries('testing', 'unstable', arch)
 
         try:
             constraints_file = os.path.join(self.options.static_input_dir, 'constraints')
@@ -852,6 +858,66 @@ class Britney(object):
 
         return packages
 
+    def merge_sources(self, source, target):
+        """Merge sources from `source' into partial suite `target'."""
+        source_sources = self.sources[source]
+        target_sources = self.sources[target]
+        # we need complete copies here, as we might later find some binaries
+        # which are only in unstable
+        for pkg, value in source_sources.items():
+            if pkg not in target_sources:
+                target_sources[pkg] = copy.deepcopy(value)
+
+    def merge_binaries(self, source, target, arch):
+        """Merge `arch' binaries from `source' into partial suite `target'."""
+        source_sources = self.sources[source]
+        source_binaries, _ = self.binaries[source][arch]
+        target_sources = self.sources[target]
+        target_binaries, target_provides = self.binaries[target][arch]
+        oodsrcs = set()
+        for pkg, value in source_binaries.items():
+            if pkg in target_binaries:
+                continue
+
+            # Don't merge binaries rendered stale by new sources in target
+            # that have built on this architecture.
+            if value.source not in oodsrcs:
+                source_version = source_sources[value.source].version
+                try:
+                    target_version = target_sources[value.source].version
+                except KeyError:
+                    self.log("merge_binaries: pkg %s has no source, NBS?" % pkg)
+                    continue
+                if source_version != target_version:
+                    current_arch = value.architecture
+                    built = False
+                    for b in target_sources[value.source].binaries:
+                        if b.architecture == arch:
+                            target_value = target_binaries[b.package_name]
+                            if current_arch in (
+                                target_value.architecture, 'all'):
+                                built = True
+                                break
+                    if built:
+                        continue
+                oodsrcs.add(value.source)
+
+            if pkg in target_binaries:
+                for p in target_binaries[pkg].provides:
+                    target_provides[p].remove(pkg)
+                    if not target_provides[p]:
+                        del target_provides[p]
+
+            target_binaries[pkg] = value
+
+            if value.pkg_id not in target_sources[value.source].binaries:
+                target_sources[value.source].binaries.append(value.pkg_id)
+
+            for p in value.provides:
+                if p not in target_provides:
+                    target_provides[p] = []
+                target_provides[p].append(pkg)
+
     def read_binaries(self, basedir, distribution, architectures):
         """Read the list of binary packages from the specified directory
 
@@ -1139,6 +1205,8 @@ class Britney(object):
 
             # retrieve the testing (if present) and unstable corresponding binary packages
             binary_t = pkg_name in packages_t_a and packages_t_a[pkg_name] or None
+            if hasattr(self.options, 'partial_unstable') and binary_t is not None and binary_t[ARCHITECTURE] == 'all' and pkg_name not in self.binaries[suite][arch][0]:
+                excuse.addhtml("Ignoring %s %s (from %s) as it is arch: all and not yet built in unstable" % (pkg_name, binary_t.version, binary_t.source_version))
             binary_u = packages_s_a[pkg_name]
 
             # this is the source version for the new binary package
