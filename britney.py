@@ -635,7 +635,7 @@ class Britney(object):
         for pkg, value in source_sources.items():
             if pkg in target_sources:
                 continue
-            target_sources[pkg] = value
+            target_sources[pkg] = list(value)
             target_sources[pkg][BINARIES] = list(
                 target_sources[pkg][BINARIES])
 
