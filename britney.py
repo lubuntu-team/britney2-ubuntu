@@ -662,7 +662,8 @@ class Britney(object):
                         binpkg, binarch = b.split('/')
                         if binarch == arch:
                             target_value = target_binaries[binpkg]
-                            if current_arch == target_value[ARCHITECTURE]:
+                            if current_arch in (
+                                target_value[ARCHITECTURE], "all"):
                                 built = True
                                 break
                     if built:
