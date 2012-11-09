@@ -1230,7 +1230,7 @@ class Britney(object):
 
         # if the package is blocked, skip it
         for hint in self.hints.search('block', package=pkg, removal=True):
-            excuse.addhtml("Not touching package, as requested by %s (contact debian-release "
+            excuse.addhtml("Not touching package, as requested by %s (contact #ubuntu-release "
                 "if update is needed)" % hint.user)
             excuse.addhtml("Not considered")
             self.excuses.append(excuse)
@@ -1435,7 +1435,7 @@ class Britney(object):
                 if unblocks:
                     excuse.addhtml("%s request by %s ignored due to version mismatch: %s" %
                                    (unblock_cmd.capitalize(), unblocks[0].user, unblocks[0].version))
-                excuse.addhtml("Not touching package due to %s request by %s (contact debian-release if update is needed)" %
+                excuse.addhtml("Not touching package due to %s request by %s (contact #ubuntu-release if update is needed)" %
                                (block_cmd, blocked[block_cmd].user))
                 update_candidate = False
 
