@@ -562,7 +562,9 @@ class Britney(object):
 
             # if the source package is available in the distribution, then register this binary package
             if dpkg[SOURCE] in sources[distribution]:
-                sources[distribution][dpkg[SOURCE]][BINARIES].append(pkg + "/" + arch)
+                pkg_arch = pkg + "/" + arch
+                if pkg_arch not in sources[distribution][dpkg[SOURCE]][BINARIES]:
+                    sources[distribution][dpkg[SOURCE]][BINARIES].append(pkg_arch)
             # if the source package doesn't exist, create a fake one
             else:
                 sources[distribution][dpkg[SOURCE]] = [dpkg[SOURCEVER], 'faux', [pkg + "/" + arch], None, True]
