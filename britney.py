@@ -1499,6 +1499,7 @@ class Britney(object):
         # at this point, we check the status of the builds on all the supported architectures
         # to catch the out-of-date ones
         pkgs = {src: ["source"]}
+        built_anywhere = False
         for arch in self.options.architectures:
             oodbins = {}
             # for every binary package produced by this source in the suite for this architecture
@@ -1516,6 +1517,7 @@ class Britney(object):
                         oodbins[pkgsv] = []
                     oodbins[pkgsv].append(pkg)
                     continue
+                built_anywhere = True
 
                 # if the package is architecture-dependent or the current arch is `nobreakall'
                 # find unsatisfied dependencies for the binary package
@@ -1547,6 +1549,9 @@ class Britney(object):
         # if the source package has no binaries, set update_candidate to False to block the update
         if len(self.sources[suite][src][BINARIES]) == 0:
             excuse.addhtml("%s has no binaries on any arch" % src)
+            update_candidate = False
+        elif not built_anywhere:
+            excuse.addhtml("%s has no up-to-date binaries on any arch" % src)
             update_candidate = False
 
         # if the suite is unstable, then we have to check the release-critical bug lists before
