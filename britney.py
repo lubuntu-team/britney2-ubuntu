@@ -610,8 +610,8 @@ class Britney(object):
                 # register real packages
                 if a[0] in packages and (not check_doubles or pkg not in packages[a[0]][RDEPENDS]):
                     packages[a[0]][RDEPENDS].append(pkg)
-                # register packages which provide a virtual package
-                elif a[0] in provides:
+                # also register packages which provide the package (if any)
+                if a[0] in provides:
                     for i in provides.get(a[0]):
                         if i not in packages: continue
                         if not check_doubles or pkg not in packages[i][RDEPENDS]:
@@ -623,8 +623,8 @@ class Britney(object):
                     # register real packages
                     if a[0] in packages and (not check_doubles or pkg not in packages[a[0]][RCONFLICTS]):
                         packages[a[0]][RCONFLICTS].append(pkg)
-                    # register packages which provide a virtual package
-                    elif a[0] in provides:
+                    # also register packages which provide the package (if any)
+                    if a[0] in provides:
                         for i in provides[a[0]]:
                             if i not in packages: continue
                             if not check_doubles or pkg not in packages[i][RCONFLICTS]:
@@ -1202,7 +1202,10 @@ class Britney(object):
             # for the solving packages, update the excuse to add the dependencies
             for p in packages:
                 if arch not in self.options.break_arches.split():
-                    excuse.add_dep(p, arch)
+                    if p in self.sources['testing'] and self.sources['testing'][p][VERSION] == self.sources[suite][p][VERSION]:
+                        excuse.add_dep("%s/%s" % (p, arch), arch)
+                    else:
+                        excuse.add_dep(p, arch)
                 else:
                     excuse.add_break_dep(p, arch)
 
@@ -2052,7 +2055,10 @@ class Britney(object):
                 key = (binary, parch)
                 # obviously, added/modified packages are affected
                 if key not in affected: affected.add(key)
-                # if the binary already exists (built from another source)
+                # if the binary already exists in testing, it is currently
+                # built by another source package. we therefore remove the
+                # version built by the other source package, after marking
+                # all of its reverse dependencies as affected
                 if binary in binaries[parch][0]:
                     # save the old binary package
                     undo['binaries'][p] = binaries[parch][0][binary]
@@ -2067,9 +2073,13 @@ class Britney(object):
                             if key not in affected: affected.add(key)
                     self.systems[parch].remove_binary(binary)
                 else:
-                    # if the binary was previously built by a different
-                    # source package in testing, all of the reverse
-                    # dependencies of the old binary are affected.
+                    # the binary isn't in testing, but it may have been at
+                    # the start of the current hint and have been removed
+                    # by an earlier migration. if that's the case then we
+                    # will have a record of the older instance of the binary
+                    # in the undo information. we can use that to ensure
+                    # that the reverse dependencies of the older binary
+                    # package are also checked.
                     # reverse dependencies built from this source can be
                     # ignored as their reverse trees are already handled
                     # by this function
@@ -2258,8 +2268,6 @@ class Britney(object):
 
                 nuninst[arch] = set([x for x in nuninst_comp[arch] if x in binaries[arch][0]])
                 nuninst[arch + "+all"] = set([x for x in nuninst_comp[arch + "+all"] if x in binaries[arch][0]])
-                broken = nuninst[arch + "+all"]
-                to_check = []
 
                 check_packages(arch, affected, skip_archall, nuninst, pkg)
 
@@ -2542,13 +2550,22 @@ class Britney(object):
         # run the auto hinter
         self.auto_hinter()
 
-        # obsolete source packages  
+        # obsolete source packages
+        # a package is obsolete if none of the binary packages in testing
+        # are built by it
         if getattr(self.options, "remove_obsolete", "yes") == "yes":
             self.__log("> Removing obsolete source packages from testing", type="I")
             removals = []
+            # local copies for performance
             sources = self.sources['testing']
-            removals = [ HintItem("-%s/%s" % (source, sources[source][VERSION])) for \
-                         source in sources if len(sources[source][BINARIES]) == 0 ]
+            binaries = self.binaries['testing']
+            used = set(binaries[arch][0][binary][SOURCE]
+                         for arch in binaries
+                         for binary in binaries[arch][0]
+                      )
+            removals = [ HintItem("-%s/%s" % (source, sources[source][VERSION]))
+                         for source in sources if source not in used
+                       ]
             if len(removals) > 0:
                 self.output_write("Removing obsolete source packages from testing (%d):\n" % (len(removals)))
                 self.do_all(actions=removals)
