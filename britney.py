@@ -213,6 +213,7 @@ from excuse import Excuse
 from migrationitem import MigrationItem, HintItem
 from hints import HintCollection
 from britney import buildSystem
+from autopkgtest import AutoPackageTest
 
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
@@ -916,7 +917,7 @@ class Britney(object):
                 elif len(l) == 1:
                     # All current hints require at least one argument
                     self.__log("Malformed hint found in %s: '%s'" % (filename, line), type="W")
-                elif l[0] in ["approve", "block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "urgent", "remove"]:
+                elif l[0] in ["approve", "block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "force-autopkgtest", "urgent", "remove"]:
                     for package in l[1:]:
                         hints.add_hint('%s %s' % (l[0], package), who)
                 elif l[0] in ["age-days"]:
@@ -925,7 +926,7 @@ class Britney(object):
                 else:
                     hints.add_hint(l, who)
 
-        for x in ["approve", "block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "urgent", "remove", "age-days"]:
+        for x in ["approve", "block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "force-autopkgtest", "urgent", "remove", "age-days"]:
             z = {}
             for hint in hints[x]:
                 package = hint.package
@@ -1754,6 +1755,49 @@ class Britney(object):
 
         # extract the not considered packages, which are in the excuses but not in upgrade_me
         unconsidered = [e.name for e in self.excuses if e.name not in upgrade_me]
+
+        if self.options.adt_series:
+            # trigger autopkgtests for valid candidates
+            adt_debug = getattr(self.options, "adt_debug", "no") == "yes"
+            autopkgtest = AutoPackageTest(
+                self.options.adt_series, debug=adt_debug)
+            autopkgtest_packages = []
+            autopkgtest_excuses = []
+            for e in self.excuses:
+                if e.name not in upgrade_me:
+                    continue
+                # skip removals, binary-only candidates, and proposed-updates
+                if e.name.startswith("-") or "/" in e.name or "_" in e.name:
+                    pass
+                if e.ver[1] == "-":
+                    continue
+                autopkgtest_excuses.append(e)
+                autopkgtest_packages.append((e.name, e.ver[1]))
+            autopkgtest.request(autopkgtest_packages)
+            if not self.options.dry_run:
+                autopkgtest.submit()
+                autopkgtest.collect()
+            for e in autopkgtest_excuses:
+                adtpass = True
+                for status, adtsrc, adtver in autopkgtest.results(
+                        e.name, e.ver[1]):
+                    e.addhtml(
+                        "autopkgtest for %s %s: %s" % (adtsrc, adtver, status))
+                    if status != "PASS":
+                        adtpass = False
+                if not adtpass:
+                    forces = [
+                        x for x in self.hints.search(
+                            'force-autopkgtest', package=e.name)
+                        if self.same_source(e.ver[1], x.version) ]
+                    if forces:
+                        e.addhtml(
+                            "Should ignore, but forced by %s" % forces[0].user)
+                    else:
+                        upgrade_me.remove(e.name)
+                        unconsidered.append(e.name)
+                        e.addhtml("Not considered")
+                        e.is_valid = False
 
         # invalidate impossible excuses
         for e in self.excuses:
