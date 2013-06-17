@@ -128,9 +128,6 @@ class AutoPackageTest(object):
             for src, ver in packages:
                 if src in self.pkglist and ver in self.pkglist[src]:
                     continue
-                if self.britney.options.verbose:
-                    print("I: [%s] - Requesting autopkgtest for %s_%s" %
-                          (time.asctime(), src, ver))
                 print("%s %s" % (src, ver), file=request_file)
             request_file.flush()
             self._adt_britney("request", "-O", request_path, request_file.name)
@@ -141,6 +138,9 @@ class AutoPackageTest(object):
             # in dry-run mode.
             src = linebits.pop(0)
             ver = linebits.pop(0)
+            if self.britney.options.verbose:
+                print("I: [%s] - Requested autopkgtest for %s_%s" %
+                      (time.asctime(), src, ver))
             try:
                 status = linebits.pop(0).upper()
                 while True:
