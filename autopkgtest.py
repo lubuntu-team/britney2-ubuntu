@@ -24,6 +24,7 @@ import os
 import subprocess
 import tempfile
 from textwrap import dedent
+import time
 
 
 adt_britney = os.path.expanduser("~/auto-package-testing/jenkins/adt-britney")
@@ -126,6 +127,9 @@ class AutoPackageTest(object):
             for src, ver in packages:
                 if src in self.pkglist and ver in self.pkglist[src]:
                     continue
+                if self.britney.options.verbose:
+                    print("I: [%s] - Requesting autopkgtest for %s_%s" %
+                          (time.asctime(), src, ver))
                 print("%s %s" % (src, ver), file=request_file)
             request_file.flush()
             self._adt_britney("request", "-O", request_path, request_file.name)
