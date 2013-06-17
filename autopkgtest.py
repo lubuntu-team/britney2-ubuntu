@@ -141,12 +141,12 @@ class AutoPackageTest(object):
                 while True:
                     trigsrc = linebits.pop(0)
                     trigver = linebits.pop(0)
-                    for status, csrc, cver in self.pkgcauses[src][ver]:
+                    for status, csrc, cver in self.pkgcauses[trigsrc][trigver]:
                         if csrc == trigsrc and cver == trigver:
                             break
                     else:
-                        self.pkgcauses[src][ver].append(
-                            (status, trigsrc, trigver))
+                        self.pkgcauses[trigsrc][trigver].append(
+                            (status, src, ver))
             except IndexError:
                 # End of the list
                 pass
