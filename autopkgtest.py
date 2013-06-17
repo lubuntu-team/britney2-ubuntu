@@ -39,7 +39,8 @@ class AutoPackageTest(object):
     accepted.
     """
 
-    def __init__(self, series, debug=False):
+    def __init__(self, britney, series, debug=False):
+        self.britney = britney
         self.series = series
         self.debug = debug
         self.read()

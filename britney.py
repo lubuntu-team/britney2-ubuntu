@@ -1760,7 +1760,7 @@ class Britney(object):
             # trigger autopkgtests for valid candidates
             adt_debug = getattr(self.options, "adt_debug", "no") == "yes"
             autopkgtest = AutoPackageTest(
-                self.options.adt_series, debug=adt_debug)
+                self, self.options.adt_series, debug=adt_debug)
             autopkgtest_packages = []
             autopkgtest_excuses = []
             for e in self.excuses:
