@@ -167,6 +167,13 @@ class AutoPackageTest(object):
         result_path = self._result_path
         self._adt_britney("collect", "-O", result_path)
         self.read()
+        if self.britney.options.verbose:
+            for src in sorted(self.pkglist):
+                for ver in self.pkglist[src]:
+                    print("I: [%s] - Collected autopkgtest status for %s_%s: "
+                          "%s" %
+                          (time.asctime(), src, ver,
+                           self.pkglist[src][ver]["status"]))
 
     def results(self, trigsrc, trigver):
         for status, src, ver in self.pkgcauses[trigsrc][trigver]:
