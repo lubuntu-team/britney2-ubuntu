@@ -1784,20 +1784,21 @@ class Britney(object):
                     e.addhtml(
                         "autopkgtest for %s %s: %s" % (adtsrc, adtver, status))
                     if status != "PASS":
-                        adtpass = False
+                        forces = [
+                            x for x in self.hints.search(
+                                'force-autopkgtest', package=adtsrc)
+                            if self.same_source(adtver, x.version) ]
+                        if forces:
+                            e.addhtml(
+                                "Should ignore, but forced by %s" %
+                                forces[0].user)
+                        else:
+                            adtpass = False
                 if not adtpass:
-                    forces = [
-                        x for x in self.hints.search(
-                            'force-autopkgtest', package=e.name)
-                        if self.same_source(e.ver[1], x.version) ]
-                    if forces:
-                        e.addhtml(
-                            "Should ignore, but forced by %s" % forces[0].user)
-                    else:
-                        upgrade_me.remove(e.name)
-                        unconsidered.append(e.name)
-                        e.addhtml("Not considered")
-                        e.is_valid = False
+                    upgrade_me.remove(e.name)
+                    unconsidered.append(e.name)
+                    e.addhtml("Not considered")
+                    e.is_valid = False
 
         # invalidate impossible excuses
         for e in self.excuses:
