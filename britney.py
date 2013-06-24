@@ -254,7 +254,7 @@ class Britney(object):
 
     HINTS_HELPERS = ("easy", "hint", "remove", "block", "block-udeb", "unblock", "unblock-udeb", "approve")
     HINTS_STANDARD = ("urgent", "age-days") + HINTS_HELPERS
-    HINTS_ALL = ("force", "force-hint", "block-all") + HINTS_STANDARD
+    HINTS_ALL = ("force", "force-hint", "force-autopkgtest", "block-all") + HINTS_STANDARD
 
     def __init__(self):
         """Class constructor
