@@ -1784,9 +1784,12 @@ class Britney(object):
                     e.addhtml(
                         "autopkgtest for %s %s: %s" % (adtsrc, adtver, status))
                     if status != "PASS":
+                        hints = self.hints.search(
+                            'force-autopkgtest', package=adtsrc)
+                        hints.extend(
+                            self.hints.search('force', package=adtsrc))
                         forces = [
-                            x for x in self.hints.search(
-                                'force-autopkgtest', package=adtsrc)
+                            x for x in hints
                             if self.same_source(adtver, x.version) ]
                         if forces:
                             e.addhtml(
