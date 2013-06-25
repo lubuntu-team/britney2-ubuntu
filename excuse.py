@@ -50,6 +50,7 @@ class Excuse(object):
         self.section = None
         self._is_valid = False
         self._dontinvalidate = False
+        self.run_autopkgtest = False
 
         self.invalid_deps = []
         self.deps = {}

@@ -1388,8 +1388,9 @@ class Britney(object):
         source_u[MAINTAINER] and excuse.set_maint(source_u[MAINTAINER].strip())
         source_u[SECTION] and excuse.set_section(source_u[SECTION].strip())
 
-        # the starting point is that we will update the candidate
+        # the starting point is that we will update the candidate and run autopkgtests
         update_candidate = True
+        run_autopkgtest = True
         
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u[VERSION], source_t[VERSION]) < 0:
@@ -1401,6 +1402,7 @@ class Britney(object):
         if source_u[FAKESRC]:
             excuse.addhtml("%s source package doesn't exist" % (src))
             update_candidate = False
+            run_autopkgtest = False
 
         # retrieve the urgency for the upload, ignoring it if this is a NEW package (not present in testing)
         urgency = self.urgencies.get(src, self.options.default_urgency)
@@ -1416,6 +1418,7 @@ class Britney(object):
                 excuse.addhtml("Removal request by %s" % (item.user))
                 excuse.addhtml("Trying to remove package, not update it")
                 update_candidate = False
+                run_autopkgtest = False
 
         # check if there is a `block' or `block-udeb' hint for this package, or a `block-all source' hint
         blocked = {}
@@ -1476,6 +1479,7 @@ class Britney(object):
                     excuse.addhtml("Too young, but urgency pushed by %s" % (urgent_hints[0].user))
                 else:
                     update_candidate = False
+                    run_autopkgtest = False
 
         if suite in ['pu', 'tpu']:
             # o-o-d(ish) checks for (t-)p-u
@@ -1501,6 +1505,7 @@ class Britney(object):
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
                 else:
                     update_candidate = False
+                    run_autopkgtest = False
 
                 excuse.addhtml(text)
 
@@ -1550,6 +1555,7 @@ class Britney(object):
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
                 else:
                     update_candidate = False
+                    run_autopkgtest = False
 
                 if self.dates is None or self.date_now != self.dates[src][1]:
                     excuse.addhtml(text)
@@ -1558,9 +1564,11 @@ class Britney(object):
         if len(self.sources[suite][src][BINARIES]) == 0:
             excuse.addhtml("%s has no binaries on any arch" % src)
             update_candidate = False
+            run_autopkgtest = False
         elif not built_anywhere:
             excuse.addhtml("%s has no up-to-date binaries on any arch" % src)
             update_candidate = False
+            run_autopkgtest = False
 
         # if the suite is unstable, then we have to check the release-critical bug lists before
         # updating testing; if the unstable package has RC bugs that do not apply to the testing
@@ -1590,6 +1598,7 @@ class Britney(object):
                     excuse.addhtml("Updating %s introduces new bugs: %s" % (pkg, ", ".join(
                         ["<a href=\"http://bugs.debian.org/%s\">#%s</a>" % (urllib.quote(a), a) for a in new_bugs])))
                     update_candidate = False
+                    run_autopkgtest = False
 
                 if len(old_bugs) > 0:
                     excuse.addhtml("Updating %s fixes old bugs: %s" % (pkg, ", ".join(
@@ -1605,6 +1614,7 @@ class Britney(object):
         if not update_candidate and forces:
             excuse.addhtml("Should ignore, but forced by %s" % (forces[0].user))
             update_candidate = True
+            run_autopkgtest = True
 
         # if the suite is *-proposed-updates, the package needs an explicit approval in order to go in
         if suite in ['tpu', 'pu']:
@@ -1614,6 +1624,7 @@ class Britney(object):
             else:
                 excuse.addhtml("NEEDS APPROVAL BY RM")
                 update_candidate = False
+                run_autopkgtest = False
 
         # if the package can be updated, it is a valid candidate
         if update_candidate:
@@ -1621,6 +1632,7 @@ class Britney(object):
         # else it won't be considered
         else:
             excuse.addhtml("Not considered")
+        excuse.run_autopkgtest = run_autopkgtest
 
         self.excuses.append(excuse)
         return update_candidate
@@ -1768,7 +1780,7 @@ class Britney(object):
             autopkgtest_packages = []
             autopkgtest_excuses = []
             for e in self.excuses:
-                if e.name not in upgrade_me:
+                if not e.run_autopkgtest:
                     continue
                 # skip removals, binary-only candidates, and proposed-updates
                 if e.name.startswith("-") or "/" in e.name or "_" in e.name:
@@ -1801,7 +1813,7 @@ class Britney(object):
                                 forces[0].user)
                         else:
                             adtpass = False
-                if not adtpass:
+                if not adtpass and e.is_valid:
                     upgrade_me.remove(e.name)
                     unconsidered.append(e.name)
                     e.addhtml("Not considered")
