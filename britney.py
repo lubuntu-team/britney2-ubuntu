@@ -1809,8 +1809,8 @@ class Britney(object):
                             if self.same_source(adtver, x.version) ]
                         if forces:
                             e.addhtml(
-                                "Should ignore, but forced by %s" %
-                                forces[0].user)
+                                "Should wait for %s %s test, but forced by "
+                                "%s" % (adtsrc, adtver, forces[0].user))
                         else:
                             adtpass = False
                 if not adtpass and e.is_valid:
