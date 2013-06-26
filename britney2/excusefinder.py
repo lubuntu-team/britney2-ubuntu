@@ -138,12 +138,13 @@ class ExcuseFinder(object):
             # if the new binary package is not from the same source as the testing one, then skip it
             # this implies that this binary migration is part of a source migration
             if source_u.version == pkgsv and source_t.version != pkgsv:
-                anywrongver = True
-                excuse.add_verdict_info(
-                    wrong_verdict,
-                    "From wrong source: %s %s (%s not %s)" %
-                    (pkg_name, binary_u.version, pkgsv, source_t.version))
-                continue
+                if binary_t is None or binary_t.version != binary_u.version:
+                    anywrongver = True
+                    excuse.add_verdict_info(
+                        wrong_verdict,
+                        "From wrong source: %s %s (%s not %s)" %
+                        (pkg_name, binary_u.version, pkgsv, source_t.version))
+                    continue
 
             # cruft in unstable
             if source_u.version != pkgsv and source_t.version != pkgsv:
