@@ -1301,9 +1301,10 @@ class Britney(object):
 
             # if the new binary package is not from the same source as the testing one, then skip it
             if not self.same_source(source_t[VERSION], pkgsv):
-                anywrongver = True
-                excuse.addhtml("From wrong source: %s %s (%s not %s)" % (pkg_name, binary_u[VERSION], pkgsv, source_t[VERSION]))
-                break
+                if binary_t is None or binary_t[VERSION] != binary_u[VERSION]:
+                    anywrongver = True
+                    excuse.addhtml("From wrong source: %s %s (%s not %s)" % (pkg_name, binary_u[VERSION], pkgsv, source_t[VERSION]))
+                    break
 
             # find unsatisfied dependencies for the new binary package
             self.excuse_unsat_deps(pkg_name, src, arch, suite, excuse)
