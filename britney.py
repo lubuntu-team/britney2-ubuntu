@@ -254,7 +254,7 @@ class Britney(object):
 
     HINTS_HELPERS = ("easy", "hint", "remove", "block", "block-udeb", "unblock", "unblock-udeb", "approve")
     HINTS_STANDARD = ("urgent", "age-days") + HINTS_HELPERS
-    HINTS_ALL = ("force", "force-hint", "force-autopkgtest", "block-all") + HINTS_STANDARD
+    HINTS_ALL = ("force", "force-hint", "force-badtest", "force-skiptest", "block-all") + HINTS_STANDARD
 
     def __init__(self):
         """Class constructor
@@ -917,7 +917,7 @@ class Britney(object):
                 elif len(l) == 1:
                     # All current hints require at least one argument
                     self.__log("Malformed hint found in %s: '%s'" % (filename, line), type="W")
-                elif l[0] in ["approve", "block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "force-autopkgtest", "urgent", "remove"]:
+                elif l[0] in ["approve", "block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "force-badtest", "force-skiptest", "urgent", "remove"]:
                     for package in l[1:]:
                         hints.add_hint('%s %s' % (l[0], package), who)
                 elif l[0] in ["age-days"]:
@@ -926,7 +926,7 @@ class Britney(object):
                 else:
                     hints.add_hint(l, who)
 
-        for x in ["approve", "block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "force-autopkgtest", "urgent", "remove", "age-days"]:
+        for x in ["approve", "block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "force-badtest", "force-skiptest", "urgent", "remove", "age-days"]:
             z = {}
             for hint in hints[x]:
                 package = hint.package
@@ -1802,7 +1802,7 @@ class Britney(object):
                         "autopkgtest for %s %s: %s" % (adtsrc, adtver, status))
                     if status != "PASS":
                         hints = self.hints.search(
-                            'force-autopkgtest', package=adtsrc)
+                            'force-badtest', package=adtsrc)
                         hints.extend(
                             self.hints.search('force', package=adtsrc))
                         forces = [
@@ -1815,10 +1815,21 @@ class Britney(object):
                         else:
                             adtpass = False
                 if not adtpass and e.is_valid:
-                    upgrade_me.remove(e.name)
-                    unconsidered.append(e.name)
-                    e.addhtml("Not considered")
-                    e.is_valid = False
+                    hints = self.hints.search('force-skiptest', package=e.name)
+                    hints.extend(self.hints.search('force', package=e.name))
+                    forces = [
+                        x for x in hints
+                        if self.same_source(e.ver[1], x.version) ]
+                    if forces:
+                        e.addhtml(
+                            "Should wait for tests relating to %s %s, but "
+                            "forced by %s" %
+                            (e.name, e.ver[1], forces[0].user))
+                    else:
+                        upgrade_me.remove(e.name)
+                        unconsidered.append(e.name)
+                        e.addhtml("Not considered")
+                        e.is_valid = False
 
         # invalidate impossible excuses
         for e in self.excuses:
