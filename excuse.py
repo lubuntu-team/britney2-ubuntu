@@ -122,12 +122,19 @@ class Excuse(object):
     def html(self):
         """Render the excuse in HTML"""
         lp_pkg = "https://launchpad.net/ubuntu/+source/%s" % self.name
+        if self.ver[0] == "-":
+            lp_old = self.ver[0]
+        else:
+            lp_old = "<a href=\"%s/%s\">%s</a>" % (
+                lp_pkg, self.ver[0], self.ver[0])
+        if self.ver[1] == "-":
+            lp_new = self.ver[1]
+        else:
+            lp_new = "<a href=\"%s/%s\">%s</a>" % (
+                lp_pkg, self.ver[1], self.ver[1])
         res = (
-            "<a id=\"%s\" name=\"%s\" href=\"%s\">%s</a> "
-            "(<a href=\"%s/%s\">%s</a> to <a href=\"%s/%s\">%s</a>)\n<ul>\n" %
-            (self.name, self.name, lp_pkg, self.name,
-             lp_pkg, self.ver[0], self.ver[0],
-             lp_pkg, self.ver[1], self.ver[1]))
+            "<a id=\"%s\" name=\"%s\" href=\"%s\">%s</a> (%s to %s)\n<ul>\n" %
+            (self.name, self.name, lp_pkg, self.name, lp_old, lp_new))
         if self.maint:
             res = res + "<li>Maintainer: %s\n" % (self.maint)
         if self.section and string.find(self.section, "/") > -1:
