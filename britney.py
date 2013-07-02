@@ -1794,12 +1794,25 @@ class Britney(object):
             if not self.options.dry_run:
                 autopkgtest.submit()
                 autopkgtest.collect()
+            jenkins_public = (
+                "https://jenkins.qa.ubuntu.com/view/%s/view/AutoPkgTest/job" %
+                self.options.adt_series.title())
+            jenkins_private = (
+                "http://10.98.0.1:8080/view/%s/view/AutoPkgTest/job" %
+                self.options.adt_series.title())
             for e in autopkgtest_excuses:
                 adtpass = True
                 for status, adtsrc, adtver in autopkgtest.results(
                         e.name, e.ver[1]):
+                    public_url = "%s/%s-adt-%s/" % (
+                        jenkins_public, self.options.adt_series, adtsrc)
+                    private_url = "%s/%s-adt-%s/" % (
+                        jenkins_private, self.options.adt_series, adtsrc)
                     e.addhtml(
-                        "autopkgtest for %s %s: %s" % (adtsrc, adtver, status))
+                        "autopkgtest for %s %s: %s (Jenkins: "
+                        "<a href=\"%s\">public</a>, "
+                        "<a href=\"%s\">private</a>)" %
+                        (adtsrc, adtver, status, public_url, private_url))
                     if status != "PASS":
                         hints = self.hints.search(
                             'force-badtest', package=adtsrc)
