@@ -139,8 +139,8 @@ class AutoPackageTest(object):
             src = linebits.pop(0)
             ver = linebits.pop(0)
             if self.britney.options.verbose:
-                print("I: [%s] - Requested autopkgtest for %s_%s" %
-                      (time.asctime(), src, ver))
+                print("I: [%s] - Requested autopkgtest for %s_%s (%s)" %
+                      (time.asctime(), src, ver, " ".join(linebits)))
             try:
                 status = linebits.pop(0).upper()
                 while True:
