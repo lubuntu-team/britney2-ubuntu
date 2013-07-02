@@ -112,7 +112,7 @@ class AutoPackageTest(object):
     def _adt_britney(self, *args):
         command = [
             adt_britney,
-            "-c", self.rc_path, "-r", self.series, "-a", "amd64", "-PU",
+            "-c", self.rc_path, "-r", self.series, "-PU",
             ]
         if self.debug:
             command.append("-d")
