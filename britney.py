@@ -1506,7 +1506,8 @@ class Britney(object):
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
                 else:
                     update_candidate = False
-                    run_autopkgtest = False
+                    if arch in self.options.adt_arches.split():
+                        run_autopkgtest = False
 
                 excuse.addhtml(text)
 
@@ -1556,7 +1557,8 @@ class Britney(object):
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
                 else:
                     update_candidate = False
-                    run_autopkgtest = False
+                    if arch in self.options.adt_arches.split():
+                        run_autopkgtest = False
 
                 if self.dates is None or self.date_now != self.dates[src][1]:
                     excuse.addhtml(text)
