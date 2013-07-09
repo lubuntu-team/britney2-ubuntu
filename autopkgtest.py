@@ -26,6 +26,8 @@ import tempfile
 from textwrap import dedent
 import time
 
+import apt_pkg
+
 
 adt_britney = os.path.expanduser("~/auto-package-testing/jenkins/adt-britney")
 
@@ -104,10 +106,14 @@ class AutoPackageTest(object):
                     trigsrc = linebits.pop(0)
                     trigver = linebits.pop(0)
                     self.pkglist[src][ver]["causes"][trigsrc] = trigver
-                    self.pkgcauses[trigsrc][trigver].append((status, src, ver))
             except IndexError:
                 # End of the list
                 pass
+        for src in self.pkglist:
+            ver = sorted(self.pkglist[ver], cmp=apt_pkg.version_compare)[-1]
+            status = self.pkglist[src][ver]["status"]
+            for trigsrc, trigver in self.pkglist[src][ver]["causes"].items():
+                self.pkgcauses[trigsrc][trigver].append((status, src, ver))
 
     def _adt_britney(self, *args):
         command = [
