@@ -1891,6 +1891,7 @@ class Britney(object):
             f.write("<html><head><title>excuses...</title>")
             f.write("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"></head><body>\n")
             f.write("<p>Generated: " + time.strftime("%Y.%m.%d %H:%M:%S %z", time.gmtime(time.time())) + "</p>\n")
+            f.write("<p>See the <a href=\"https://wiki.ubuntu.com/ProposedMigration\">documentation</a> for help interpreting this page.</p>\n")
             f.write("<ul>\n")
             for e in self.excuses:
                 f.write("<li>%s" % e.html())
