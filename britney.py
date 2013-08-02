@@ -1807,9 +1807,11 @@ class Britney(object):
                 for status, adtsrc, adtver in autopkgtest.results(
                         e.name, e.ver[1]):
                     public_url = "%s/%s-adt-%s/" % (
-                        jenkins_public, self.options.adt_series, adtsrc)
+                        jenkins_public, self.options.adt_series,
+                        adtsrc.replace("+", "-"))
                     private_url = "%s/%s-adt-%s/" % (
-                        jenkins_private, self.options.adt_series, adtsrc)
+                        jenkins_private, self.options.adt_series,
+                        adtsrc.replace("+", "-"))
                     e.addhtml(
                         "autopkgtest for %s %s: %s (Jenkins: "
                         "<a href=\"%s\">public</a>, "
