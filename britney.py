@@ -408,7 +408,7 @@ class Britney(object):
         # Sort the architecture list
         allarches = sorted(self.options.architectures.split())
         arches = [x for x in allarches if x in self.options.nobreakall_arches.split()]
-        arches += [x for x in allarches if x not in arches and x not in self.options.fucked_arches.split()]
+        arches += [x for x in allarches if x not in arches and x not in self.options.outofsync_arches.split()]
         arches += [x for x in allarches if x not in arches and x not in self.options.break_arches.split()]
         arches += [x for x in allarches if x not in arches and x not in self.options.new_arches.split()]
         arches += [x for x in allarches if x not in arches]
@@ -1502,7 +1502,7 @@ class Britney(object):
                     base = 'stable'
                 text = "Not yet built on <a href=\"https://launchpad.net/ubuntu/+source/%s/%s\" target=\"_blank\">%s</a> (relative to testing)" % (urllib.quote(src), urllib.quote(source_u[VERSION]), arch)
 
-                if arch in self.options.fucked_arches.split():
+                if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
                 else:
                     update_candidate = False
@@ -1541,7 +1541,7 @@ class Britney(object):
 
             # if there are out-of-date packages, warn about them in the excuse and set update_candidate
             # to False to block the update; if the architecture where the package is out-of-date is
-            # in the `fucked_arches' list, then do not block the update
+            # in the `outofsync_arches' list, then do not block the update
             if oodbins:
                 oodtxt = ""
                 for v in oodbins.keys():
@@ -1553,7 +1553,7 @@ class Britney(object):
                     "%s/%s\" target=\"_blank\">%s</a>: %s" % \
                     (urllib.quote(src), urllib.quote(source_u[VERSION]), arch, oodtxt)
 
-                if arch in self.options.fucked_arches.split():
+                if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
                 else:
                     update_candidate = False
