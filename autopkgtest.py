@@ -111,9 +111,8 @@ class AutoPackageTest(object):
                 pass
         for src in self.pkglist:
             all_vers = sorted(self.pkglist[src], cmp=apt_pkg.version_compare)
-            latest_ver = all_vers[-1]
-            status = self.pkglist[src][latest_ver]["status"]
             for ver in self.pkglist[src]:
+                status = self.pkglist[src][ver]["status"]
                 for trigsrc, trigver in \
                         self.pkglist[src][ver]["causes"].items():
                     self.pkgcauses[trigsrc][trigver].append((status, src, ver))
