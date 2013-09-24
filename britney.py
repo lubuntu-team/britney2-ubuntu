@@ -1344,17 +1344,20 @@ class Britney(object):
         if not anywrongver and (anyworthdoing or not self.sources[suite][src][FAKESRC]):
             srcv = self.sources[suite][src][VERSION]
             ssrc = self.same_source(source_t[VERSION], srcv)
-            # for every binary package produced by this source in testing for this architecture
-            for pkg in sorted([x.split("/")[0] for x in self.sources['testing'][src][BINARIES] if x.endswith("/"+arch)]):
-                # if the package is architecture-independent, then ignore it
-                if self.binaries['testing'][arch][0][pkg][ARCHITECTURE] == 'all':
-                    excuse.addhtml("Ignoring removal of %s as it is arch: all" % (pkg))
-                    continue
-                # if the package is not produced by the new source package, then remove it from testing
-                if pkg not in self.binaries[suite][arch][0]:
-                    tpkgv = self.binaries['testing'][arch][0][pkg][VERSION]
-                    excuse.addhtml("Removed binary: %s %s" % (pkg, tpkgv))
-                    if ssrc: anyworthdoing = True
+            # if this is a binary-only migration via *pu, we never want to try
+            # removing binary packages
+            if not (ssrc and suite != 'unstable'):
+                # for every binary package produced by this source in testing for this architecture
+                for pkg in sorted([x.split("/")[0] for x in self.sources['testing'][src][BINARIES] if x.endswith("/"+arch)]):
+                    # if the package is architecture-independent, then ignore it
+                    if self.binaries['testing'][arch][0][pkg][ARCHITECTURE] == 'all':
+                        excuse.addhtml("Ignoring removal of %s as it is arch: all" % (pkg))
+                        continue
+                    # if the package is not produced by the new source package, then remove it from testing
+                    if pkg not in self.binaries[suite][arch][0]:
+                        tpkgv = self.binaries['testing'][arch][0][pkg][VERSION]
+                        excuse.addhtml("Removed binary: %s %s" % (pkg, tpkgv))
+                        if ssrc: anyworthdoing = True
 
         # if there is nothing wrong and there is something worth doing, this is a valid candidate
         if not anywrongver and anyworthdoing:
@@ -1502,15 +1505,22 @@ class Britney(object):
         if suite in ['pu', 'tpu']:
             # o-o-d(ish) checks for (t-)p-u
             for arch in self.options.architectures:
-                # If the package isn't in testing or the testing
-                # package produces no packages on this architecture,
-                # then it can't be out-of-date.  We assume that if
-                # the (t-)p-u package has produced any binaries for
-                # this architecture then it is ok
-
-                if not src in self.sources["testing"] or \
-                   (len([x for x in self.sources["testing"][src][BINARIES] if x.endswith("/"+arch) and self.binaries["testing"][arch][0][x.split("/")[0]][ARCHITECTURE] != 'all' ]) == 0) or \
-                   (len([x for x in self.sources[suite][src][BINARIES] if x.endswith("/"+arch) and self.binaries[suite][arch][0][x.split("/")[0]][ARCHITECTURE] != 'all' ]) > 0):
+                if src not in self.sources["testing"]:
+                    continue
+                    
+                # if the package in testing has no binaries on this
+                # architecture, it can't be out-of-date
+                if not any(x for x in self.sources["testing"][src][BINARIES]
+                           if x.endswith("/"+arch) and self.binaries["testing"][arch][0][x.split("/")[0]][ARCHITECTURE] != 'all'):
+                    continue
+                    
+                # if the (t-)p-u package has produced any binaries on
+                # this architecture then we assume it's ok. this allows for
+                # uploads to (t-)p-u which intentionally drop binary
+                # packages
+                if any(x for x in self.binaries[suite][arch][0].values() \
+                          if x[SOURCE] == src and x[SOURCEVER] == source_u[VERSION] and \
+                             x[ARCHITECTURE] != 'all'):
                     continue
 
                 if suite == 'tpu':
@@ -1723,6 +1733,8 @@ class Britney(object):
         # this list will contain the packages which are valid candidates;
         # if a package is going to be removed, it will have a "-" prefix
         upgrade_me = []
+
+        self.excuses = []
 
         # for every source package in testing, check if it should be removed
         for pkg in sources['testing']:
@@ -2063,7 +2075,16 @@ class Britney(object):
                 # first, build a list of eligible binaries
                 for p in source[BINARIES]:
                     binary, parch = p.split("/")
-                    if item.architecture != 'source' and parch != item.architecture: continue
+                    if item.architecture != 'source':
+                        # for a binary migration, binaries should not be removed:
+                        # - unless they are for the correct architecture
+                        if parch != item.architecture: continue
+                        # - if they are arch:all and the migration is via *pu,
+                        #   as the packages will not have been rebuilt and the
+                        #   source suite will not contain them
+                        if binaries[parch][0][binary][ARCHITECTURE] == 'all' and \
+                           item.suite != 'unstable':
+                            continue
                     # do not remove binaries which have been hijacked by other sources
                     if binaries[parch][0][binary][SOURCE] != item.package: continue
                     bins.append(p)
@@ -2108,9 +2129,8 @@ class Britney(object):
                 # outside of the current source
                 for p in check:
                     binary, parch = p.split("/")
-                    rdeps = [ bin for bin in binaries[parch][0][binary][RDEPENDS] \
-                              if bin in [y.split("/")[0] for y in smoothbins] ]
-                    if len(rdeps) > 0:
+                    if any(bin for bin in binaries[parch][0][binary][RDEPENDS] \
+                              if bin in [y.split("/")[0] for y in smoothbins]):
                         smoothbins.append(p)
 
                 # remove all the binaries which aren't being smooth updated
@@ -2752,6 +2772,11 @@ class Britney(object):
             # quit the hint tester
             if input and input[0] in ('quit', 'exit'):
                 break
+            elif input and input[0] in ('remove', 'approve', 'urgent', 'age-days',
+                                        'block', 'block-udeb', 'unblock', 'unblock-udeb',
+                                        'block-all', 'force'):
+                self.hints.add_hint(' '.join(input), 'hint-tester')
+                self.write_excuses()
             # run a hint
             elif input and input[0] in ('easy', 'hint', 'force-hint'):
                 try:
