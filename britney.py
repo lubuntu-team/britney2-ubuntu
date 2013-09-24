@@ -566,14 +566,20 @@ class Britney(object):
                 if "(" in source:
                     dpkg[SOURCEVER] = source[source.find("(")+1:source.find(")")]
 
+            pkgarch = "%s/%s" % (pkg,arch)
             # if the source package is available in the distribution, then register this binary package
             if dpkg[SOURCE] in sources[distribution]:
-                pkg_arch = pkg + "/" + arch
-                if pkg_arch not in sources[distribution][dpkg[SOURCE]][BINARIES]:
-                    sources[distribution][dpkg[SOURCE]][BINARIES].append(pkg_arch)
+                # There may be multiple versions of any arch:all packages
+                # (in unstable) if some architectures have out-of-date
+                # binaries.  We only want to include the package in the
+                # source -> binary mapping once. It doesn't matter which
+                # of the versions we include as only the package name and
+                # architecture are recorded.
+                if pkgarch not in sources[distribution][dpkg[SOURCE]][BINARIES]:
+                    sources[distribution][dpkg[SOURCE]][BINARIES].append(pkgarch)
             # if the source package doesn't exist, create a fake one
             else:
-                sources[distribution][dpkg[SOURCE]] = [dpkg[SOURCEVER], 'faux', [pkg + "/" + arch], None, True]
+                sources[distribution][dpkg[SOURCE]] = [dpkg[SOURCEVER], 'faux', [pkgarch], None, True]
 
             # register virtual packages and real packages that provide them
             if dpkg[PROVIDES]:
@@ -1109,6 +1115,9 @@ class Britney(object):
         if sv1 == sv2:
             return 1
 
+        if sv1 is None or sv2 is None:
+            return 0
+
         m = re.match(r'^(.*)\+b\d+$', sv1)
         if m: sv1 = m.group(1)
         m = re.match(r'^(.*)\+b\d+$', sv2)
@@ -1314,6 +1323,12 @@ class Britney(object):
                     anywrongver = True
                     excuse.addhtml("From wrong source: %s %s (%s not %s)" % (pkg_name, binary_u[VERSION], pkgsv, source_t[VERSION]))
                     break
+
+            # if the source package has been updated in unstable and this is a binary migration, skip it
+            if self.same_source(source_t[VERSION], pkgsv) and source_t[VERSION] != source_u[VERSION]:
+                anywrongver = True
+                excuse.addhtml("From wrong source: %s %s (%s not %s)" % (pkg_name, binary_u[VERSION], pkgsv, source_u[VERSION]))
+                break
 
             # find unsatisfied dependencies for the new binary package
             self.excuse_unsat_deps(pkg_name, src, arch, suite, excuse)
