@@ -216,7 +216,7 @@ from britney_util import (old_libraries_format, same_source, undo_changes,
                           read_nuninst, write_nuninst, write_heidi,
                           eval_uninst, newly_uninst)
 from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
-                   SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
+                   SOURCE, SOURCEVER, ARCHITECTURE, MULTIARCH, DEPENDS, CONFLICTS,
                    PROVIDES, RDEPENDS, RCONFLICTS)
 from autopkgtest import AutoPackageTest
 
