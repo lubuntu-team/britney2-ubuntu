@@ -246,8 +246,7 @@ class Britney(object):
         This method initializes and populates the data lists, which contain all
         the information needed by the other methods of the class.
         """
-        # britney's "day" begins at 3pm
-        self.date_now = int(((time.time() / (60*60)) - 15) / 24)
+        self.date_now = int(time.time())
 
         # parse the command line arguments
         self.__parse_arguments()
@@ -729,7 +728,8 @@ class Britney(object):
 
         <package-name> <version> <date-of-upload>
 
-        The dates are expressed as the number of days from 1970-01-01.
+        The dates are expressed as the number of seconds from the Unix epoch
+        (1970-01-01 00:00:00 UTC).
 
         The method returns a dictionary where the key is the binary package
         name and the value is a tuple with two items, the version and the date.
@@ -1367,7 +1367,7 @@ class Britney(object):
             elif not same_source(self.dates[src][0], source_u[VERSION]):
                 self.dates[src] = (source_u[VERSION], self.date_now)
 
-            days_old = self.date_now - self.dates[src][1]
+            days_old = (self.date_now - self.dates[src][1]) / 60 / 60 / 24
             min_days = self.MINDAYS[urgency]
 
             for age_days_hint in [ x for x in self.hints.search('age-days', package=src) if \
