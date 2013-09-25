@@ -210,8 +210,7 @@ class AgePolicy(BasePolicy):
         if options.default_urgency not in mindays:
             raise ValueError("Missing age-requirement for default urgency (MINDAYS_%s)" % options.default_urgency)
         self._min_days_default = mindays[options.default_urgency]
-        # britney's "day" begins at 3pm
-        self._date_now = int(((time.time() / (60*60)) - 15) / 24)
+        self._date_now = int(time.time())
         self._dates = {}
         self._urgencies = {}
 
@@ -249,7 +248,7 @@ class AgePolicy(BasePolicy):
         elif self._dates[source_name][0] != source_data_srcdist.version:
             self._dates[source_name] = (source_data_srcdist.version, self._date_now)
 
-        days_old = self._date_now - self._dates[source_name][1]
+        days_old = (self._date_now - self._dates[source_name][1]) / 60 / 60 / 24
         min_days = self._min_days[urgency]
         age_info['age-requirement'] = min_days
         age_info['current-age'] = days_old
