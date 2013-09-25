@@ -46,6 +46,7 @@ def initialize_policy(test_name, policy_class, *args, **kwargs):
         adt_success_bounty=3,
         adt_regression_penalty=False,
         adt_retry_url_mech='run_id',
+        fake_runtime=774000,
         **kwargs)
     suite_info = Suites(
         Suite(SuiteClass.TARGET_SUITE, target, os.path.join(test_dir, target), ''),
@@ -234,10 +235,6 @@ class TestAgePolicy(unittest.TestCase):
         'low': 10,
     }
 
-    @classmethod
-    def reset_age(cls, policy, effective_date=10):
-        policy._date_now = effective_date
-
     def test_missing_age_file(self):
         age_file = os.path.join(POLICY_DATA_BASE_DIR, 'age', 'missing-age-file', 'age-policy-dates')
         assert not os.path.exists(age_file)
@@ -273,7 +270,6 @@ class TestAgePolicy(unittest.TestCase):
     def test_age_old_version_aged(self):
         src_name = 'out-of-date-version'
         policy = initialize_policy('age/basic', AgePolicy, TestAgePolicy.DEFAULT_MIN_DAYS)
-        self.reset_age(policy)
         age_policy_info = apply_src_policy(policy, PolicyVerdict.REJECTED_TEMPORARILY, src_name)
         assert age_policy_info['age-requirement'] == TestAgePolicy.DEFAULT_MIN_DAYS[DEFAULT_URGENCY]
         assert age_policy_info['current-age'] == 0
@@ -281,7 +277,6 @@ class TestAgePolicy(unittest.TestCase):
     def test_age_almost_aged(self):
         src_name = 'almost-aged-properly'
         policy = initialize_policy('age/basic', AgePolicy, TestAgePolicy.DEFAULT_MIN_DAYS)
-        self.reset_age(policy)
         age_policy_info = apply_src_policy(policy, PolicyVerdict.REJECTED_TEMPORARILY, src_name)
         assert age_policy_info['age-requirement'] == TestAgePolicy.DEFAULT_MIN_DAYS[DEFAULT_URGENCY]
         assert age_policy_info['current-age'] == 4
@@ -289,7 +284,6 @@ class TestAgePolicy(unittest.TestCase):
     def test_age_aged_properly(self):
         src_name = 'aged-properly'
         policy = initialize_policy('age/basic', AgePolicy, TestAgePolicy.DEFAULT_MIN_DAYS)
-        self.reset_age(policy)
         age_policy_info = apply_src_policy(policy, PolicyVerdict.PASS, src_name)
         assert age_policy_info['age-requirement'] == TestAgePolicy.DEFAULT_MIN_DAYS[DEFAULT_URGENCY]
         assert age_policy_info['current-age'] == 5
