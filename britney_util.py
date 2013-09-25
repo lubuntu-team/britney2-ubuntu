@@ -6,6 +6,9 @@
 #                         Fabio Tranchitella <kobold@debian.org>
 # Copyright (C) 2010-2012 Adam D. Barratt <adsb@debian.org>
 # Copyright (C) 2012 Niels Thykier <niels@thykier.net>
+#
+# New portions
+# Copyright (C) 2013 Adam D. Barratt <adsb@debian.org>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,7 +26,7 @@ from functools import partial
 from itertools import chain, ifilter, ifilterfalse, izip, repeat
 import re
 import time
-
+from migrationitem import MigrationItem, UnversionnedMigrationItem
 
 from consts import (VERSION, BINARIES, PROVIDES, DEPENDS, CONFLICTS,
                     RDEPENDS, RCONFLICTS, ARCHITECTURE, SECTION)
@@ -154,12 +157,11 @@ def old_libraries_format(libs):
     """Format old libraries in a smart table"""
     libraries = {}
     for i in libs:
-        pkg, arch = i.split("/")
-        pkg = pkg[1:]
+        pkg = i.package
         if pkg in libraries:
-            libraries[pkg].append(arch)
+            libraries[pkg].append(i.architecture)
         else:
-            libraries[pkg] = [arch]
+            libraries[pkg] = [i.architecture]
     return "\n".join("  " + k + ": " + " ".join(libraries[k]) for k in libraries) + "\n"
 
 
@@ -273,7 +275,8 @@ def write_nuninst(filename, nuninst):
         # redundant.
         f.write("Built on: " + time.strftime("%Y.%m.%d %H:%M:%S %z", time.gmtime(time.time())) + "\n")
         f.write("Last update: " + time.strftime("%Y.%m.%d %H:%M:%S %z", time.gmtime(time.time())) + "\n\n")
-        f.write("".join([k + ": " + " ".join(nuninst[k]) + "\n" for k in nuninst]))
+        for k in nuninst:
+            f.write("%s: %s\n" % (k, " ".join(nuninst[k])))
 
 
 def read_nuninst(filename, architectures):
@@ -360,3 +363,13 @@ def write_heidi(filename, sources_t, packages_t,
             srcv = src[VERSION]
             srcsec = src[SECTION] or 'unknown'
             f.write('%s %s source %s\n' % (src_name, srcv, srcsec))
+
+def make_migrationitem(package, sources, VERSION=VERSION):
+    """Convert a textual package specification to a MigrationItem
+    
+    sources is a list of source packages in each suite, used to determine
+    the version which should be used for the MigrationItem.
+    """
+    
+    item = UnversionnedMigrationItem(package)
+    return MigrationItem("%s/%s" % (item.uvname, sources[item.suite][item.package][VERSION]))

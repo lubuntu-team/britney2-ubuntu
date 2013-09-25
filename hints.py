@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2011 Adam D. Barratt <adsb@debian.org>
+# Copyright (C) 2013 Adam D. Barratt <adsb@debian.org>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-from migrationitem import HintItem
+from migrationitem import MigrationItem
 
 class HintCollection(object):
     def __init__(self):
@@ -36,6 +36,8 @@ class HintCollection(object):
         self._hints.append(Hint(hint, user))
 
 class Hint(object):
+    NO_VERSION = [ 'block', 'block-all', 'block-udeb' ]
+
     def __init__(self, hint, user):
         self._hint = hint
         self._user = user
@@ -57,7 +59,16 @@ class Hint(object):
         if isinstance(self._packages, str):
             self._packages = self._packages.split(' ')
 
-        self._packages = [HintItem(x) for x in self._packages]
+        self._packages = [MigrationItem(x) for x in self._packages]
+        
+        self.check()
+        
+    def check(self):
+        for package in self.packages:
+            if self.type in self.__class__.NO_VERSION:
+                assert package.version is None, package
+            else:
+                assert package.version is not None, package
 
     def set_active(self, active):
         self._active = active
@@ -66,7 +77,12 @@ class Hint(object):
         return self._hint
 
     def __eq__(self, other):
-        return str(self) == str(other)
+        if self.type != other.type:
+            return False
+        elif self.type == 'age-days' and self.days != other.days:
+            return False
+        else:
+            return frozenset(self.packages) == frozenset(other.packages)
 
     @property
     def type(self):
