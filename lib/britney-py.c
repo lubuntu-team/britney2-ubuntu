@@ -123,7 +123,7 @@ static PyObject *dpkgpackages_add_binary(dpkgpackages *self, PyObject *args) {
         pkg->conflicts = read_dep_and(PyString_AsString(pyString));
     } else pkg->conflicts = NULL;
 
-    pyString = PyList_GetItem(value, 9);
+    pyString = PyList_GetItem(value, 8);
     if (pyString == NULL) return NULL;
     if (pyString != Py_None) {
         pkg->provides = read_packagenames(PyString_AsString(pyString));
@@ -262,7 +262,7 @@ static PyObject *build_system(PyObject *self, PyObject *args) {
             pkg->conflicts = read_dep_and(PyString_AsString(pyString));
         } else pkg->conflicts = NULL;
 
-        pyString = PyList_GetItem(value, 9);
+        pyString = PyList_GetItem(value, 8);
         if (pyString == NULL) continue;
         if (pyString != Py_None) {
             pkg->provides = read_packagenames(PyString_AsString(pyString));
