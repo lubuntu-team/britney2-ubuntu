@@ -1471,8 +1471,7 @@ class Britney(object):
                     if arch in self.options.adt_arches.split():
                         run_autopkgtest = False
 
-                if self.dates is None or self.date_now != self.dates[src][1]:
-                    excuse.addhtml(text)
+                excuse.addhtml(text)
 
         # if the source package has no binaries, set update_candidate to False to block the update
         if len(self.sources[suite][src][BINARIES]) == 0:
