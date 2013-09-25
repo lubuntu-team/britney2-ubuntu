@@ -271,14 +271,13 @@ class AgePolicy(BasePolicy):
         super().__init__('age', options, suite_info, {SuiteClass.PRIMARY_SOURCE_SUITE})
         self._min_days = mindays
         self._min_days_default = None  # initialised later
-        # britney's "day" begins at 7pm (we want aging to occur in the 22:00Z run and we run Britney 2-4 times a day)
         # NB: _date_now is used in tests
         time_now = time.time()
         if hasattr(self.options, 'fake_runtime'):
             time_now = int(self.options.fake_runtime)
             self.logger.info("overriding runtime with fake_runtime %d" % time_now)
 
-        self._date_now = int(((time_now / (60*60)) - 19) / 24)
+        self._date_now = int(time_now)
         self._dates = {}
         self._urgencies = {}
         self._default_urgency = self.options.default_urgency
@@ -336,7 +335,7 @@ class AgePolicy(BasePolicy):
         elif self._dates[source_name][0] != source_data_srcdist.version:
             self._dates[source_name] = (source_data_srcdist.version, self._date_now)
 
-        days_old = self._date_now - self._dates[source_name][1]
+        days_old = (self._date_now - self._dates[source_name][1]) / 60 / 60 / 24
         min_days = self._min_days[urgency]
         for bounty in excuse.bounty:
             if excuse.bounty[bounty]:
