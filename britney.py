@@ -737,18 +737,13 @@ class Britney(object):
         dates = {}
         filename = os.path.join(basedir, "Dates")
         self.__log("Loading upload data from %s" % filename)
-        try:
-            for line in open(filename):
-                l = line.split()
-                if len(l) != 3: continue
-                try:
-                    dates[l[0]] = (l[1], int(l[2]))
-                except ValueError:
-                    self.__log("Dates, unable to parse \"%s\"" % line,
-                               type="E")
-        except IOError:
-            self.__log("%s missing; skipping date-based processing" % filename)
-            return None
+        for line in open(filename):
+            l = line.split()
+            if len(l) != 3: continue
+            try:
+                dates[l[0]] = (l[1], int(l[2]))
+            except ValueError:
+                self.__log("Dates, unable to parse \"%s\"" % line, type="E")
         return dates
 
     def write_dates(self, basedir, dates):
@@ -1361,7 +1356,7 @@ class Britney(object):
         # permanence in unstable before updating testing; if the source package is too young,
         # the check fails and we set update_candidate to False to block the update; consider
         # the age-days hint, if specified for the package
-        if suite == 'unstable' and self.dates is not None:
+        if suite == 'unstable':
             if src not in self.dates:
                 self.dates[src] = (source_u[VERSION], self.date_now)
             elif not same_source(self.dates[src][0], source_u[VERSION]):
@@ -2514,8 +2509,7 @@ class Britney(object):
                 self.write_controlfiles(self.options.testing, 'testing')
 
             # write dates
-            if self.dates is not None:
-                self.write_dates(self.options.testing, self.dates)
+            self.write_dates(self.options.testing, self.dates)
 
             # write HeidiResult
             self.__log("Writing Heidi results to %s" % self.options.heidi_output)
