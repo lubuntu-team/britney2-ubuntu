@@ -1151,6 +1151,9 @@ class Britney(object):
 
             # retrieve the testing (if present) and unstable corresponding binary packages
             binary_t = pkg in source_t[BINARIES] and self.binaries['testing'][arch][0][pkg_name] or None
+            if hasattr(self.options, 'partial_unstable') and binary_t is not None and binary_t[ARCHITECTURE] == 'all' and pkg_name not in self.binaries[suite][arch][0]:
+                excuse.addhtml("Ignoring %s %s (from %s) as it is arch: all and not yet built in unstable" % (pkg_name, binary_t[VERSION], binary_t[SOURCEVER]))
+                continue
             binary_u = self.binaries[suite][arch][0][pkg_name]
 
             # this is the source version for the new binary package
