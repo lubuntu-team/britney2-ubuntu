@@ -1409,7 +1409,7 @@ class Britney(object):
                     base = 'testing'
                 else:
                     base = 'stable'
-                text = "Not yet built on <a href=\"https://launchpad.net/ubuntu/+source/%s/%s\" target=\"_blank\">%s</a> (relative to testing)" % (urllib.quote(src), urllib.quote(source_u[VERSION]), arch)
+                text = "Not yet built on <a href=\"https://launchpad.net/ubuntu/+source/%s/%s\" target=\"_blank\">%s</a> (relative to testing)" % (urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch)
 
                 if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
@@ -1457,10 +1457,10 @@ class Britney(object):
                     if oodtxt: oodtxt = oodtxt + "; "
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/ubuntu/+source/" \
                         "%s/%s\" target=\"_blank\">%s</a>)" % \
-                        (", ".join(sorted(oodbins[v])), urllib.quote(src), urllib.quote(v), v)
+                        (", ".join(sorted(oodbins[v])), urllib.quote(src.split("/")[0]), urllib.quote(v), v)
                 text = "out of date on <a href=\"https://launchpad.net/ubuntu/+source/" \
                     "%s/%s\" target=\"_blank\">%s</a>: %s" % \
-                    (urllib.quote(src), urllib.quote(source_u[VERSION]), arch, oodtxt)
+                    (urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
 
                 if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)

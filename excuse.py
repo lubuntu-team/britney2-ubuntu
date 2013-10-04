@@ -121,7 +121,7 @@ class Excuse(object):
 
     def html(self):
         """Render the excuse in HTML"""
-        lp_pkg = "https://launchpad.net/ubuntu/+source/%s" % self.name
+        lp_pkg = "https://launchpad.net/ubuntu/+source/%s" % self.name.split("/")[0]
         if self.ver[0] == "-":
             lp_old = self.ver[0]
         else:
