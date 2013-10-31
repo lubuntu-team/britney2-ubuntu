@@ -62,6 +62,9 @@ Other than source and binary packages, Britney loads the following data:
   * Hints, which contains lists of commands which modify the standard behaviour
     of Britney (see Britney.read_hints).
 
+  * Blocks, which contains user-supplied blocks read from Launchpad bugs
+    (see Britney.read_blocks).
+
 For a more detailed explanation about the format of these files, please read
 the documentation of the related methods. The exact meaning of them will be
 instead explained in the chapter "Excuses Generation".
@@ -332,6 +335,7 @@ class Britney(object):
         self.dates = self.read_dates(self.options.testing)
         self.urgencies = self.read_urgencies(self.options.testing)
         self.hints = self.read_hints(self.options.unstable)
+        self.blocks = self.read_blocks(self.options.unstable)
         self.excuses = []
         self.dependencies = {}
 
@@ -888,6 +892,32 @@ class Britney(object):
 
         return hints
 
+    def read_blocks(self, basedir):
+        """Read user-supplied blocks from the specified directory.
+
+        The file contains rows with the format:
+
+        <source-name> <bug> <date>
+
+        The dates are expressed as the number of seconds from the Unix epoch
+        (1970-01-01 00:00:00 UTC).
+
+        The method returns a dictionary where the key is the source package
+        name and the value is a list of (bug, date) tuples.
+        """
+        blocks = {}
+        filename = os.path.join(basedir, "Blocks")
+        self.__log("Loading user-supplied block data from %s" % filename)
+        for line in open(filename):
+            l = line.split()
+            if len(l) != 3: continue
+            try:
+                dates.setdefault(l[0], [])
+                dates[l[0]].append((l[1], int(l[2])))
+            except ValueError:
+                self.__log("Blocks, unable to parse \"%s\"" % line, type="E")
+        return blocks
+
 
     def write_delta(self, filename):
         """Write the output delta
@@ -1353,6 +1383,12 @@ class Britney(object):
                                    (block_cmd, blocked[block_cmd].user))
                 else:
                     excuse.addhtml("NEEDS APPROVAL BY RM")
+                update_candidate = False
+
+        if src in self.blocks:
+            for user_block in self.blocks[src]:
+                excuse.addhtml("Not touching package as requested in <a href=\"https://launchpad.net/bugs/%s\">bug %s</a> on %s" %
+                               (user_block[1], user_block[1], time.asctime(time.gmtime(user_block[2]))))
                 update_candidate = False
 
         # if the suite is unstable, then we have to check the urgency and the minimum days of
