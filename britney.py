@@ -1388,7 +1388,7 @@ class Britney(object):
         if src in self.blocks:
             for user_block in self.blocks[src]:
                 excuse.addhtml("Not touching package as requested in <a href=\"https://launchpad.net/bugs/%s\">bug %s</a> on %s" %
-                               (user_block[1], user_block[1], time.asctime(time.gmtime(user_block[2]))))
+                               (user_block[0], user_block[0], time.asctime(time.gmtime(user_block[1]))))
                 update_candidate = False
 
         # if the suite is unstable, then we have to check the urgency and the minimum days of
