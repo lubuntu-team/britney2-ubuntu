@@ -1684,8 +1684,10 @@ class Britney(object):
                 self, self.options.adt_series, debug=adt_debug)
             autopkgtest_packages = []
             autopkgtest_excuses = []
+            autopkgtest_excludes = []
             for e in self.excuses:
                 if not e.run_autopkgtest:
+                    autopkgtest_excludes.append(e.name)
                     continue
                 # skip removals, binary-only candidates, and proposed-updates
                 if e.name.startswith("-") or "/" in e.name or "_" in e.name:
@@ -1694,7 +1696,7 @@ class Britney(object):
                     continue
                 autopkgtest_excuses.append(e)
                 autopkgtest_packages.append((e.name, e.ver[1]))
-            autopkgtest.request(autopkgtest_packages)
+            autopkgtest.request(autopkgtest_packages, autopkgtest_excludes)
             if not self.options.dry_run:
                 autopkgtest.submit()
                 autopkgtest.collect()

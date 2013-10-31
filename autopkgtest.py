@@ -128,7 +128,10 @@ class AutoPackageTest(object):
         command.extend(args)
         subprocess.check_call(command)
 
-    def request(self, packages):
+    def request(self, packages, excludes=None):
+        if excludes is None:
+            excludes = []
+
         self._ensure_rc_file()
         request_path = self._request_path
         if os.path.exists(request_path):
@@ -140,6 +143,22 @@ class AutoPackageTest(object):
                 print("%s %s" % (src, ver), file=request_file)
             request_file.flush()
             self._adt_britney("request", "-O", request_path, request_file.name)
+
+        # Remove packages that have been identified as invalid candidates for
+        # testing from the request file i.e run_autopkgtest = False
+        with open(request_path, 'r') as request_file:
+            lines = request_file.readlines()
+        with open(request_path, 'w') as request_file:
+            for line in lines:
+                src = line.split()[0]
+                if not src in excludes:
+                    request_file.write(line)
+                else:
+                    if self.britney.options.verbose:
+                        print("I: [%s] - Requested autopkgtest for %s but "
+                              "run_autopkgtest set to False" %
+                              (time.asctime(), src))
+
         for linebits in self._parse(request_path):
             # Make sure that there's an entry in pkgcauses for each new
             # request, so that results() gives useful information without
