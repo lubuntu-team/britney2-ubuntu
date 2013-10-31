@@ -912,8 +912,8 @@ class Britney(object):
             l = line.split()
             if len(l) != 3: continue
             try:
-                dates.setdefault(l[0], [])
-                dates[l[0]].append((l[1], int(l[2])))
+                blocks.setdefault(l[0], [])
+                blocks[l[0]].append((l[1], int(l[2])))
             except ValueError:
                 self.__log("Blocks, unable to parse \"%s\"" % line, type="E")
         return blocks
