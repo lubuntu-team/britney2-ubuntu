@@ -1921,28 +1921,6 @@ class AT(TestAutopkgtestBase):
         )
 
     ################################################################
-    # Tests for non-hint policies (Ubuntu only)
-    ################################################################
-
-# #    def test_lp_bug_block(self):
-# #        self.data.add_default_packages(darkgreen=False)
-# #
-# #        with open(os.path.join(self.data.path, 'data/unstable/Blocks'), 'w') as f:
-# #            f.write('darkgreen 12345 1471505000\ndarkgreen 98765 1471500000\n')
-# #
-# #        exc = self.run_it(
-# #            [('darkgreen', {'Version': '2'}, 'autopkgtest')],
-# #            {'darkgreen': (False, {'darkgreen': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}})},
-# #            {'darkgreen': [('reason', 'block'),
-# #                           ('excuses', 'Not touching package as requested in <a href="https://launchpad.net/bugs/12345">bug 12345</a> on Thu Aug 18 07:23:20 2016'),
-# #                           ('is-candidate', False),
-# #                           ]
-# #            }
-# #        )[1]
-# #        self.assertEqual(exc['darkgreen']['policy_info']['block-bugs'],
-# #                         {'12345': 1471505000, '98765': 1471500000})
-
-    ################################################################
     # Kernel related tests
     ################################################################
 
