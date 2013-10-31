@@ -62,6 +62,9 @@ Other than source and binary packages, Britney loads the following data:
   * Hints, which contains lists of commands which modify the standard behaviour
     of Britney (see Britney.read_hints).
 
+  * Blocks, which contains user-supplied blocks read from Launchpad bugs
+    (see LPBlockBugPolicy).
+
 For a more detailed explanation about the format of these files, please read
 the documentation of the related methods. The exact meaning of them will be
 instead explained in the chapter "Excuses Generation".
@@ -209,7 +212,7 @@ from britney_util import (old_libraries_format, undo_changes,
                           create_provides_map,
                           ensuredir,
                           )
-from policies.policy import AgePolicy, RCBugPolicy, PolicyVerdict
+from policies.policy import AgePolicy, RCBugPolicy, LPBlockBugPolicy, PolicyVerdict
 
 # Check the "check_field_name" reflection before removing an import here.
 from consts import (SOURCE, SOURCEVER, ARCHITECTURE, CONFLICTS, DEPENDS,
@@ -528,6 +531,7 @@ class Britney(object):
 
         self.policies.append(AgePolicy(self.options, MINDAYS))
         self.policies.append(RCBugPolicy(self.options))
+        self.policies.append(LPBlockBugPolicy(self.options))
 
         for policy in self.policies:
             policy.register_hints(self._hint_parser)
@@ -1672,6 +1676,12 @@ class Britney(object):
             if new_bugs and len(old_bugs) > len(new_bugs):
                 excuse.addhtml("%s introduces new bugs, so still ignored (even "
                                "though it fixes more than it introduces, whine at debian-release)" % src)
+
+        if 'block-bugs' in policy_info:
+            for bug, date in policy_info['block-bugs'].items():
+                excuse.addhtml("Not touching package as requested in <a href=\"https://launchpad.net/bugs/%s\">bug %s</a> on %s" %
+                               (bug, bug, time.asctime(time.gmtime(date))))
+                excuse.addreason("block")
 
         all_binaries = self.all_binaries
 
