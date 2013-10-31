@@ -151,7 +151,7 @@ class AutoPackageTest(object):
         with open(request_path, 'w') as request_file:
             for line in lines:
                 src = line.split()[0]
-                if not src in excludes:
+                if src not in excludes:
                     request_file.write(line)
                 else:
                     if self.britney.options.verbose:
