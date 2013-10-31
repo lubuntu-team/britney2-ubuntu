@@ -62,6 +62,9 @@ Other than source and binary packages, Britney loads the following data:
   * Hints, which contains lists of commands which modify the standard behaviour
     of Britney (see Britney.read_hints).
 
+  * Blocks, which contains user-supplied blocks read from Launchpad bugs
+    (see LPBlockBugPolicy).
+
 For a more detailed explanation about the format of these files, please read
 the documentation of the related methods. The exact meaning of them will be
 instead explained in the chapter "Excuses Generation".
@@ -210,6 +213,7 @@ from britney2.policies.policy import (AgePolicy,
                                       BuiltUsingPolicy,
                                       BuiltOnBuilddPolicy,
                                       ImplicitDependencyPolicy,
+                                      LPBlockBugPolicy,
                                       )
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.utils import (log_and_format_old_libraries,
@@ -517,6 +521,7 @@ class Britney(object):
         self._policy_engine.add_policy(ImplicitDependencyPolicy(self.options, self.suite_info))
         if getattr(self.options, 'check_buildd', 'no') == 'yes':
             self._policy_engine.add_policy(BuiltOnBuilddPolicy(self.options, self.suite_info))
+        self._policy_engine.add_policy(LPBlockBugPolicy(self.options, self.suite_info))
 
     @property
     def hints(self):
