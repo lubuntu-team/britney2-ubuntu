@@ -62,6 +62,9 @@ Other than source and binary packages, Britney loads the following data:
   * Hints, which contains lists of commands which modify the standard behaviour
     of Britney (see Britney.read_hints).
 
+  * Blocks, which contains user-supplied blocks read from Launchpad bugs
+    (see LPBlockBugPolicy).
+
 For a more detailed explanation about the format of these files, please read
 the documentation of the related methods. The exact meaning of them will be
 instead explained in the chapter "Excuses Generation".
@@ -199,6 +202,7 @@ from britney2.hints import HintParser
 from britney2.installability.builder import build_installability_tester, ma_parse_depends
 from britney2.migrationitem import MigrationItem
 from britney2.policies.policy import AgePolicy, RCBugPolicy, PiupartsPolicy, PolicyVerdict
+from britney2.policies.policy import LPBlockBugPolicy
 from britney2.utils import (old_libraries_format, undo_changes,
                             compute_reverse_tree, possibly_compressed,
                             read_nuninst, write_nuninst, write_heidi,
@@ -526,6 +530,7 @@ class Britney(object):
         self.policies.append(AgePolicy(self.options, self.suite_info, MINDAYS))
         self.policies.append(RCBugPolicy(self.options, self.suite_info))
         self.policies.append(PiupartsPolicy(self.options, self.suite_info))
+        self.policies.append(LPBlockBugPolicy(self.options, self.suite_info))
 
         for policy in self.policies:
             policy.register_hints(self._hint_parser)

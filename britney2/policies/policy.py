@@ -654,3 +654,50 @@ class PiupartsPolicy(BasePolicy):
             summary[source] = (state, url)
 
         return summary
+
+
+class LPBlockBugPolicy(BasePolicy):
+    """block-proposed Launchpad bug policy for source migrations
+
+    This policy will read an user-supplied "Blocks" file from the unstable
+    directory (provided by an external script) with rows of the following
+    format:
+
+        <source-name> <bug> <date>
+
+    The dates are expressed as the number of seconds from the Unix epoch
+    (1970-01-01 00:00:00 UTC).
+    """
+    def __init__(self, options, suite_info):
+        super().__init__('block-bugs', options, suite_info, {'unstable'})
+
+    def initialise(self, britney):
+        super().initialise(britney)
+        self.blocks = {}  # srcpkg -> [(bug, date), ...]
+
+        filename = os.path.join(self.options.unstable, "Blocks")
+        self.log("Loading user-supplied block data from %s" % filename)
+        for line in open(filename):
+            l = line.split()
+            if len(l) != 3:
+                self.log("Blocks, ignoring malformed line %s" % line, type='W')
+                continue
+            try:
+                self.blocks.setdefault(l[0], [])
+                self.blocks[l[0]].append((l[1], int(l[2])))
+            except ValueError:
+                self.log("Blocks, unable to parse \"%s\"" % line, type='E')
+
+    def apply_policy_impl(self, block_bugs_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
+        try:
+            blocks = self.blocks[source_name]
+        except KeyError:
+            return PolicyVerdict.PASS
+
+        for bug, date in blocks:
+            block_bugs_info[bug] = date
+            excuse.addhtml("Not touching package as requested in <a href=\"https://launchpad.net/bugs/%s\">bug %s</a> on %s" %
+                           (bug, bug, time.asctime(time.gmtime(date))))
+        excuse.addreason('block')
+
+        return PolicyVerdict.REJECTED_PERMANENTLY
