@@ -1740,7 +1740,7 @@ class Britney(object):
                 "https://jenkins.qa.ubuntu.com/view/%s/view/AutoPkgTest/job" %
                 self.options.adt_series.title())
             jenkins_private = (
-                "http://10.98.0.1:8080/view/%s/view/AutoPkgTest/job" %
+                "http://d-jenkins.ubuntu-ci:8080/view/%s/view/AutoPkgTest/job" %
                 self.options.adt_series.title())
             for e in autopkgtest_excuses:
                 adtpass = True
