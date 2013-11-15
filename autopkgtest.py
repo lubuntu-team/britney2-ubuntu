@@ -60,7 +60,7 @@ class AutoPackageTest(object):
                 aptroot: ~/.chdist/%s-proposed-amd64/
                 apturi: file:%s/mirror/ubuntu
                 components: main restricted universe multiverse
-                rsync_host: rsync://10.189.74.2/adt/
+                rsync_host: rsync://tachash.ubuntu-ci/adt/
                 datadir: ~/proposed-migration/autopkgtest/data""" %
                 (self.series, self.series, home)), file=rc_file)
 
