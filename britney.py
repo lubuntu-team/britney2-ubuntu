@@ -2408,7 +2408,7 @@ class Britney(object):
 
             if not force:
                 self.output_write(eval_uninst(self.options.architectures,
-                                              newly_uninst(nuninst_start, nuninst_end)) + "\n")
+                                              newly_uninst(nuninst_start, nuninst_end)))
 
         if force or self.is_nuninst_asgood_generous(self.nuninst_orig, nuninst_end):
             # Result accepted either by force or by being better than the original result.
@@ -2424,7 +2424,7 @@ class Britney(object):
             if force:
                 self.output_write("force breaks:\n")
                 self.output_write(eval_uninst(self.options.architectures,
-                                              newly_uninst(nuninst_start, nuninst_end)) + "\n")
+                                              newly_uninst(nuninst_start, nuninst_end)))
             self.output_write("SUCCESS (%d/%d)\n" % (len(actions or self.upgrade_me), len(extra)))
             self.nuninst_orig = nuninst_end
             self.all_selected += [x.uvname for x in selected]
@@ -2440,6 +2440,7 @@ class Britney(object):
             lundo.reverse()
 
             undo_changes(lundo, self.systems, self.sources, self.binaries)
+        self.output_write("\n")
 
 
 
