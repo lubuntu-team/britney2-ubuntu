@@ -129,7 +129,9 @@ class Test(unittest.TestCase):
         self.data.add('libgreen1', False, {'Source': 'green',
                                            'Depends': 'libc6 (>= 0.9)'})
         self.data.add('green', False, {'Depends': 'libc6 (>= 0.9), libgreen1',
-                                       'Conflicts': 'green'})
+                                       'Conflicts': 'blue'})
+        self.data.add('lightgreen', False, {'Depends': 'libgreen1'})
+        self.data.add('darkgreen', False, {'Depends': 'libgreen1'})
         self.data.add('blue', False, {'Depends': 'libc6 (>= 0.9)',
                                       'Conflicts': 'green'})
         self.data.add('justdata', False, {'Architecture': 'all'})
@@ -260,6 +262,45 @@ args.func()
             True,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              '<li>autopkgtest for green 1.1~beta: PASS'])
+
+    def test_multi_rdepends_with_tests(self):
+        '''Multiple reverse dependencies with tests'''
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
+            'lightgreen 1 PASS green 2\n'
+            'darkgreen 1 RUNNING green 2\n',
+            False,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             '<li>autopkgtest for lightgreen 1: PASS',
+             '<li>autopkgtest for darkgreen 1: RUNNING'])
+
+    def test_multi_rdepends_with_some_tests(self):
+        '''Multiple reverse dependencies with some tests'''
+
+        # add a third reverse dependency to libgreen1 which does not have a test
+        self.data.add('mint', False, {'Depends': 'libgreen1'})
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
+            'lightgreen 1 RUNNING green 2\n'
+            'darkgreen 1 RUNNING green 2\n',
+            False,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             '<li>autopkgtest for lightgreen 1: RUNNING',
+             '<li>autopkgtest for darkgreen 1: RUNNING'])
+
+    def test_binary_from_new_source_package(self):
+        '''building an existing binary for a new source package'''
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'})],
+            'lightgreen 1 PASS green 2\n'
+            'darkgreen 1 RUNNING green 2\n',
+            False,
+            [r'\bnewgreen\b.*>- to .*>2<',
+             '<li>autopkgtest for lightgreen 1: PASS',
+             '<li>autopkgtest for darkgreen 1: RUNNING'])
 
     def do_test(self, unstable_add, adt_request, considered, expect=None,
                 no_expect=None):
