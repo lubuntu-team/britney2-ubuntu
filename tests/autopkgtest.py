@@ -199,54 +199,88 @@ args.func()
 ''' % {'py': sys.executable, 'path': self.data.path, 'rq': request})
 
     def run_britney(self, args=[]):
-        '''Run britney and return (exit, out, err)'''
+        '''Run britney.
 
+        Assert that it succeeds and does not produce anything on stderr.
+        Return generated excuses.html output.
+        '''
         britney = subprocess.Popen([self.britney, '-c', self.britney_conf],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
                                    cwd=self.data.path,
                                    universal_newlines=True)
         (out, err) = britney.communicate()
-        return (britney.returncode, out, err)
+        self.assertEqual(britney.returncode, 0, out + err)
+        self.assertEqual(err, '')
+
+        with open(os.path.join(self.data.path, 'output', 'excuses.html')) as f:
+            excuses = f.read()
+
+        return excuses
 
     def test_no_request_for_uninstallable(self):
         '''Does not request a test for an uninstallable package'''
 
-        # uninstallable unstable version
-        self.data.add('green', True,
-                      {'Version': '1.1~beta',
-                       'Depends': 'libc6 (>= 0.9), libgreen1 (>= 2)'})
+        self.do_test(
+            # uninstallable unstable version
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1 (>= 2)'})],
+            'green 1.1~beta RUNNING green 1.1~beta\n',
+            False,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             'green/amd64 unsatisfiable Depends: libgreen1 \(>= 2\)'],
+            # autopkgtest should not be triggered for uninstallable pkg
+            ['autopkgtest'])
 
-        self.make_adt_britney('green 1.1~beta FAIL green 1.1~beta\n')
+    def test_request_for_installable_running(self):
+        '''Requests a test for an installable package, test still running'''
 
-        (c, o, e) = self.run_britney()
-        self.assertEqual(e, '', e)
-        self.assertEqual(c, 0, o + e)
+        self.do_test(
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
+            'green 1.1~beta RUNNING green 1.1~beta\n',
+            False,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>autopkgtest for green 1.1~beta: RUNNING'])
 
-        with open(os.path.join(self.data.path, 'output', 'excuses.html')) as f:
-            excuses = f.read()
-        self.assertIn('green/amd64 unsatisfiable Depends: libgreen1 (>= 2)', excuses)
-        # does not request autopkgtest for uninstallable package
-        self.assertNotIn('autopkgtest', excuses)
+    def test_request_for_installable_fail(self):
+        '''Requests a test for an installable package, test fail'''
 
-    def test_request_for_installable(self):
-        '''Requests a test for an installable package'''
+        self.do_test(
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
+            'green 1.1~beta FAIL green 1.1~beta\n',
+            False,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>autopkgtest for green 1.1~beta: FAIL'])
 
-        # installable unstable version
-        self.data.add('green', True,
-                      {'Version': '1.1~beta',
-                       'Depends': 'libc6 (>= 0.9), libgreen1'})
+    def test_request_for_installable_pass(self):
+        '''Requests a test for an installable package, test pass'''
 
-        self.make_adt_britney('green 1.1~beta RUNNING green 1.1~beta\n')
+        self.do_test(
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
+            'green 1.1~beta PASS green 1.1~beta\n',
+            True,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>autopkgtest for green 1.1~beta: PASS'])
 
-        (c, o, e) = self.run_britney()
-        self.assertEqual(c, 0, o + e)
-        self.assertEqual(e, '')
+    def do_test(self, unstable_add, adt_request, considered, expect=None,
+                no_expect=None):
+        for (pkg, fields) in unstable_add:
+            self.data.add(pkg, True, fields)
 
-        with open(os.path.join(self.data.path, 'output', 'excuses.html')) as f:
-            excuses = f.read()
-        self.assertRegexpMatches(excuses, r'\bgreen\b.*>1</a> to .*>1.1~beta<')
-        self.assertIn('<li>autopkgtest for green 1.1~beta: RUNNING', excuses)
+        self.make_adt_britney(adt_request)
+
+        excuses = self.run_britney()
+        if considered:
+            self.assertIn('Valid candidate', excuses)
+        else:
+            self.assertIn('Not considered', excuses)
+
+        if expect:
+            for re in expect:
+                self.assertRegexpMatches(excuses, re)
+        if no_expect:
+            for re in no_expect:
+                self.assertNotRegexpMatches(excuses, re)
+
 
     def shell(self):
         # uninstallable unstable version
