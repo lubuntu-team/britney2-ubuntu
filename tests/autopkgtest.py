@@ -161,7 +161,7 @@ def request():
     if args.req:
         shutil.copy(args.req, '%(path)s/adt-britney.requestarg')
     with open(args.output, 'w') as f:
-        f.write("""%(rq)s""".replace('PASS', 'NEW').replace('FAIL', 'NEW'))
+        f.write("""%(rq)s""".replace('PASS', 'NEW').replace('FAIL', 'NEW').replace('RUNNING', 'NEW'))
 
 def submit():
     with open(args.req, 'w') as f:
