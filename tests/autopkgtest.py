@@ -202,7 +202,7 @@ args.func()
         '''Run britney.
 
         Assert that it succeeds and does not produce anything on stderr.
-        Return generated excuses.html output.
+        Return (excuses.html, britney_out).
         '''
         britney = subprocess.Popen([self.britney, '-c', self.britney_conf],
                                    stdout=subprocess.PIPE,
@@ -216,7 +216,7 @@ args.func()
         with open(os.path.join(self.data.path, 'output', 'excuses.html')) as f:
             excuses = f.read()
 
-        return excuses
+        return (excuses, out)
 
     def test_no_request_for_uninstallable(self):
         '''Does not request a test for an uninstallable package'''
@@ -268,7 +268,11 @@ args.func()
 
         self.make_adt_britney(adt_request)
 
-        excuses = self.run_britney()
+        (excuses, out) = self.run_britney()
+        #print('-------\nexcuses: %s\n-----' % excuses)
+        #print('-------\nout: %s\n-----' % out)
+        #print('run:\n%s -c %s\n' % (self.britney, self.britney_conf))
+        #subprocess.call(['bash', '-i'], cwd=self.data.path)
         if considered:
             self.assertIn('Valid candidate', excuses)
         else:
