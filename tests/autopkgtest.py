@@ -302,6 +302,17 @@ args.func()
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: RUNNING'])
 
+    def test_result_from_older_version(self):
+        '''test result from older version than the uploaded one'''
+
+        self.do_test(
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
+            'green 1.1~alpha PASS green 1.1~beta\n',
+            False,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             # it's not entirely clear what precisely it should say here
+             '<li>autopkgtest for green 1.1~beta: RUNNING'])
+
     def do_test(self, unstable_add, adt_request, considered, expect=None,
                 no_expect=None):
         for (pkg, fields) in unstable_add:
