@@ -266,8 +266,8 @@ args.func()
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              '<li>autopkgtest for green 1.1~beta: PASS'])
 
-    def test_multi_rdepends_with_tests(self):
-        '''Multiple reverse dependencies with tests'''
+    def test_multi_rdepends_with_tests_running(self):
+        '''Multiple reverse dependencies with tests (still running)'''
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
@@ -278,8 +278,32 @@ args.func()
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: RUNNING'])
 
-    def test_multi_rdepends_with_some_tests(self):
-        '''Multiple reverse dependencies with some tests'''
+    def test_multi_rdepends_with_tests_fail(self):
+        '''Multiple reverse dependencies with tests (fail)'''
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
+            'lightgreen 1 PASS green 2\n'
+            'darkgreen 1 FAIL green 2\n',
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             '<li>autopkgtest for lightgreen 1: PASS',
+             '<li>autopkgtest for darkgreen 1: FAIL'])
+
+    def test_multi_rdepends_with_tests_pass(self):
+        '''Multiple reverse dependencies with tests (pass)'''
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
+            'lightgreen 1 PASS green 2\n'
+            'darkgreen 1 PASS green 2\n',
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             '<li>autopkgtest for lightgreen 1: PASS',
+             '<li>autopkgtest for darkgreen 1: PASS'])
+
+    def test_multi_rdepends_with_some_tests_running(self):
+        '''Multiple reverse dependencies with some tests (running)'''
 
         # add a third reverse dependency to libgreen1 which does not have a test
         self.data.add('mint', False, {'Depends': 'libgreen1'})
@@ -293,8 +317,38 @@ args.func()
              '<li>autopkgtest for lightgreen 1: RUNNING',
              '<li>autopkgtest for darkgreen 1: RUNNING'])
 
-    def test_binary_from_new_source_package(self):
-        '''building an existing binary for a new source package'''
+    def test_multi_rdepends_with_some_tests_fail(self):
+        '''Multiple reverse dependencies with some tests (fail)'''
+
+        # add a third reverse dependency to libgreen1 which does not have a test
+        self.data.add('mint', False, {'Depends': 'libgreen1'})
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
+            'lightgreen 1 PASS green 2\n'
+            'darkgreen 1 FAIL green 2\n',
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             '<li>autopkgtest for lightgreen 1: PASS',
+             '<li>autopkgtest for darkgreen 1: FAIL'])
+
+    def test_multi_rdepends_with_some_tests_pass(self):
+        '''Multiple reverse dependencies with some tests (pass)'''
+
+        # add a third reverse dependency to libgreen1 which does not have a test
+        self.data.add('mint', False, {'Depends': 'libgreen1'})
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
+            'lightgreen 1 PASS green 2\n'
+            'darkgreen 1 PASS green 2\n',
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             '<li>autopkgtest for lightgreen 1: PASS',
+             '<li>autopkgtest for darkgreen 1: PASS'])
+
+    def test_binary_from_new_source_package_running(self):
+        '''building an existing binary for a new source package (running)'''
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'})],
@@ -304,6 +358,30 @@ args.func()
             [r'\bnewgreen\b.*>- to .*>2<',
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: RUNNING'])
+
+    def test_binary_from_new_source_package_fail(self):
+        '''building an existing binary for a new source package (fail)'''
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'})],
+            'lightgreen 1 PASS green 2\n'
+            'darkgreen 1 FAIL green 2\n',
+            NOT_CONSIDERED,
+            [r'\bnewgreen\b.*>- to .*>2<',
+             '<li>autopkgtest for lightgreen 1: PASS',
+             '<li>autopkgtest for darkgreen 1: FAIL'])
+
+    def test_binary_from_new_source_package_pass(self):
+        '''building an existing binary for a new source package (pass)'''
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'})],
+            'lightgreen 1 PASS green 2\n'
+            'darkgreen 1 PASS green 2\n',
+            VALID_CANDIDATE,
+            [r'\bnewgreen\b.*>- to .*>2<',
+             '<li>autopkgtest for lightgreen 1: PASS',
+             '<li>autopkgtest for darkgreen 1: PASS'])
 
     def test_result_from_older_version(self):
         '''test result from older version than the uploaded one'''
