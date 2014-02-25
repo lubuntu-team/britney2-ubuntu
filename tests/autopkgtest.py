@@ -17,6 +17,9 @@ architectures = ['amd64', 'arm64', 'armhf', 'i386', 'powerpc', 'ppc64el']
 
 my_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+NOT_CONSIDERED = False
+VALID_CANDIDATE = True
+
 
 class TestData:
     def __init__(self):
@@ -227,7 +230,7 @@ args.func()
             # uninstallable unstable version
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1 (>= 2)'})],
             'green 1.1~beta RUNNING green 1.1~beta\n',
-            False,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              'green/amd64 unsatisfiable Depends: libgreen1 \(>= 2\)'],
             # autopkgtest should not be triggered for uninstallable pkg
@@ -239,7 +242,7 @@ args.func()
         self.do_test(
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
             'green 1.1~beta RUNNING green 1.1~beta\n',
-            False,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              '<li>autopkgtest for green 1.1~beta: RUNNING'])
 
@@ -249,7 +252,7 @@ args.func()
         self.do_test(
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
             'green 1.1~beta FAIL green 1.1~beta\n',
-            False,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              '<li>autopkgtest for green 1.1~beta: FAIL'])
 
@@ -259,7 +262,7 @@ args.func()
         self.do_test(
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
             'green 1.1~beta PASS green 1.1~beta\n',
-            True,
+            VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              '<li>autopkgtest for green 1.1~beta: PASS'])
 
@@ -270,7 +273,7 @@ args.func()
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
             'lightgreen 1 PASS green 2\n'
             'darkgreen 1 RUNNING green 2\n',
-            False,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: RUNNING'])
@@ -285,7 +288,7 @@ args.func()
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'})],
             'lightgreen 1 RUNNING green 2\n'
             'darkgreen 1 RUNNING green 2\n',
-            False,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              '<li>autopkgtest for lightgreen 1: RUNNING',
              '<li>autopkgtest for darkgreen 1: RUNNING'])
@@ -297,7 +300,7 @@ args.func()
             [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'})],
             'lightgreen 1 PASS green 2\n'
             'darkgreen 1 RUNNING green 2\n',
-            False,
+            NOT_CONSIDERED,
             [r'\bnewgreen\b.*>- to .*>2<',
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: RUNNING'])
@@ -308,7 +311,7 @@ args.func()
         self.do_test(
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
             'green 1.1~alpha PASS green 1.1~beta\n',
-            False,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              # it's not entirely clear what precisely it should say here
              '<li>autopkgtest for green 1.1~beta: RUNNING'])
@@ -336,7 +339,6 @@ args.func()
         if no_expect:
             for re in no_expect:
                 self.assertNotRegexpMatches(excuses, re)
-
 
     def shell(self):
         # uninstallable unstable version
