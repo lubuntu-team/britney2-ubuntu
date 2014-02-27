@@ -182,6 +182,7 @@ p.add_argument('-c', '--config')
 p.add_argument('-a', '--arch')
 p.add_argument('-r', '--release')
 p.add_argument('-P', '--use-proposed', action='store_true')
+p.add_argument('-d', '--debug', action='store_true')
 p.add_argument('-U', '--no-update', action='store_true')
 sp = p.add_subparsers()
 
