@@ -210,7 +210,7 @@ args.func()
         Assert that it succeeds and does not produce anything on stderr.
         Return (excuses.html, britney_out).
         '''
-        britney = subprocess.Popen([self.britney, '-c', self.britney_conf],
+        britney = subprocess.Popen([self.britney, '-v', '-c', self.britney_conf],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
                                    cwd=self.data.path,
