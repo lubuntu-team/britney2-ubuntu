@@ -1087,6 +1087,7 @@ class Britney(object):
 
             # if no package can satisfy the dependency, add this information to the excuse
             if len(packages) == 0:
+                excuse.invalidate_dep(block_txt.strip())
                 excuse.addhtml("%s/%s unsatisfiable Depends: %s" % (pkg, arch, block_txt.strip()))
                 continue
 
@@ -1506,6 +1507,11 @@ class Britney(object):
                         run_autopkgtest = False
 
                 excuse.addhtml(text)
+
+        # if the source has uninstallable dependencies, block the update
+        if excuse.invalid_deps:
+            update_candidate = False
+            run_autopkgtest = False
 
         # if the source package has no binaries, set update_candidate to False to block the update
         if len(self.sources[suite][src][BINARIES]) == 0:
