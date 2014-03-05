@@ -1217,7 +1217,7 @@ class Britney(object):
 
             # find unsatisfied dependencies for the new binary package
             if not self.excuse_unsat_deps(pkg_name, src, arch, suite, excuse):
-                unsat_deps = False
+                unsat_deps = True
 
             # if the binary is not present in testing, then it is a new binary;
             # in this case, there is something worth doing
