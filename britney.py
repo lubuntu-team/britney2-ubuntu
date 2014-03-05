@@ -1067,6 +1067,8 @@ class Britney(object):
             return
         deps = binary_u[DEPENDS]
 
+        all_satisfiable = True
+
         # for every dependency block (formed as conjunction of disjunction)
         for block, block_txt in zip(parse_depends(deps, False), deps.split(',')):
             # if the block is satisfied in testing, then skip the block
@@ -1088,6 +1090,7 @@ class Britney(object):
             # if no package can satisfy the dependency, add this information to the excuse
             if len(packages) == 0:
                 excuse.addhtml("%s/%s unsatisfiable Depends: %s" % (pkg, arch, block_txt.strip()))
+                all_satisfiable = False
                 continue
 
             # for the solving packages, update the excuse to add the dependencies
@@ -1099,6 +1102,8 @@ class Britney(object):
                         excuse.add_dep(p, arch)
                 else:
                     excuse.add_break_dep(p, arch)
+
+        return all_satisfiable
 
     # Package analysis methods
     # ------------------------
@@ -1174,6 +1179,7 @@ class Britney(object):
         # the starting point is that there is nothing wrong and nothing worth doing
         anywrongver = False
         anyworthdoing = False
+        unsat_deps = False
 
         # for every binary package produced by this source in unstable for this architecture
         for pkg in sorted(ifilter(lambda x: x.endswith("/" + arch), source_u[BINARIES]), key=lambda x: x.split("/")[0]):
@@ -1210,7 +1216,8 @@ class Britney(object):
                 break
 
             # find unsatisfied dependencies for the new binary package
-            self.excuse_unsat_deps(pkg_name, src, arch, suite, excuse)
+            if not self.excuse_unsat_deps(pkg_name, src, arch, suite, excuse):
+                unsat_deps = False
 
             # if the binary is not present in testing, then it is a new binary;
             # in this case, there is something worth doing
@@ -1270,7 +1277,7 @@ class Britney(object):
                                 anyworthdoing = True
 
         # if there is nothing wrong and there is something worth doing, this is a valid candidate
-        if not anywrongver and anyworthdoing:
+        if not anywrongver and not unsat_deps and anyworthdoing:
             excuse.is_valid = True
             self.excuses.append(excuse)
             return True
@@ -1482,7 +1489,10 @@ class Britney(object):
                 # if the package is architecture-dependent or the current arch is `nobreakall'
                 # find unsatisfied dependencies for the binary package
                 if binary_u[ARCHITECTURE] != 'all' or arch in self.options.nobreakall_arches.split():
-                    self.excuse_unsat_deps(pkg, src, arch, suite, excuse)
+                    if not self.excuse_unsat_deps(pkg, src, arch, suite, excuse):
+                        update_candidate = False
+                        if arch in self.options.adt_arches.split():
+                            run_autopkgtest = False
 
             # if there are out-of-date packages, warn about them in the excuse and set update_candidate
             # to False to block the update; if the architecture where the package is out-of-date is
