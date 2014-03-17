@@ -384,6 +384,18 @@ args.func()
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: PASS'])
 
+    def test_binary_from_new_source_package_uninst(self):
+        '''building an existing binary for a new source package (uninstallable)'''
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6, nosuchpkg'})],
+            '',
+            NOT_CONSIDERED,
+            [r'\bnewgreen\b.*- to .*>2<',
+             'libgreen1/amd64 unsatisfiable Depends: nosuchpkg'],
+            # autopkgtest should not be triggered for uninstallable pkg
+            ['autopkgtest'])
+
     def test_result_from_older_version(self):
         '''test result from older version than the uploaded one'''
 
