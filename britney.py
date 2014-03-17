@@ -1064,7 +1064,7 @@ class Britney(object):
 
         # analyze the dependency fields (if present)
         if not binary_u[DEPENDS]:
-            return
+            return True
         deps = binary_u[DEPENDS]
 
         all_satisfiable = True
