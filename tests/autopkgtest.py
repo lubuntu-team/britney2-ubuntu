@@ -353,10 +353,10 @@ args.func()
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'})],
-            'lightgreen 1 PASS green 2\n'
-            'darkgreen 1 RUNNING green 2\n',
+            'lightgreen 1 PASS newgreen 2\n'
+            'darkgreen 1 RUNNING newgreen 2\n',
             NOT_CONSIDERED,
-            [r'\bnewgreen\b.*>- to .*>2<',
+            [r'\bnewgreen\b.*\(- to .*>2<',
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: RUNNING'])
 
@@ -365,10 +365,10 @@ args.func()
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'})],
-            'lightgreen 1 PASS green 2\n'
-            'darkgreen 1 FAIL green 2\n',
+            'lightgreen 1 PASS newgreen 2\n'
+            'darkgreen 1 FAIL newgreen 2\n',
             NOT_CONSIDERED,
-            [r'\bnewgreen\b.*>- to .*>2<',
+            [r'\bnewgreen\b.*\(- to .*>2<',
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: FAIL'])
 
@@ -377,10 +377,10 @@ args.func()
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'})],
-            'lightgreen 1 PASS green 2\n'
-            'darkgreen 1 PASS green 2\n',
+            'lightgreen 1 PASS newgreen 2\n'
+            'darkgreen 1 PASS newgreen 2\n',
             VALID_CANDIDATE,
-            [r'\bnewgreen\b.*>- to .*>2<',
+            [r'\bnewgreen\b.*\(- to .*>2<',
              '<li>autopkgtest for lightgreen 1: PASS',
              '<li>autopkgtest for darkgreen 1: PASS'])
 
@@ -389,9 +389,9 @@ args.func()
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6, nosuchpkg'})],
-            '',
+            'darkgreen 1 FAIL newgreen 2\n',
             NOT_CONSIDERED,
-            [r'\bnewgreen\b.*- to .*>2<',
+            [r'\bnewgreen\b.*\(- to .*>2<',
              'libgreen1/amd64 unsatisfiable Depends: nosuchpkg'],
             # autopkgtest should not be triggered for uninstallable pkg
             ['autopkgtest'])
