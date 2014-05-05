@@ -514,9 +514,8 @@ args.func()
         self.data.add('yellow', True, {'Version': '1.1~beta',
                                        'Depends': 'libc6 (>= 0.9), nosuchpkg'})
 
-        self.make_adt_britney('yellow 1.1~beta RUNNING yellow 1.1~beta\n', "")
-        #self.make_adt_britney('yellow 1.1~beta RUNNING yellow 1.1~beta\n',
-        #                      'purple 2 FAIL pink 3.0.~britney\n')
+        self.make_adt_britney('yellow 1.1~beta RUNNING yellow 1.1~beta\n',
+                              'purple 2 FAIL pink 3.0.~britney\n')
 
         print('run:\n%s -c %s\n' % (self.britney, self.britney_conf))
         subprocess.call(['bash', '-i'], cwd=self.data.path)
