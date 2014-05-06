@@ -176,7 +176,7 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         records.sort(cmp=apt_pkg.version_compare, key=operator.itemgetter(4))
         records.sort(key=operator.itemgetter(3))
         records.sort(cmp=apt_pkg.version_compare, key=operator.itemgetter(1))
-        records.sort(key=operator.itemgetter(1))
+        records.sort()
 
         return "\n".join([' '.join(x) for x in records])
 
