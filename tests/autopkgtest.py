@@ -178,7 +178,6 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         records.sort(cmp=apt_pkg.version_compare, key=operator.itemgetter(1))
         records.sort()
 
-        print(records)
         return "\n".join([' '.join(x) for x in records])
 
     def make_adt_britney(self, request, history=""):
