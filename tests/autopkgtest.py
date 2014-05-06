@@ -178,6 +178,7 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         records.sort(cmp=apt_pkg.version_compare, key=operator.itemgetter(1))
         records.sort()
 
+        print(records)
         return "\n".join([' '.join(x) for x in records])
 
     def make_adt_britney(self, request, history=""):
@@ -484,6 +485,68 @@ args.func()
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              # it's not entirely clear what precisely it should say here
              '<li>autopkgtest for green 1.1~beta: {}'.format(ADT_EXCUSES_LABELS['RUNNING'])])
+
+    def test_request_for_installable_fail_regression_promoted(self):
+        '''Requests a test for an installable package, test fail, is a
+        regression.
+
+        This test verifies a bug in britney where a package was promoted if latest test
+        appeared before previous result in history, only the last result in
+        alphabetic order was taken into account. For example:
+            A 1 FAIL B 1
+            A 1 PASS A 1
+        In this case results for A 1didn't appear in the list of results
+        triggered by the upload of B 1 and B 1 was promoted
+        '''
+
+
+        self.do_test(
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
+            'lightgreen 1 FAIL green 1.1~beta\n',
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['REGRESSION'])],
+            history="lightgreen 1 PASS lightgreen 1"
+        )
+
+    def test_history_always_passed(self):
+        '''All the results in history are PASS, and test passed
+
+        '''
+        self.do_test(
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
+            'lightgreen 1 PASS green 1.1~beta\n',
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS'])],
+            history="lightgreen 1 PASS lightgreen 1"
+        )
+
+    def test_history_always_failed(self):
+        '''All the results in history are FAIL, test fails. not a regression.
+
+        '''
+        self.do_test(
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
+            'lightgreen 1 FAIL green 1.1~beta\n',
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['ALWAYSFAIL'])],
+            history="lightgreen 1 FAIL lightgreen 1"
+        )
+
+    def test_history_regression(self):
+        '''All the results in history are PASS, test fails. Blocked.
+
+        '''
+        self.do_test(
+            [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
+            'lightgreen 1 FAIL green 1.1~beta\n',
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['REGRESSION'])],
+            history="lightgreen 1 PASS lightgreen 1"
+        )
 
     def do_test(self, unstable_add, adt_request, considered, expect=None,
                 no_expect=None, history=""):
