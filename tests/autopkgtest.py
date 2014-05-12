@@ -396,6 +396,7 @@ args.func()
             # autopkgtest should not be triggered for uninstallable pkg
             ['autopkgtest'])
 
+    @unittest.expectedFailure
     def test_result_from_older_version(self):
         '''test result from older version than the uploaded one'''
 
