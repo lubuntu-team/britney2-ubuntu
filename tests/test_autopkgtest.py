@@ -23,12 +23,8 @@ my_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NOT_CONSIDERED = False
 VALID_CANDIDATE = True
 
-ADT_EXCUSES_LABELS = {
-    "PASS": '<span style="background:#87d96c">Pass</span>',
-    "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
-    "REGRESSION": '<span style="background:#ff6666">Regression</span>',
-    "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
-}
+sys.path.insert(0, my_dir)
+from autopkgtest import ADT_EXCUSES_LABELS
 
 
 class TestData:
@@ -168,6 +164,15 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         del self.data
 
     def __merge_records(self, results, history=""):
+        '''Merges a list of results with records in history.
+
+        This function merges results from a collect with records already in
+        history and sort records by version/name of causes and version/name of
+        source packages with tests. This should be done in the fake
+        adt-britney but it is more convenient to just pass a static list of
+        records and make adt-britney just return this list.
+        '''
+
         if history is None:
             history = ""
         records = [x.split() for x in (results.strip() + '\n' +
@@ -225,9 +230,9 @@ pcollect.set_defaults(func=collect)
 
 args = p.parse_args()
 args.func()
-                    ''' % {'py': sys.executable, 'path': self.data.path, 'rq':
-                           request, 'res': self.__merge_records(request,
-                                                                history)})
+                    ''' % {'py': sys.executable, 'path': self.data.path,
+                           'rq': request,
+                           'res': self.__merge_records(request, history)})
 
     def run_britney(self, args=[]):
         '''Run britney.
@@ -270,17 +275,17 @@ args.func()
             'green 1.1~beta RUNNING green 1.1~beta\n',
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>autopkgtest for green 1.1~beta: {}'.format(ADT_EXCUSES_LABELS['RUNNING'])])
+             '<li>autopkgtest for green 1.1~beta: %s' % ADT_EXCUSES_LABELS['RUNNING']])
 
-    def test_request_for_installable_fail_always(self):
-        '''Requests a test for an installable package, test fail'''
+    def test_request_for_installable_first_fail(self):
+        '''Requests a test for an installable package. No history and first result is a failure'''
 
         self.do_test(
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
             'green 1.1~beta FAIL green 1.1~beta\n',
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>autopkgtest for green 1.1~beta: {}'.format(ADT_EXCUSES_LABELS['ALWAYSFAIL'])])
+             '<li>autopkgtest for green 1.1~beta: %s' % ADT_EXCUSES_LABELS['ALWAYSFAIL']])
 
     def test_request_for_installable_fail_regression(self):
         '''Requests a test for an installable package, test fail'''
@@ -290,7 +295,7 @@ args.func()
             'green 1.1~beta FAIL green 1.1~beta\n',
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>autopkgtest for green 1.1~beta: {}'.format(ADT_EXCUSES_LABELS['REGRESSION'])],
+             '<li>autopkgtest for green 1.1~beta: %s' % ADT_EXCUSES_LABELS['REGRESSION']],
             history='green 1.0~beta PASS green 1.0~beta\n')
 
     def test_request_for_installable_pass(self):
@@ -301,7 +306,7 @@ args.func()
             'green 1.1~beta PASS green 1.1~beta\n',
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>autopkgtest for green 1.1~beta: {}'.format(ADT_EXCUSES_LABELS['PASS'])])
+             '<li>autopkgtest for green 1.1~beta: %s' % ADT_EXCUSES_LABELS['PASS']])
 
     def test_multi_rdepends_with_tests_running(self):
         '''Multiple reverse dependencies with tests (still running)'''
@@ -312,8 +317,8 @@ args.func()
             'darkgreen 1 RUNNING green 2\n',
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['RUNNING'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['RUNNING']])
 
     def test_multi_rdepends_with_tests_fail_always(self):
         '''Multiple reverse dependencies with tests (fail)'''
@@ -324,8 +329,8 @@ args.func()
             'darkgreen 1 FAIL green 2\n',
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['ALWAYSFAIL'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['ALWAYSFAIL']])
 
     def test_multi_rdepends_with_tests_fail_regression(self):
         '''Multiple reverse dependencies with tests (fail)'''
@@ -336,8 +341,8 @@ args.func()
             'darkgreen 1 FAIL green 2\n',
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['REGRESSION'])],
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['REGRESSION']],
             history='darkgreen 1 PASS green 1\n')
 
     def test_multi_rdepends_with_tests_pass(self):
@@ -349,8 +354,8 @@ args.func()
             'darkgreen 1 PASS green 2\n',
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['PASS']])
 
     def test_multi_rdepends_with_some_tests_running(self):
         '''Multiple reverse dependencies with some tests (running)'''
@@ -364,8 +369,8 @@ args.func()
             'darkgreen 1 RUNNING green 2\n',
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['RUNNING']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['RUNNING'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['RUNNING'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['RUNNING']])
 
     def test_multi_rdepends_with_some_tests_fail_always(self):
         '''Multiple reverse dependencies with some tests (fail)'''
@@ -379,8 +384,8 @@ args.func()
             'darkgreen 1 FAIL green 2\n',
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['ALWAYSFAIL'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['ALWAYSFAIL']])
 
     def test_multi_rdepends_with_some_tests_fail_regression(self):
         '''Multiple reverse dependencies with some tests (fail)'''
@@ -394,8 +399,8 @@ args.func()
             'darkgreen 1 FAIL green 2\n',
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['REGRESSION'])],
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['REGRESSION']],
             history='darkgreen 1 PASS green 1\n')
 
     def test_multi_rdepends_with_some_tests_pass(self):
@@ -410,8 +415,8 @@ args.func()
             'darkgreen 1 PASS green 2\n',
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['PASS']])
 
     def test_binary_from_new_source_package_running(self):
         '''building an existing binary for a new source package (running)'''
@@ -422,8 +427,8 @@ args.func()
             'darkgreen 1 RUNNING newgreen 2\n',
             NOT_CONSIDERED,
             [r'\bnewgreen\b.*\(- to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['RUNNING'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['RUNNING']])
 
     def test_binary_from_new_source_package_fail_always(self):
         '''building an existing binary for a new source package (fail)'''
@@ -434,8 +439,8 @@ args.func()
             'darkgreen 1 FAIL newgreen 2\n',
             VALID_CANDIDATE,
             [r'\bnewgreen\b.*\(- to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['ALWAYSFAIL'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['ALWAYSFAIL']])
 
     def test_binary_from_new_source_package_fail_regression(self):
         '''building an existing binary for a new source package (fail)'''
@@ -446,8 +451,8 @@ args.func()
             'darkgreen 1 FAIL newgreen 2\n',
             NOT_CONSIDERED,
             [r'\bnewgreen\b.*\(- to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['REGRESSION'])],
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['REGRESSION']],
             history='darkgreen 1 PASS green 1\n')
 
     def test_binary_from_new_source_package_pass(self):
@@ -459,8 +464,8 @@ args.func()
             'darkgreen 1 PASS newgreen 2\n',
             VALID_CANDIDATE,
             [r'\bnewgreen\b.*\(- to .*>2<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS']),
-             '<li>autopkgtest for darkgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS'])])
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS'],
+             '<li>autopkgtest for darkgreen 1: %s' % ADT_EXCUSES_LABELS['PASS']])
 
     def test_binary_from_new_source_package_uninst(self):
         '''building an existing binary for a new source package (uninstallable)'''
@@ -483,28 +488,26 @@ args.func()
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              # it's not entirely clear what precisely it should say here
-             '<li>autopkgtest for green 1.1~beta: {}'.format(ADT_EXCUSES_LABELS['RUNNING'])])
+             '<li>autopkgtest for green 1.1~beta: %s' % ADT_EXCUSES_LABELS['RUNNING']])
 
     def test_request_for_installable_fail_regression_promoted(self):
-        '''Requests a test for an installable package, test fail, is a
-        regression.
+        '''Requests a test for an installable package, test fail, is a regression.
 
         This test verifies a bug in britney where a package was promoted if latest test
         appeared before previous result in history, only the last result in
         alphabetic order was taken into account. For example:
             A 1 FAIL B 1
             A 1 PASS A 1
-        In this case results for A 1didn't appear in the list of results
+        In this case results for A 1 didn't appear in the list of results
         triggered by the upload of B 1 and B 1 was promoted
         '''
-
 
         self.do_test(
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
             'lightgreen 1 FAIL green 1.1~beta\n',
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['REGRESSION'])],
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['REGRESSION']],
             history="lightgreen 1 PASS lightgreen 1"
         )
 
@@ -512,12 +515,13 @@ args.func()
         '''All the results in history are PASS, and test passed
 
         '''
+
         self.do_test(
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
             'lightgreen 1 PASS green 1.1~beta\n',
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['PASS'])],
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['PASS']],
             history="lightgreen 1 PASS lightgreen 1"
         )
 
@@ -525,12 +529,13 @@ args.func()
         '''All the results in history are FAIL, test fails. not a regression.
 
         '''
+
         self.do_test(
             [('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1'})],
             'lightgreen 1 FAIL green 1.1~beta\n',
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['ALWAYSFAIL'])],
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['ALWAYSFAIL']],
             history="lightgreen 1 FAIL lightgreen 1"
         )
 
@@ -543,7 +548,7 @@ args.func()
             'lightgreen 1 FAIL green 1.1~beta\n',
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>autopkgtest for lightgreen 1: {}'.format(ADT_EXCUSES_LABELS['REGRESSION'])],
+             '<li>autopkgtest for lightgreen 1: %s' % ADT_EXCUSES_LABELS['REGRESSION']],
             history="lightgreen 1 PASS lightgreen 1"
         )
 
