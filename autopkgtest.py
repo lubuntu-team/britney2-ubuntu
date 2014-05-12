@@ -96,6 +96,18 @@ class AutoPackageTest(object):
                     yield linebits
 
     def read(self):
+        '''Loads a list of results
+
+        This function loads a list of results returned by __parse() and builds
+        2 lists:
+            - a list of source package/version with all the causes that
+            triggered a test and the result of the test for this trigger.
+            - a list of packages/version that triggered a test with the source
+            package/version and result triggered by this package.
+        These lists will be used in result() called from britney.py to generate
+        excuses and now which uploads passed, caused regression or which tests
+        have always been failing
+        '''
         self.pkglist = defaultdict(dict)
         self.pkgcauses = defaultdict(lambda: defaultdict(list))
         for linebits in self._parse(self._result_path):
@@ -109,10 +121,8 @@ class AutoPackageTest(object):
 
             i = iter(linebits[3:])
             for trigsrc, trigver in zip(i, i):
-                if not trigsrc in self.pkglist[src][ver]['causes']:
-                    self.pkglist[src][ver]['causes'][trigsrc] = []
-                self.pkglist[src][ver]['causes'][trigsrc].append((trigver,
-                                                                  status))
+                self.pkglist[src][ver]['causes'].setdefault(
+                    trigsrc, []).append((trigver, status))
                 self.pkgcauses[trigsrc][trigver].append((status, src, ver))
 
     def _adt_britney(self, *args):

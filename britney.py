@@ -1762,9 +1762,7 @@ class Britney(object):
                     private_url = "%s/%s-adt-%s/lastBuild" % (
                         jenkins_private, self.options.adt_series,
                         adtsrc.replace("+", "-"))
-                    adt_label = status
-                    if status in ADT_EXCUSES_LABELS:
-                        adt_label = ADT_EXCUSES_LABELS[status]
+                    adt_label = ADT_EXCUSES_LABELS.get(status, status)
                     e.addhtml(
                         "autopkgtest for %s %s: %s (Jenkins: "
                         "<a href=\"%s\">public</a>, "
