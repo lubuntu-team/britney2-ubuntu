@@ -19,17 +19,23 @@ from __future__ import print_function
 
 from collections import defaultdict
 from contextlib import closing
-import logging
 import os
 import subprocess
 import tempfile
 from textwrap import dedent
 import time
-
 import apt_pkg
 
 
 adt_britney = os.path.expanduser("~/auto-package-testing/jenkins/adt-britney")
+
+ADT_PASS = ["PASS", "ALWAYSFAIL"]
+ADT_EXCUSES_LABELS = {
+    "PASS": '<span style="background:#87d96c">Pass</span>',
+    "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
+    "REGRESSION": '<span style="background:#ff6666">Regression</span>',
+    "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
+}
 
 
 class AutoPackageTest(object):
@@ -62,7 +68,7 @@ class AutoPackageTest(object):
                 components: main restricted universe multiverse
                 rsync_host: rsync://tachash.ubuntu-ci/adt/
                 datadir: ~/proposed-migration/autopkgtest/data""" %
-                (self.series, self.series, home)), file=rc_file)
+                         (self.series, self.series, home)), file=rc_file)
 
     @property
     def _request_path(self):
@@ -85,38 +91,39 @@ class AutoPackageTest(object):
                         continue
                     linebits = line.split()
                     if len(linebits) < 2:
-                        logging.warning(
-                            "Invalid line format: '%s', skipped" % line)
+                        print("W: Invalid line format: '%s', skipped" % line)
                         continue
                     yield linebits
 
     def read(self):
+        '''Loads a list of results
+
+        This function loads a list of results returned by __parse() and builds
+        2 lists:
+            - a list of source package/version with all the causes that
+            triggered a test and the result of the test for this trigger.
+            - a list of packages/version that triggered a test with the source
+            package/version and result triggered by this package.
+        These lists will be used in result() called from britney.py to generate
+        excuses and now which uploads passed, caused regression or which tests
+        have always been failing
+        '''
         self.pkglist = defaultdict(dict)
         self.pkgcauses = defaultdict(lambda: defaultdict(list))
         for linebits in self._parse(self._result_path):
-            src = linebits.pop(0)
-            ver = linebits.pop(0)
-            self.pkglist[src][ver] = {
-                "status": "NEW",
-                "causes": {},
+            (src, ver, status) = linebits[:3]
+
+            if not (src in self.pkglist and ver in self.pkglist[src]):
+                self.pkglist[src][ver] = {
+                    "status": status,
+                    "causes": {}
                 }
-            try:
-                status = linebits.pop(0).upper()
-                self.pkglist[src][ver]["status"] = status
-                while True:
-                    trigsrc = linebits.pop(0)
-                    trigver = linebits.pop(0)
-                    self.pkglist[src][ver]["causes"][trigsrc] = trigver
-            except IndexError:
-                # End of the list
-                pass
-        for src in self.pkglist:
-            all_vers = sorted(self.pkglist[src], cmp=apt_pkg.version_compare)
-            for ver in self.pkglist[src]:
-                status = self.pkglist[src][ver]["status"]
-                for trigsrc, trigver in \
-                        self.pkglist[src][ver]["causes"].items():
-                    self.pkgcauses[trigsrc][trigver].append((status, src, ver))
+
+            i = iter(linebits[3:])
+            for trigsrc, trigver in zip(i, i):
+                self.pkglist[src][ver]['causes'].setdefault(
+                    trigsrc, []).append((trigver, status))
+                self.pkgcauses[trigsrc][trigver].append((status, src, ver))
 
     def _adt_britney(self, *args):
         command = [
@@ -197,12 +204,29 @@ class AutoPackageTest(object):
         self.read()
         if self.britney.options.verbose:
             for src in sorted(self.pkglist):
-                for ver in self.pkglist[src]:
-                    print("I: [%s] - Collected autopkgtest status for %s_%s: "
-                          "%s" %
-                          (time.asctime(), src, ver,
-                           self.pkglist[src][ver]["status"]))
+                for ver in sorted(self.pkglist[src],
+                                  cmp=apt_pkg.version_compare):
+                    for trigsrc in sorted(self.pkglist[src][ver]['causes']):
+                        for trigver, status \
+                                in self.pkglist[src][ver]['causes'][trigsrc]:
+                            print("I: [%s] - Collected autopkgtest status "
+                                  "for %s_%s/%s_%s: " "%s" % (
+                                      time.asctime(), src, ver, trigsrc,
+                                      trigver, status))
 
     def results(self, trigsrc, trigver):
         for status, src, ver in self.pkgcauses[trigsrc][trigver]:
+            # Check for regresssion
+            if status == 'FAIL':
+                passed_once = False
+                for ver in self.pkglist[src]:
+                    for trigsrc in self.pkglist[src][ver]['causes']:
+                        for trigver, status \
+                                in self.pkglist[src][ver]['causes'][trigsrc]:
+                            if status == 'PASS':
+                                passed_once = True
+                if not passed_once:
+                    status = 'ALWAYSFAIL'
+                else:
+                    status = 'REGRESSION'
             yield status, src, ver

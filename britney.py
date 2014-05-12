@@ -222,7 +222,7 @@ from britney_util import (old_libraries_format, same_source, undo_changes,
 from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
                    SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
                    PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH)
-from autopkgtest import AutoPackageTest
+from autopkgtest import AutoPackageTest, ADT_PASS, ADT_EXCUSES_LABELS
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
 __version__ = '2.0'
@@ -1756,18 +1756,19 @@ class Britney(object):
                 adtpass = True
                 for status, adtsrc, adtver in autopkgtest.results(
                         e.name, e.ver[1]):
-                    public_url = "%s/%s-adt-%s/" % (
+                    public_url = "%s/%s-adt-%s/lastBuild" % (
                         jenkins_public, self.options.adt_series,
                         adtsrc.replace("+", "-"))
-                    private_url = "%s/%s-adt-%s/" % (
+                    private_url = "%s/%s-adt-%s/lastBuild" % (
                         jenkins_private, self.options.adt_series,
                         adtsrc.replace("+", "-"))
+                    adt_label = ADT_EXCUSES_LABELS.get(status, status)
                     e.addhtml(
                         "autopkgtest for %s %s: %s (Jenkins: "
                         "<a href=\"%s\">public</a>, "
                         "<a href=\"%s\">private</a>)" %
-                        (adtsrc, adtver, status, public_url, private_url))
-                    if status != "PASS":
+                        (adtsrc, adtver, adt_label, public_url, private_url))
+                    if status not in ADT_PASS:
                         hints = self.hints.search(
                             'force-badtest', package=adtsrc)
                         hints.extend(
