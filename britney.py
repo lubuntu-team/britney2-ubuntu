@@ -450,6 +450,8 @@ class Britney(object):
                     k, v = line.split('=', 1)
                     k = k.strip()
                     v = v.strip()
+                    if self.options.series is not None:
+                        v = v.replace("%(SERIES)", self.options.series)
                     if k.startswith("MINDAYS_"):
                         MINDAYS[k.split("_")[1].lower()] = int(v)
                     elif k.startswith("HINTS_"):
