@@ -453,6 +453,8 @@ class Britney(object):
                                help="just print a summary of uninstallable packages")
         parser.add_option("", "--components", action="store", dest="components",
                                help="Sources/Packages are laid out by components listed (, sep)")
+        parser.add_option("", "--series", action="store", dest="series", default=None,
+                               help="set distribution series name")
         (self.options, self.args) = parser.parse_args()
         
         # integrity checks
@@ -475,6 +477,8 @@ class Britney(object):
                     k, v = line.split('=', 1)
                     k = k.strip()
                     v = v.strip()
+                    if self.options.series is not None:
+                        v = v.replace("%(SERIES)", self.options.series)
                     if k.startswith("MINDAYS_"):
                         MINDAYS[k.split("_")[1].lower()] = int(v)
                     elif k.startswith("HINTS_"):
