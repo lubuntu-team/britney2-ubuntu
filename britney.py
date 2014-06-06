@@ -208,6 +208,7 @@ from britney2.utils import (old_libraries_format, undo_changes,
                             create_provides_map, read_release_file,
                             read_sources_file, get_dependency_solvers,
                             invalidate_excuses, compile_nuninst,
+                            ensuredir,
                             )
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
@@ -1633,6 +1634,7 @@ class Britney(object):
         if not self.options.dry_run:
             self.log("> Writing Excuses to %s" % self.options.excuses_output, type="I")
             sorted_excuses = sorted(excuses.values(), key=lambda x: x.sortkey())
+            ensuredir(os.path.dirname(self.options.excuses_output))
             write_excuses(sorted_excuses, self.options.excuses_output,
                           output_format="legacy-html")
             if hasattr(self.options, 'excuses_yaml_output'):
@@ -2742,6 +2744,7 @@ class Britney(object):
         except AttributeError:
             return
 
+        ensuredir(os.path.dirname(self.options.upgrade_output))
         with open(self.options.upgrade_output, 'w', encoding='utf-8') as f:
             self.__output = f
 
