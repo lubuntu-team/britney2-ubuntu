@@ -385,6 +385,8 @@ class Britney(object):
         self.MINDAYS = {}
         self.HINTS = {'command-line': self.HINTS_ALL}
         for k, v in [map(string.strip,r.split('=', 1)) for r in file(self.options.config) if '=' in r and not r.strip().startswith('#')]:
+            if self.options.ubuntu_series is not None:
+                v = v.replace("%(UBUNTU_SERIES)", self.options.ubuntu_series)
             if k.startswith("MINDAYS_"):
                 self.MINDAYS[k.split("_")[1].lower()] = int(v)
             elif k.startswith("HINTS_"):
