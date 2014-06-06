@@ -5,6 +5,7 @@ import os
 import time
 
 from hints import Hint, split_into_one_hint_per_package
+from britney_util import ensuredir
 
 
 @unique
@@ -367,6 +368,7 @@ class AgePolicy(BasePolicy):
             basename = 'Dates'
             old_file = None
         filename = os.path.join(directory, basename)
+        ensuredir(directory)
         filename_tmp = os.path.join(directory, '%s_new' % basename)
         with open(filename_tmp, 'w', encoding='utf-8') as fd:
             for pkg in sorted(dates):

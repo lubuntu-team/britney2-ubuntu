@@ -352,6 +352,16 @@ def make_migrationitem(package, sources, VERSION=VERSION):
     return MigrationItem("%s/%s" % (item.uvname, sources[item.suite][item.package].version))
 
 
+def ensuredir(dir):
+    """Create dir if it does not exist
+
+    os.makedirs(dir, exist_ok=True) is too strict as that will fail if the
+    direcotry already exists with different permissions.
+    """
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+
+
 def write_excuses(excuselist, dest_file, output_format="yaml"):
     """Write the excuses to dest_file
 
@@ -360,6 +370,7 @@ def write_excuses(excuselist, dest_file, output_format="yaml"):
     or "legacy-html".
     """
     if output_format == "yaml":
+        ensuredir(os.path.dirname(dest_file))
         with open(dest_file, 'w', encoding='utf-8') as f:
             edatalist = [e.excusedata() for e in excuselist]
             excusesdata = {
@@ -368,6 +379,7 @@ def write_excuses(excuselist, dest_file, output_format="yaml"):
             }
             f.write(yaml.dump(excusesdata, default_flow_style=False, allow_unicode=True))
     elif output_format == "legacy-html":
+        ensuredir(os.path.dirname(dest_file))
         with open(dest_file, 'w', encoding='utf-8') as f:
             f.write("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n")
             f.write("<html><head><title>excuses...</title>")
@@ -431,6 +443,7 @@ def write_controlfiles(sources, packages, suite, basedir):
                  (PROVIDES, 'Provides'), (CONFLICTS, 'Conflicts'),
                  (ESSENTIAL, 'Essential'))
 
+    ensuredir(basedir)
     for arch in packages_s:
         filename = os.path.join(basedir, 'Packages_%s' % arch)
         binaries = packages_s[arch][0]
