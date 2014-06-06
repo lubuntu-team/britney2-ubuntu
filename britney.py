@@ -227,6 +227,10 @@ from autopkgtest import AutoPackageTest, ADT_PASS, ADT_EXCUSES_LABELS
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
 __version__ = '2.0'
 
+def ensuredir(directory):
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+
 class Britney(object):
     """Britney, the Debian testing updater script
     
@@ -762,6 +766,7 @@ class Britney(object):
         """
         filename = os.path.join(basedir, "Dates")
         self.__log("Writing upload data to %s" % filename)
+        ensuredir(os.path.dirname(filename))
         f = open(filename, 'w')
         for pkg in sorted(dates):
             f.write("%s %s %d\n" % ((pkg,) + dates[pkg]))
@@ -934,6 +939,7 @@ class Britney(object):
         The order corresponds to that shown in update_output.
         """
         self.__log("Writing delta to %s" % filename)
+        ensuredir(os.path.dirname(filename))
         f = open(filename, "w")
 
         sources = self.sources['testing']
@@ -961,6 +967,7 @@ class Britney(object):
         sources = self.sources[suite]
 
         self.__log("Writing new %s control files to %s" % (suite, basedir))
+        ensuredir(basedir)
         for arch in self.options.architectures:
             filename = os.path.join(basedir, 'Packages_%s' % arch)
             f = open(filename, 'w')
@@ -1844,6 +1851,7 @@ class Britney(object):
         # write excuses to the output file
         if not self.options.dry_run:
             self.__log("> Writing Excuses to %s" % self.options.excuses_output, type="I")
+            ensuredir(os.path.dirname(self.options.excuses_output))
             f = open(self.options.excuses_output, 'w')
             f.write("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n")
             f.write("<html><head><title>excuses...</title>")
@@ -2866,6 +2874,7 @@ class Britney(object):
         else:
             self.upgrade_me = self.options.actions.split()
 
+        ensuredir(os.path.dirname(self.options.upgrade_output))
         self.__output = open(self.options.upgrade_output, 'w')
 
         # run the hint tester
