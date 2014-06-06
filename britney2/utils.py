@@ -299,7 +299,6 @@ def write_heidi_delta(filename, all_selected):
                 fd.write('%s%s %s %s\n' % (prefix, item.package,
                                            item.version, item.architecture))
 
-
 def write_excuses(excuses, dest_file, output_format="yaml"):
     """Write the excuses to dest_file
 
@@ -309,6 +308,7 @@ def write_excuses(excuses, dest_file, output_format="yaml"):
     """
     excuselist = sorted(excuses.values(), key=lambda x: x.sortkey())
     if output_format == "yaml":
+        os.makedirs(os.path.dirname(dest_file), exist_ok=True)
         with open(dest_file, 'w', encoding='utf-8') as f:
             edatalist = [e.excusedata(excuses) for e in excuselist]
             excusesdata = {
@@ -317,6 +317,7 @@ def write_excuses(excuses, dest_file, output_format="yaml"):
             }
             f.write(yaml.dump(excusesdata, default_flow_style=False, allow_unicode=True))
     elif output_format == "legacy-html":
+        os.makedirs(os.path.dirname(dest_file), exist_ok=True)
         with open(dest_file, 'w', encoding='utf-8') as f:
             f.write("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n")
             f.write("<html><head><title>excuses...</title>")

@@ -516,6 +516,7 @@ class AgePolicy(BasePolicy):
             basename = 'Dates'
             old_file = None
         filename = os.path.join(directory, basename)
+        os.makedirs(directory, exist_ok=True)
         filename_tmp = os.path.join(directory, '%s_new' % basename)
         with open(filename_tmp, 'w', encoding='utf-8') as fd:
             for pkg in sorted(dates):

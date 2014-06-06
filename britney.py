@@ -797,6 +797,7 @@ class Britney(object):
         # write excuses to the output file
         if not self.options.dry_run:
             self.logger.info("> Writing Excuses to %s", self.options.excuses_output)
+            os.makedirs(os.path.dirname(self.options.excuses_output), exist_ok=True)
             write_excuses(excuses, self.options.excuses_output,
                           output_format="legacy-html")
             if hasattr(self.options, 'excuses_yaml_output'):
@@ -1545,6 +1546,7 @@ class Britney(object):
                                  " as this is a dry-run.")
             elif hasattr(self.options, 'upgrade_output'):
                 upgrade_output = getattr(self.options, 'upgrade_output')
+                os.makedirs(os.path.dirname(self.options.upgrade_output), exist_ok=True)
                 file_handler = logging.FileHandler(upgrade_output, mode='w', encoding='utf-8')
                 output_formatter = logging.Formatter('%(message)s')
                 file_handler.setFormatter(output_formatter)
