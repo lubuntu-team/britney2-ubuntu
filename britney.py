@@ -1512,10 +1512,12 @@ class Britney(object):
                 oodtxt = ""
                 for v in oodbins.keys():
                     if oodtxt: oodtxt = oodtxt + "; "
-                    if source_t and same_source(source_t[VERSION], v):
-                        maybe_nbs = ""
-                    else:
-                        maybe_nbs = "; NBS?"
+                    maybe_nbs = ""
+                    if not source_t or same_source(source_t[VERSION], v):
+                        for pkg in oodbins[v]:
+                            if self.__maxver(pkg, suite) == v:
+                                maybe_nbs = "; NBS?"
+                                break
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/ubuntu/+source/" \
                         "%s/%s\" target=\"_blank\">%s</a>%s)" % \
                         (", ".join(sorted(oodbins[v])), urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
