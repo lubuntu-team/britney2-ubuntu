@@ -1512,9 +1512,13 @@ class Britney(object):
                 oodtxt = ""
                 for v in oodbins.keys():
                     if oodtxt: oodtxt = oodtxt + "; "
+                    if source_t and same_source(source_t[VERSION], v):
+                        maybe_nbs = ""
+                    else:
+                        maybe_nbs = "; NBS?"
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/ubuntu/+source/" \
-                        "%s/%s\" target=\"_blank\">%s</a>)" % \
-                        (", ".join(sorted(oodbins[v])), urllib.quote(src.split("/")[0]), urllib.quote(v), v)
+                        "%s/%s\" target=\"_blank\">%s</a>%s)" % \
+                        (", ".join(sorted(oodbins[v])), urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
                 text = "out of date on <a href=\"https://launchpad.net/ubuntu/+source/" \
                     "%s/%s\" target=\"_blank\">%s</a>: %s" % \
                     (urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
