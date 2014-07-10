@@ -1514,16 +1514,14 @@ class Britney(object):
                     if oodtxt: oodtxt = oodtxt + "; "
                     maybe_nbs = ""
                     if not source_t or same_source(source_t[VERSION], v):
-                        for pkg in oodbins[v]:
-                            maxver = None
-                            for other_arch in self.options.architectures:
-                                if pkg not in self.binaries[suite][other_arch][0]: continue
-                                pkgv = self.binaries[suite][other_arch][0][pkg][VERSION]
-                                if maxver is None or apt_pkg.version_compare(pkgv, maxver) > 0:
-                                    maxver = pkgv
-                            if maxver == v:
-                                maybe_nbs = "; NBS?"
-                                break
+                        maxver = None
+                        for pkg in sorted(x.split("/")[0] for x in source_u[BINARIES] if x.endswith("/"+arch)):
+                            pkgv = self.binaries[suite][arch][0][pkg][VERSION]
+                            if maxver is None or apt_pkg.version_compare(pkgv, maxver) > 0:
+                                maxver = pkgv
+                        if maxver is not None and apt_pkg.version_compare(maxver, v) > 0:
+                            maybe_nbs = "; NBS?"
+                            break
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/ubuntu/+source/" \
                         "%s/%s\" target=\"_blank\">%s</a>%s)" % \
                         (", ".join(sorted(oodbins[v])), urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
