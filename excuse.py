@@ -51,6 +51,7 @@ class Excuse(object):
         self._is_valid = False
         self._dontinvalidate = False
         self.run_autopkgtest = False
+        self.distribution = "ubuntu"
 
         self.invalid_deps = []
         self.deps = {}
@@ -92,6 +93,10 @@ class Excuse(object):
         """Set the urgency of upload of the package"""
         self.urgency = date
 
+    def set_distribution(self, distribution):
+        """Set the distribution name"""
+        self.distribution = distribution
+
     def add_dep(self, name, arch):
         """Add a dependency"""
         if name not in self.deps: self.deps[name]=[]
@@ -121,7 +126,7 @@ class Excuse(object):
 
     def html(self):
         """Render the excuse in HTML"""
-        lp_pkg = "https://launchpad.net/ubuntu/+source/%s" % self.name.split("/")[0]
+        lp_pkg = "https://launchpad.net/%s/+source/%s" % (self.distribution, self.name.split("/")[0])
         if self.ver[0] == "-":
             lp_old = self.ver[0]
         else:

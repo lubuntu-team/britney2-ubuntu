@@ -47,8 +47,9 @@ class AutoPackageTest(object):
     accepted.
     """
 
-    def __init__(self, britney, series, debug=False):
+    def __init__(self, britney, distribution, series, debug=False):
         self.britney = britney
+        self.distribution = distribution
         self.series = series
         self.debug = debug
         self.read()
@@ -64,11 +65,12 @@ class AutoPackageTest(object):
             print(dedent("""\
                 release: %s
                 aptroot: ~/.chdist/%s-proposed-amd64/
-                apturi: file:%s/mirror/ubuntu
+                apturi: file:%s/mirror/%s
                 components: main restricted universe multiverse
                 rsync_host: rsync://tachash.ubuntu-ci/adt/
                 datadir: ~/proposed-migration/autopkgtest/data""" %
-                         (self.series, self.series, home)), file=rc_file)
+                         (self.series, self.series, home, self.distribution)),
+                         file=rc_file)
 
     @property
     def _request_path(self):

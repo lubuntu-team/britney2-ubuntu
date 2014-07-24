@@ -371,6 +371,8 @@ class Britney(object):
                                help="do not build the non-installability status, use the cache from file")
         parser.add_option("", "--print-uninst", action="store_true", dest="print_uninst", default=False,
                                help="just print a summary of uninstallable packages")
+        parser.add_option("", "--distribution", action="store", dest="distribution", default="ubuntu",
+                               help="set distribution name")
         parser.add_option("", "--series", action="store", dest="series", default=None,
                                help="set distribution series name")
         (self.options, self.args) = parser.parse_args()
@@ -1136,6 +1138,7 @@ class Britney(object):
         # otherwise, add a new excuse for its removal and return True
         src = self.sources['testing'][pkg]
         excuse = Excuse("-" + pkg)
+        excuse.set_distribution(self.options.distribution)
         excuse.set_vers(src[VERSION], None)
         src[MAINTAINER] and excuse.set_maint(src[MAINTAINER].strip())
         src[SECTION] and excuse.set_section(src[SECTION].strip())
@@ -1172,6 +1175,7 @@ class Britney(object):
         # build the common part of the excuse, which will be filled by the code below
         ref = "%s/%s%s" % (src, arch, suite != 'unstable' and "_" + suite or "")
         excuse = Excuse(ref)
+        excuse.set_distribution(self.options.distribution)
         excuse.set_vers(source_t[VERSION], source_t[VERSION])
         source_u[MAINTAINER] and excuse.set_maint(source_u[MAINTAINER].strip())
         source_u[SECTION] and excuse.set_section(source_u[SECTION].strip())
@@ -1327,6 +1331,7 @@ class Britney(object):
         # build the common part of the excuse, which will be filled by the code below
         ref = "%s%s" % (src, suite != 'unstable' and "_" + suite or "")
         excuse = Excuse(ref)
+        excuse.set_distribution(self.options.distribution)
         excuse.set_vers(source_t and source_t[VERSION] or None, source_u[VERSION])
         source_u[MAINTAINER] and excuse.set_maint(source_u[MAINTAINER].strip())
         source_u[SECTION] and excuse.set_section(source_u[SECTION].strip())
@@ -1463,7 +1468,7 @@ class Britney(object):
                     base = 'testing'
                 else:
                     base = 'stable'
-                text = "Not yet built on <a href=\"https://launchpad.net/ubuntu/+source/%s/%s\" target=\"_blank\">%s</a> (relative to testing)" % (urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch)
+                text = "Not yet built on <a href=\"https://launchpad.net/%s/+source/%s/%s\" target=\"_blank\">%s</a> (relative to testing)" % (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch)
 
                 if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
@@ -1522,12 +1527,12 @@ class Britney(object):
                         if maxver is not None and apt_pkg.version_compare(maxver, v) > 0:
                             maybe_nbs = "; NBS?"
                             break
-                    oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/ubuntu/+source/" \
+                    oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/%s/+source/" \
                         "%s/%s\" target=\"_blank\">%s</a>%s)" % \
-                        (", ".join(sorted(oodbins[v])), urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
-                text = "out of date on <a href=\"https://launchpad.net/ubuntu/+source/" \
+                        (self.options.distribution, ", ".join(sorted(oodbins[v])), urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
+                text = "out of date on <a href=\"https://launchpad.net/%s/+source/" \
                     "%s/%s\" target=\"_blank\">%s</a>: %s" % \
-                    (urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
+                    (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
 
                 if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
@@ -1733,6 +1738,7 @@ class Britney(object):
             # add the removal of the package to upgrade_me and build a new excuse
             upgrade_me.append("-%s" % (src))
             excuse = Excuse("-%s" % (src))
+            excuse.set_distribution(self.options.distribution)
             excuse.set_vers(tsrcv, None)
             excuse.addhtml("Removal request by %s" % (item.user))
             excuse.addhtml("Package is broken, will try to remove")
@@ -1749,7 +1755,8 @@ class Britney(object):
             # trigger autopkgtests for valid candidates
             adt_debug = getattr(self.options, "adt_debug", "no") == "yes"
             autopkgtest = AutoPackageTest(
-                self, self.options.series, debug=adt_debug)
+                self, self.options.distribution, self.options.series,
+                debug=adt_debug)
             autopkgtest_packages = []
             autopkgtest_excuses = []
             autopkgtest_excludes = []
