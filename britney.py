@@ -371,7 +371,7 @@ class Britney(object):
                                help="do not build the non-installability status, use the cache from file")
         parser.add_option("", "--print-uninst", action="store_true", dest="print_uninst", default=False,
                                help="just print a summary of uninstallable packages")
-        parser.add_option("", "--series", "--ubuntu-series", action="store", dest="series", default=None,
+        parser.add_option("", "--series", action="store", dest="series", default=None,
                                help="set distribution series name")
         (self.options, self.args) = parser.parse_args()
         
