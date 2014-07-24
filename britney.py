@@ -454,6 +454,8 @@ class Britney(object):
                                help="just print a summary of uninstallable packages")
         parser.add_option("", "--components", action="store", dest="components",
                                help="Sources/Packages are laid out by components listed (, sep)")
+        parser.add_option("", "--distribution", action="store", dest="distribution", default="ubuntu",
+                               help="set distribution name")
         parser.add_option("", "--series", action="store", dest="series", default=None,
                                help="set distribution series name")
         (self.options, self.args) = parser.parse_args()
@@ -1330,6 +1332,7 @@ class Britney(object):
         # otherwise, add a new excuse for its removal
         src = self.sources['testing'][pkg]
         excuse = Excuse("-" + pkg)
+        excuse.set_distribution(self.options.distribution)
         excuse.addhtml("Package not in unstable, will try to remove")
         excuse.set_vers(src.version, None)
         src.maintainer and excuse.set_maint(src.maintainer)
@@ -1368,6 +1371,7 @@ class Britney(object):
         excuse.set_vers(source_t.version, source_t.version)
         source_u.maintainer and excuse.set_maint(source_u.maintainer)
         source_u.section and excuse.set_section(source_u.section)
+        excuse.set_distribution(self.options.distribution)
         
         # if there is a `remove' hint and the requested version is the same as the
         # version in testing, then stop here and return False
@@ -1532,6 +1536,7 @@ class Britney(object):
         excuse.set_vers(source_t and source_t.version or None, source_u.version)
         source_u.maintainer and excuse.set_maint(source_u.maintainer)
         source_u.section and excuse.set_section(source_u.section)
+        excuse.set_distribution(self.options.distribution)
 
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u.version, source_t.version) < 0:
@@ -1879,6 +1884,7 @@ class Britney(object):
             # add the removal of the package to upgrade_me and build a new excuse
             upgrade_me_append("-%s" % (src))
             excuse = Excuse("-%s" % (src))
+            excuse.set_distribution(self.options.distribution)
             excuse.set_vers(tsrcv, None)
             excuse.addhtml("Removal request by %s" % (hint.user))
             excuse.addhtml("Package is broken, will try to remove")

@@ -53,6 +53,7 @@ class Excuse(object):
         self.needs_approval = False
         self.hints = []
         self.forced = False
+        self.distribution = "ubuntu"
 
         self.invalid_deps = []
         self.deps = {}
@@ -105,6 +106,10 @@ class Excuse(object):
     def set_urgency(self, date):
         """Set the urgency of upload of the package"""
         self.urgency = date
+
+    def set_distribution(self, distribution):
+        """Set the distribution name"""
+        self.distribution = distribution
 
     def add_dep(self, name, arch):
         """Add a dependency"""
