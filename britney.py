@@ -751,13 +751,16 @@ class Britney(object):
         dates = {}
         filename = os.path.join(basedir, "Dates")
         self.__log("Loading upload data from %s" % filename)
-        for line in open(filename):
-            l = line.split()
-            if len(l) != 3: continue
-            try:
-                dates[l[0]] = (l[1], int(l[2]))
-            except ValueError:
-                self.__log("Dates, unable to parse \"%s\"" % line, type="E")
+        try:
+            for line in open(filename):
+                l = line.split()
+                if len(l) != 3: continue
+                try:
+                    dates[l[0]] = (l[1], int(l[2]))
+                except ValueError:
+                    self.__log("Dates, unable to parse \"%s\"" % line, type="E")
+        except IOError:
+            self.__log("%s missing; initialising upload data from scratch")
         return dates
 
     def write_dates(self, basedir, dates):
