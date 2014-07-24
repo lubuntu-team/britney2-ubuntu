@@ -49,6 +49,7 @@ class ExcuseFinder(object):
         # otherwise, add a new excuse for its removal
         src = item.suite.sources[pkg]
         excuse = Excuse(item)
+        excuse.set_distribution(self.options.distribution)
         excuse.addinfo("Package not in %s, will try to remove" % source_suite.name)
         excuse.set_vers(src.version, None)
         src.maintainer and excuse.set_maint(src.maintainer)
@@ -93,6 +94,7 @@ class ExcuseFinder(object):
         excuse.set_vers(source_t.version, source_t.version)
         source_u.maintainer and excuse.set_maint(source_u.maintainer)
         source_u.section and excuse.set_section(source_u.section)
+        excuse.set_distribution(self.options.distribution)
 
         # if there is a `remove' hint and the requested version is the same as the
         # version in testing, then stop here and return False
@@ -294,6 +296,7 @@ class ExcuseFinder(object):
         source_u.maintainer and excuse.set_maint(source_u.maintainer)
         source_u.section and excuse.set_section(source_u.section)
         excuse.add_package(PackageId(src, source_u.version, "source"))
+        excuse.set_distribution(self.options.distribution)
 
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u.version, source_t.version) < 0:
