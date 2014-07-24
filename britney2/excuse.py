@@ -236,6 +236,10 @@ class Excuse(object):
         """Set the section of the package"""
         self.section = section
 
+    def set_distribution(self, distribution):
+        """Set the distribution name"""
+        self.distribution = distribution
+
     def add_dependency(self, dep, spec):
         """Add a dependency of type deptype
 

@@ -417,6 +417,8 @@ class Britney(object):
                           help="Do not compute which packages can migrate.")
         parser.add_option("", "--series", action="store", dest="series", default='',
                           help="set distribution series name")
+        parser.add_option("", "--distribution", action="store", dest="distribution", default="Debian",
+                          help="set distribution name")
         (self.options, self.args) = parser.parse_args()
 
         if self.options.verbose:
