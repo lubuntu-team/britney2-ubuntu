@@ -52,6 +52,7 @@ class Excuse(object):
         self.needs_approval = False
         self.hints = []
         self.forced = False
+        self.distribution = "ubuntu"
 
         self.invalid_deps = []
         self.deps = {}
@@ -100,6 +101,10 @@ class Excuse(object):
     def set_section(self, section):
         """Set the section of the package"""
         self.section = section
+
+    def set_distribution(self, distribution):
+        """Set the distribution name"""
+        self.distribution = distribution
 
     def add_dep(self, name, arch):
         """Add a dependency"""
