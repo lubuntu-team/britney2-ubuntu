@@ -371,8 +371,8 @@ class Britney(object):
                                help="do not build the non-installability status, use the cache from file")
         parser.add_option("", "--print-uninst", action="store_true", dest="print_uninst", default=False,
                                help="just print a summary of uninstallable packages")
-        parser.add_option("", "--ubuntu-series", action="store", dest="ubuntu_series", default=None,
-                               help="set Ubuntu series name")
+        parser.add_option("", "--series", "--ubuntu-series", action="store", dest="series", default=None,
+                               help="set distribution series name")
         (self.options, self.args) = parser.parse_args()
         
         # integrity checks
@@ -389,8 +389,8 @@ class Britney(object):
         self.MINDAYS = {}
         self.HINTS = {'command-line': self.HINTS_ALL}
         for k, v in [map(string.strip,r.split('=', 1)) for r in file(self.options.config) if '=' in r and not r.strip().startswith('#')]:
-            if self.options.ubuntu_series is not None:
-                v = v.replace("%(UBUNTU_SERIES)", self.options.ubuntu_series)
+            if self.options.series is not None:
+                v = v.replace("%(SERIES)", self.options.series)
             if k.startswith("MINDAYS_"):
                 self.MINDAYS[k.split("_")[1].lower()] = int(v)
             elif k.startswith("HINTS_"):
@@ -1745,11 +1745,11 @@ class Britney(object):
         unconsidered = [e.name for e in self.excuses if e.name not in upgrade_me]
 
         if getattr(self.options, "adt_enable", "no") == "yes" and \
-           self.options.ubuntu_series:
+           self.options.series:
             # trigger autopkgtests for valid candidates
             adt_debug = getattr(self.options, "adt_debug", "no") == "yes"
             autopkgtest = AutoPackageTest(
-                self, self.options.ubuntu_series, debug=adt_debug)
+                self, self.options.series, debug=adt_debug)
             autopkgtest_packages = []
             autopkgtest_excuses = []
             autopkgtest_excludes = []
@@ -1770,19 +1770,19 @@ class Britney(object):
                 autopkgtest.collect()
             jenkins_public = (
                 "https://jenkins.qa.ubuntu.com/view/%s/view/AutoPkgTest/job" %
-                self.options.ubuntu_series.title())
+                self.options.series.title())
             jenkins_private = (
                 "http://d-jenkins.ubuntu-ci:8080/view/%s/view/AutoPkgTest/job" %
-                self.options.ubuntu_series.title())
+                self.options.series.title())
             for e in autopkgtest_excuses:
                 adtpass = True
                 for status, adtsrc, adtver in autopkgtest.results(
                         e.name, e.ver[1]):
                     public_url = "%s/%s-adt-%s/lastBuild" % (
-                        jenkins_public, self.options.ubuntu_series,
+                        jenkins_public, self.options.series,
                         adtsrc.replace("+", "-"))
                     private_url = "%s/%s-adt-%s/lastBuild" % (
-                        jenkins_private, self.options.ubuntu_series,
+                        jenkins_private, self.options.series,
                         adtsrc.replace("+", "-"))
                     adt_label = ADT_EXCUSES_LABELS.get(status, status)
                     e.addhtml(
