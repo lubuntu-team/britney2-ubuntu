@@ -1532,7 +1532,7 @@ class Britney(object):
                             break
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/%s/+source/" \
                         "%s/%s\" target=\"_blank\">%s</a>%s)" % \
-                        (self.options.distribution, ", ".join(sorted(oodbins[v])), urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
+                        (", ".join(sorted(oodbins[v])), self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
                 text = "out of date on <a href=\"https://launchpad.net/%s/+source/" \
                     "%s/%s\" target=\"_blank\">%s</a>: %s" % \
                     (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
