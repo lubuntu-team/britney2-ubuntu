@@ -1529,7 +1529,6 @@ class Britney(object):
                                 maxver = pkgv
                         if maxver is not None and apt_pkg.version_compare(maxver, v) > 0:
                             maybe_nbs = "; NBS?"
-                            break
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/%s/+source/" \
                         "%s/%s\" target=\"_blank\">%s</a>%s)" % \
                         (", ".join(sorted(oodbins[v])), self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
