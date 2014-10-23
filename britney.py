@@ -760,7 +760,8 @@ class Britney(object):
                 except ValueError:
                     self.__log("Dates, unable to parse \"%s\"" % line, type="E")
         except IOError:
-            self.__log("%s missing; initialising upload data from scratch")
+            self.__log("%s missing; initialising upload data from scratch" %
+                       filename)
         return dates
 
     def write_dates(self, basedir, dates):
