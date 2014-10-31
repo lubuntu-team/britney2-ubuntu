@@ -1778,9 +1778,7 @@ class Britney(object):
             if not self.options.dry_run:
                 autopkgtest.submit()
                 autopkgtest.collect()
-            jenkins_public = (
-                "https://jenkins.qa.ubuntu.com/view/%s/view/AutoPkgTest/job" %
-                self.options.series.title())
+            jenkins_public = "https://jenkins.qa.ubuntu.com/job"
             jenkins_private = (
                 "http://d-jenkins.ubuntu-ci:8080/view/%s/view/AutoPkgTest/job" %
                 self.options.series.title())
