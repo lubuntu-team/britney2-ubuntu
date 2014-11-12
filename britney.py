@@ -625,16 +625,23 @@ class Britney(object):
                 if source_version != target_version:
                     current_arch = value[ARCHITECTURE]
                     built = False
+                    any_arch_indep = False
+                    any_arch_dep = False
                     for b in target_sources[value[SOURCE]][BINARIES]:
                         binpkg, binarch = b.split('/')
                         if binarch == arch:
                             target_value = target_binaries[binpkg]
                             target_arch = target_value[ARCHITECTURE]
-                            if (current_arch in (target_arch, "all") or
-                                target_arch == "all"):
+                            if current_arch in (target_arch, "all"):
                                 built = True
                                 break
+                            if target_arch == "all":
+                                any_arch_indep = True
+                            else:
+                                any_arch_dep = True
                     if built:
+                        continue
+                    if any_arch_indep and not any_arch_dep:
                         continue
                 oodsrcs.add(value[SOURCE])
 
