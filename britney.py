@@ -215,7 +215,6 @@ from installability.builder import InstallabilityTesterBuilder
 from excuse import Excuse
 from migrationitem import MigrationItem
 from hints import HintCollection
-from britney import buildSystem
 from britney_util import (old_libraries_format, same_source, undo_changes,
                           register_reverses, compute_reverse_tree,
                           read_nuninst, write_nuninst, write_heidi,
@@ -264,6 +263,10 @@ class Britney(object):
         apt_pkg.init()
         self.sources = {}
         self.binaries = {}
+        try:
+            self.hints = self.read_hints(self.options.hintsdir)
+        except AttributeError:
+            self.hints = self.read_hints(self.options.unstable)
 
         if self.options.nuninst_cache:
             self.__log("Not building the list of non-installable packages, as requested", type="I")
@@ -345,7 +348,6 @@ class Britney(object):
         # read additional data
         self.dates = self.read_dates(self.options.testing)
         self.urgencies = self.read_urgencies(self.options.testing)
-        self.hints = self.read_hints(self.options.unstable)
         self.blocks = self.read_blocks(self.options.unstable)
         self.excuses = []
         self.dependencies = {}
@@ -858,8 +860,8 @@ class Britney(object):
                 if len(l) != 3: continue
 
                 # read the minimum days associated with the urgencies
-                urgency_old = urgencies.get(l[0], self.options.default_urgency)
-                mindays_old = self.MINDAYS.get(urgency_old, self.MINDAYS[self.options.default_urgency])
+                urgency_old = urgencies.get(l[0], None)
+                mindays_old = self.MINDAYS.get(urgency_old, sys.maxint)
                 mindays_new = self.MINDAYS.get(l[2], self.MINDAYS[self.options.default_urgency])
 
                 # if the new urgency is lower (so the min days are higher), do nothing
@@ -1417,9 +1419,10 @@ class Britney(object):
 
         # retrieve the urgency for the upload, ignoring it if this is a NEW package (not present in testing)
         urgency = self.urgencies.get(src, self.options.default_urgency)
-        if not source_t and urgency != self.options.default_urgency:
-            excuse.addhtml("Ignoring %s urgency setting for NEW package" % (urgency))
-            urgency = self.options.default_urgency
+        if not source_t:
+            if self.MINDAYS[urgency] < self.MINDAYS[self.options.default_urgency]:
+                excuse.addhtml("Ignoring %s urgency setting for NEW package" % (urgency))
+                urgency = self.options.default_urgency
 
         # if there is a `remove' hint and the requested version is the same as the
         # version in testing, then stop here and return False
@@ -2661,7 +2664,10 @@ class Britney(object):
                 self.write_controlfiles(self.options.testing, 'testing')
 
             # write dates
-            self.write_dates(self.options.testing, self.dates)
+            try:
+                self.write_dates(self.options.outputdir, self.dates)
+            except AttributeError:
+                self.write_dates(self.options.testing, self.dates)
 
             # write HeidiResult
             self.__log("Writing Heidi results to %s" % self.options.heidi_output)
