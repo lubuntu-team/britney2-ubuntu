@@ -304,6 +304,11 @@ class Britney(object):
                 self.merge_binaries('testing', 'unstable', arch)
             if hasattr(self.options, 'tpu'):
                 self.binaries['tpu'][arch] = self.read_binaries(self.options.tpu, "tpu", arch)
+            else:
+                # _build_installability_tester relies it being
+                # properly initialised, so insert two empty dicts
+                # here.
+                self.binaries['tpu'][arch] = ({}, {})
             if hasattr(self.options, 'pu'):
                 self.binaries['pu'][arch] = self.read_binaries(self.options.pu, "pu", arch)
             else:
