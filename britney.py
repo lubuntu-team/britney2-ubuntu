@@ -1562,8 +1562,8 @@ class Britney(object):
                 for v in oodbins.keys():
                     if oodtxt: oodtxt = oodtxt + "; "
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/%s/+source/" \
-                        "%s/%s\" target=\"_blank\">%s</a>%s)" % \
-                        (", ".join(sorted(oodbins[v])), self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
+                        "%s/%s\" target=\"_blank\">%s</a>)" % \
+                        (", ".join(sorted(oodbins[v])), self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(v), v)
                 if uptodatebins:
                     text = "old binaries left on <a href=\"https://launchpad.net/%s/+source/" \
                         "%s/%s\" target=\"_blank\">%s</a>: %s" % \
