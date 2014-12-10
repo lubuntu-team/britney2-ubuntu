@@ -23,16 +23,26 @@
 
 import apt_pkg
 from functools import partial
+from datetime import datetime
 from itertools import chain, ifilter, ifilterfalse, izip, repeat
+import os
 import re
 import time
+import yaml
+
 from migrationitem import MigrationItem, UnversionnedMigrationItem
 
 from consts import (VERSION, BINARIES, PROVIDES, DEPENDS, CONFLICTS,
                     RDEPENDS, RCONFLICTS, ARCHITECTURE, SECTION,
-                    SOURCE, SOURCEVER)
+                    SOURCE, SOURCEVER, MAINTAINER, MULTIARCH,
+                    ESSENTIAL)
 
 binnmu_re = re.compile(r'^(.*)\+b\d+$')
+
+def ensuredir(directory):
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+
 
 def same_source(sv1, sv2, binnmu_re=binnmu_re):
     """Check if two version numbers are built from the same source
@@ -404,6 +414,34 @@ def write_heidi(filename, sources_t, packages_t,
             srcsec = src[SECTION] or 'unknown'
             f.write('%s %s source %s\n' % (src_name, srcv, srcsec))
 
+
+def write_heidi_delta(filename, all_selected):
+    """Write the output delta
+
+    This method writes the packages to be upgraded, in the form:
+    <src-name> <src-version>
+    or (if the source is to be removed):
+    -<src-name> <src-version>
+
+    The order corresponds to that shown in update_output.
+    """
+    with open(filename, "w") as fd:
+
+        fd.write("#HeidiDelta\n")
+
+        for item in all_selected:
+            prefix = ""
+
+            if item.is_removal:
+                prefix = "-"
+
+            if item.architecture == 'source':
+                fd.write('%s%s %s\n' % (prefix, item.package, item.version))
+            else:
+                fd.write('%s%s %s %s\n' % (prefix, item.package,
+                                           item.version, item.architecture))
+
+
 def make_migrationitem(package, sources, VERSION=VERSION):
     """Convert a textual package specification to a MigrationItem
     
@@ -413,3 +451,135 @@ def make_migrationitem(package, sources, VERSION=VERSION):
     
     item = UnversionnedMigrationItem(package)
     return MigrationItem("%s/%s" % (item.uvname, sources[item.suite][item.package][VERSION]))
+
+
+def write_excuses(excuses, dest_file, output_format="yaml"):
+    """Write the excuses to dest_file
+
+    Writes a list of excuses in a specified output_format to the
+    path denoted by dest_file.  The output_format can either be "yaml"
+    or "legacy-html".
+    """
+    if output_format == "yaml":
+        ensuredir(os.path.dirname(dest_file))
+        with open(dest_file, 'w') as f:
+            excuselist = []
+            for e in excuses:
+                excuselist.append(e.excusedata())
+            excusesdata = {}
+            excusesdata["sources"] = excuselist
+            excusesdata["generated-date"] = datetime.utcnow()
+            f.write(yaml.dump(excusesdata, default_flow_style=False, allow_unicode=True))
+    elif output_format == "legacy-html":
+        ensuredir(os.path.dirname(dest_file))
+        with open(dest_file, 'w') as f:
+            f.write("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n")
+            f.write("<html><head><title>excuses...</title>")
+            f.write("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"></head><body>\n")
+            f.write("<p>Generated: " + time.strftime("%Y.%m.%d %H:%M:%S %z", time.gmtime(time.time())) + "</p>\n")
+            f.write("<p>See the <a href=\"https://wiki.ubuntu.com/ProposedMigration\">documentation</a> for help interpreting this page.</p>\n")
+            f.write("<ul>\n")
+            for e in excuses:
+                f.write("<li>%s" % e.html())
+            f.write("</ul></body></html>\n")
+    else:
+        raise ValueError('Output format must be either "yaml or "legacy-html"')
+
+
+def write_sources(sources_s, filename):
+    """Write a sources file from Britney's state for a given suite
+
+    Britney discards fields she does not care about, so the resulting
+    file omitts a lot of regular fields.
+    """
+
+    key_pairs = ((VERSION, 'Version'), (SECTION, 'Section'),
+                 (MAINTAINER, 'Maintainer'))
+
+    with open(filename, 'w') as f:
+        for src in sources_s:
+           src_data = sources_s[src]
+           output = "Package: %s\n" % src
+           output += "\n".join(k + ": "+ src_data[key]
+                               for key, k in key_pairs if src_data[key])
+           f.write(output + "\n\n")
+
+
+def write_controlfiles(sources, packages, suite, basedir):
+    """Write the control files
+
+    This method writes the control files for the binary packages of all
+    the architectures and for the source packages.  Note that Britney
+    discards a lot of fields that she does not care about.  Therefore,
+    these files may omit a lot of regular fields.
+    """
+
+    sources_s = sources[suite]
+    packages_s = packages[suite]
+
+    key_pairs = ((SECTION, 'Section'), (ARCHITECTURE, 'Architecture'),
+                 (MULTIARCH, 'Multi-Arch'), (SOURCE, 'Source'),
+                 (VERSION, 'Version'), (DEPENDS, 'Depends'),
+                 (PROVIDES, 'Provides'), (CONFLICTS, 'Conflicts'),
+                 (ESSENTIAL, 'Essential'))
+
+    ensuredir(basedir)
+    for arch in packages_s:
+        filename = os.path.join(basedir, 'Packages_%s' % arch)
+        binaries = packages_s[arch][0]
+        with open(filename, 'w') as f:
+            for pkg in binaries:
+                output = "Package: %s\n" % pkg
+                bin_data = binaries[pkg]
+                for key, k in key_pairs:
+                    if not bin_data[key]: continue
+                    if key == SOURCE:
+                        src = bin_data[SOURCE]
+                        if sources_s[src][MAINTAINER]:
+                            output += ("Maintainer: " + sources_s[src][MAINTAINER] + "\n")
+
+                        if bin_data[SOURCE] == pkg:
+                            if bin_data[SOURCEVER] != bin_data[VERSION]:
+                                source = src + " (" + bin_data[SOURCEVER] + ")"
+                            else: continue
+                        else:
+                            if bin_data[SOURCEVER] != bin_data[VERSION]:
+                                source = src + " (" + bin_data[SOURCEVER] + ")"
+                            else:
+                                source = src
+                        output += (k + ": " + source + "\n")
+                    elif key == PROVIDES:
+                        if bin_data[key]:
+                            output += (k + ": " + ", ".join(bin_data[key]) + "\n")
+                    elif key == ESSENTIAL:
+                        if bin_data[key]:
+                            output += (k + ": " + " yes\n")
+                    else:
+                        output += (k + ": " + bin_data[key] + "\n")
+                f.write(output + "\n")
+
+    write_sources(sources_s, os.path.join(basedir, 'Sources'))
+
+
+def old_libraries(sources, packages, same_source=same_source):
+    """Detect old libraries left in testing for smooth transitions
+
+    This method detects old libraries which are in testing but no
+    longer built from the source package: they are still there because
+    other packages still depend on them, but they should be removed as
+    soon as possible.
+
+    same_source is an optimisation to avoid "load global".
+    """
+    sources_t = sources['testing']
+    testing = packages['testing']
+    unstable = packages['unstable']
+    removals = []
+    for arch in testing:
+        for pkg_name in testing[arch][0]:
+            pkg = testing[arch][0][pkg_name]
+            if pkg_name not in unstable[arch][0] and \
+                    not same_source(sources_t[pkg[SOURCE]][VERSION], pkg[SOURCEVER]):
+                migration = "-" + "/".join((pkg_name, arch, pkg[SOURCEVER]))
+                removals.append(MigrationItem(migration))
+    return removals

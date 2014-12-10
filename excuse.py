@@ -50,6 +50,7 @@ class Excuse(object):
         self.section = None
         self._is_valid = False
         self._dontinvalidate = False
+        self.forced = False
         self.run_autopkgtest = False
         self.distribution = "ubuntu"
 
@@ -58,6 +59,9 @@ class Excuse(object):
         self.sane_deps = []
         self.break_deps = []
         self.bugs = []
+        self.newbugs = set()
+        self.oldbugs = set()
+        self.reason = {}
         self.htmlline = []
 
     @property
@@ -120,6 +124,10 @@ class Excuse(object):
         self.daysold = daysold
         self.mindays = mindays
 
+    def force(self):
+        """Add force hint"""
+        self.forced = True
+
     def addhtml(self, note):
         """Add a note in HTML"""
         self.htmlline.append(note)
@@ -171,3 +179,76 @@ class Excuse(object):
             res += "<li>Valid candidate\n"
         res = res + "</ul>\n"
         return res
+
+    def setbugs(self, oldbugs, newbugs):
+        """"Set the list of old and new bugs"""
+        self.newbugs.update(newbugs)
+        self.oldbugs.update(oldbugs)
+
+    def addreason(self, reason):
+        """"adding reason"""
+        self.reason[reason] = 1
+
+    # TODO merge with html()
+    def text(self):
+        """Render the excuse in text"""
+        res = []
+        res.append("%s (%s to %s)" % \
+            (self.name, self.ver[0], self.ver[1]))
+        if self.maint:
+            maint = self.maint
+            # ugly hack to work around strange encoding in pyyaml
+            # should go away with pyyaml in python 3
+            try:
+                maint.decode('ascii')
+            except UnicodeDecodeError:
+                maint = unicode(self.maint,'utf-8')
+            res.append("Maintainer: %s" % maint)
+        if self.section and string.find(self.section, "/") > -1:
+            res.append("Section: %s" % (self.section))
+        if self.daysold != None:
+            if self.mindays == 0:
+                res.append("%d days old" % self.daysold)
+            elif self.daysold < self.mindays:
+                res.append(("Too young, only %d of %d days old" %
+                (self.daysold, self.mindays)))
+            else:
+                res.append(("%d days old (needed %d days)" %
+                (self.daysold, self.mindays)))
+        for x in self.htmlline:
+            res.append("" + x + "")
+        lastdep = ""
+        for x in sorted(self.deps, lambda x,y: cmp(x.split('/')[0], y.split('/')[0])):
+            dep = x.split('/')[0]
+            if dep == lastdep: continue
+            lastdep = dep
+            if x in self.invalid_deps:
+                res.append("Depends: %s %s (not considered)" % (self.name, dep))
+            else:
+                res.append("Depends: %s %s" % (self.name, dep))
+        for (n,a) in self.break_deps:
+            if n not in self.deps:
+                res.append("Ignoring %s depends: %s" % (a, n))
+        if self.is_valid:
+            res.append("Valid candidate")
+        return res
+
+    def excusedata(self):
+        """Render the excuse in as key-value data"""
+        excusedata = {}
+        excusedata["excuses"] = self.text()
+        excusedata["source"] = self.name
+        excusedata["old-version"] = self.ver[0]
+        excusedata["new-version"] = self.ver[1]
+        excusedata["age"] = self.daysold
+        excusedata["age-needed"] = self.mindays
+        excusedata["new-bugs"] = sorted(self.newbugs)
+        excusedata["old-bugs"] = sorted(self.oldbugs)
+        if self.forced:
+            excusedata["forced-reason"] = self.reason.keys()
+            excusedata["reason"] = []
+        else:
+            excusedata["reason"] = self.reason.keys()
+        excusedata["is-candidate"] = self.is_valid
+        return excusedata
+

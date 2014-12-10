@@ -218,7 +218,9 @@ from hints import HintCollection
 from britney_util import (old_libraries_format, same_source, undo_changes,
                           register_reverses, compute_reverse_tree,
                           read_nuninst, write_nuninst, write_heidi,
-                          eval_uninst, newly_uninst, make_migrationitem)
+                          eval_uninst, newly_uninst, make_migrationitem,
+                          write_excuses, write_heidi_delta, write_controlfiles,
+                          old_libraries, ensuredir)
 from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
                    SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
                    PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH, ESSENTIAL)
@@ -226,10 +228,6 @@ from autopkgtest import AutoPackageTest, ADT_PASS, ADT_EXCUSES_LABELS
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
 __version__ = '2.0'
-
-def ensuredir(directory):
-    if not os.path.isdir(directory):
-        os.makedirs(directory)
 
 class Britney(object):
     """Britney, the Debian testing updater script
@@ -263,6 +261,8 @@ class Britney(object):
         apt_pkg.init()
         self.sources = {}
         self.binaries = {}
+        self.all_selected = []
+
         try:
             self.hints = self.read_hints(self.options.hintsdir)
         except AttributeError:
@@ -410,6 +410,9 @@ class Britney(object):
             elif not hasattr(self.options, k.lower()) or \
                  not getattr(self.options, k.lower()):
                 setattr(self.options, k.lower(), v)
+
+        if not hasattr(self.options, "heidi_delta_output"):
+            self.options.heidi_delta_output = self.options.heidi_output + "Delta"
 
         # Sort the architecture list
         allarches = sorted(self.options.architectures.split())
@@ -992,89 +995,6 @@ class Britney(object):
         return blocks
 
 
-    def write_delta(self, filename):
-        """Write the output delta
-
-        This method writes the packages to be upgraded, in the form:
-        <src-name> <src-version>
-        or (if the source is to be removed):
-        <src-name>
-
-        The order corresponds to that shown in update_output.
-        """
-        self.__log("Writing delta to %s" % filename)
-        ensuredir(os.path.dirname(filename))
-        f = open(filename, "w")
-
-        sources = self.sources['testing']
-        for name in self.all_selected:
-            if "/" in name:
-                pkg_name, arch = name.split('/', 1)
-                if pkg_name in sources:
-                    f.write('%s %s\n' % (name, sources[pkg_name][VERSION]))
-                else:
-                    f.write('%s\n' % name)
-            else:
-                if name in sources:
-                    f.write('%s %s\n' % (name, sources[name][VERSION]))
-                else:
-                    f.write('%s\n' % name)
-
-        f.close()
-
-    def write_controlfiles(self, basedir, suite):
-        """Write the control files
-
-        This method writes the control files for the binary packages of all
-        the architectures and for the source packages.
-        """
-        sources = self.sources[suite]
-
-        self.__log("Writing new %s control files to %s" % (suite, basedir))
-        ensuredir(basedir)
-        for arch in self.options.architectures:
-            filename = os.path.join(basedir, 'Packages_%s' % arch)
-            f = open(filename, 'w')
-            binaries = self.binaries[suite][arch][0]
-            for pkg in binaries:
-                output = "Package: %s\n" % pkg
-                for key, k in ((SECTION, 'Section'), (ARCHITECTURE, 'Architecture'), (MULTIARCH, 'Multi-Arch'), (SOURCE, 'Source'), (VERSION, 'Version'), 
-                          (DEPENDS, 'Depends'), (PROVIDES, 'Provides'), (CONFLICTS, 'Conflicts'), (ESSENTIAL, 'Essential')):
-                    if not binaries[pkg][key]: continue
-                    if key == SOURCE:
-                        if binaries[pkg][SOURCE] == pkg:
-                            if binaries[pkg][SOURCEVER] != binaries[pkg][VERSION]:
-                                source = binaries[pkg][SOURCE] + " (" + binaries[pkg][SOURCEVER] + ")"
-                            else: continue
-                        else:
-                            if binaries[pkg][SOURCEVER] != binaries[pkg][VERSION]:
-                                source = binaries[pkg][SOURCE] + " (" + binaries[pkg][SOURCEVER] + ")"
-                            else:
-                                source = binaries[pkg][SOURCE]
-                        output += (k + ": " + source + "\n")
-                        if sources[binaries[pkg][SOURCE]][MAINTAINER]:
-                            output += ("Maintainer: " + sources[binaries[pkg][SOURCE]][MAINTAINER] + "\n")
-                    elif key == PROVIDES:
-                        if len(binaries[pkg][key]) > 0:
-                            output += (k + ": " + ", ".join(binaries[pkg][key]) + "\n")
-                    elif key == ESSENTIAL:
-                        if binaries[pkg][key]:
-                            output += (k + ": " + " yes\n")
-                    else:
-                        output += (k + ": " + binaries[pkg][key] + "\n")
-                f.write(output + "\n")
-            f.close()
-
-        filename = os.path.join(basedir, 'Sources')
-        f = open(filename, 'w')
-        for src in sources:
-            output = "Package: %s\n" % src
-            for key, k in ((VERSION, 'Version'), (SECTION, 'Section'), (MAINTAINER, 'Maintainer')):
-                if not sources[src][key]: continue
-                output += (k + ": " + sources[src][key] + "\n")
-            f.write(output + "\n")
-        f.close()
-
     # Utility methods for package analysis
     # ------------------------------------
 
@@ -1168,6 +1088,7 @@ class Britney(object):
             # if no package can satisfy the dependency, add this information to the excuse
             if len(packages) == 0:
                 excuse.addhtml("%s/%s unsatisfiable Depends: %s" % (pkg, arch, block_txt.strip()))
+                excuse.addreason("depends");
                 all_satisfiable = False
                 continue
 
@@ -1203,6 +1124,8 @@ class Britney(object):
         # otherwise, add a new excuse for its removal and return True
         src = self.sources['testing'][pkg]
         excuse = Excuse("-" + pkg)
+        excuse.addhtml("Package not in unstable, will try to remove")
+        excuse.addreason("remove")
         excuse.set_distribution(self.options.distribution)
         excuse.set_vers(src[VERSION], None)
         src[MAINTAINER] and excuse.set_maint(src[MAINTAINER].strip())
@@ -1213,6 +1136,7 @@ class Britney(object):
             excuse.addhtml("Not touching package, as requested by %s (contact #ubuntu-release "
                 "if update is needed)" % hint.user)
             excuse.addhtml("Not considered")
+            excuse.addreason("block")
             self.excuses.append(excuse)
             return False
 
@@ -1253,6 +1177,7 @@ class Britney(object):
             excuse.addhtml("Removal request by %s" % (hint.user))
             excuse.addhtml("Trying to remove package, not update it")
             excuse.addhtml("Not considered")
+            excuse.addreason("remove")
             self.excuses.append(excuse)
             return False
 
@@ -1409,6 +1334,7 @@ class Britney(object):
         if source_t and apt_pkg.version_compare(source_u[VERSION], source_t[VERSION]) < 0:
             excuse.addhtml("ALERT: %s is newer in testing (%s %s)" % (src, source_t[VERSION], source_u[VERSION]))
             self.excuses.append(excuse)
+            excuse.addreason("newerintesting");
             return False
 
         # check if the source package really exists or if it is a fake one
@@ -1431,6 +1357,7 @@ class Britney(object):
                same_source(source_u[VERSION], item.version):
                 excuse.addhtml("Removal request by %s" % (item.user))
                 excuse.addhtml("Trying to remove package, not update it")
+                excuse.addreason("remove")
                 update_candidate = False
                 run_autopkgtest = False
 
@@ -1470,14 +1397,17 @@ class Britney(object):
                 if suite == 'unstable' or block_cmd == 'block-udeb':
                     excuse.addhtml("Not touching package due to %s request by %s (contact #ubuntu-release if update is needed)" %
                                    (block_cmd, blocked[block_cmd].user))
+                    excuse.addreason("block")
                 else:
                     excuse.addhtml("NEEDS APPROVAL BY RM")
+                    excuse.addreason("block")
                 update_candidate = False
 
         if src in self.blocks:
             for user_block in self.blocks[src]:
                 excuse.addhtml("Not touching package as requested in <a href=\"https://launchpad.net/bugs/%s\">bug %s</a> on %s" %
                                (user_block[0], user_block[0], time.asctime(time.gmtime(user_block[1]))))
+                excuse.addreason("block")
                 update_candidate = False
 
         # if the suite is unstable, then we have to check the urgency and the minimum days of
@@ -1508,6 +1438,7 @@ class Britney(object):
                 else:
                     update_candidate = False
                     run_autopkgtest = False
+                    excuse.addreason("age")
 
         if suite in ['pu', 'tpu']:
             # o-o-d(ish) checks for (t-)p-u
@@ -1542,6 +1473,8 @@ class Britney(object):
                     update_candidate = False
                     if arch in self.options.adt_arches.split():
                         run_autopkgtest = False
+                    excuse.addreason("arch")
+                    excuse.addreason("arch-%s" % arch)
 
                 excuse.addhtml(text)
 
@@ -1605,16 +1538,20 @@ class Britney(object):
                     update_candidate = False
                     if arch in self.options.adt_arches.split():
                         run_autopkgtest = False
+                    excuse.addreason("arch")
+                    excuse.addreason("arch-%s" % arch)
 
                 excuse.addhtml(text)
 
         # if the source package has no binaries, set update_candidate to False to block the update
         if len(self.sources[suite][src][BINARIES]) == 0:
             excuse.addhtml("%s has no binaries on any arch" % src)
+            excuse.addreason("no-binaries")
             update_candidate = False
             run_autopkgtest = False
         elif not built_anywhere:
             excuse.addhtml("%s has no up-to-date binaries on any arch" % src)
+            excuse.addreason("no-binaries")
             update_candidate = False
             run_autopkgtest = False
 
@@ -1639,6 +1576,8 @@ class Britney(object):
                 new_bugs = sorted(set(bugs_u).difference(bugs_t))
                 old_bugs = sorted(set(bugs_t).difference(bugs_u))
 
+                excuse.setbugs(old_bugs,new_bugs)
+
                 if len(new_bugs) > 0:
                     excuse.addhtml("%s (%s) <a href=\"http://bugs.debian.org/cgi-bin/pkgreport.cgi?" \
                         "which=pkg&data=%s&sev-inc=critical&sev-inc=grave&sev-inc=serious\" " \
@@ -1647,6 +1586,7 @@ class Britney(object):
                         ["<a href=\"http://bugs.debian.org/%s\">#%s</a>" % (urllib.quote(a), a) for a in new_bugs])))
                     update_candidate = False
                     run_autopkgtest = False
+                    excuse.addreason("buggy")
 
                 if len(old_bugs) > 0:
                     excuse.addhtml("Updating %s fixes old bugs: %s" % (pkg, ", ".join(
@@ -1661,6 +1601,7 @@ class Britney(object):
             excuse.dontinvalidate = True
         if not update_candidate and forces:
             excuse.addhtml("Should ignore, but forced by %s" % (forces[0].user))
+            excuse.force()
             update_candidate = True
             run_autopkgtest = True
 
@@ -1669,6 +1610,7 @@ class Britney(object):
             excuse.is_valid = True
         # else it won't be considered
         else:
+            # TODO
             excuse.addhtml("Not considered")
         excuse.run_autopkgtest = run_autopkgtest
 
@@ -1728,6 +1670,7 @@ class Britney(object):
                     invalid.append(valid.pop(p))
                     exclookup[x].addhtml("Invalidated by dependency")
                     exclookup[x].addhtml("Not considered")
+                    exclookup[x].addreason("depends")
                     exclookup[x].is_valid = False
             i = i + 1
  
@@ -1807,6 +1750,7 @@ class Britney(object):
             excuse.set_vers(tsrcv, None)
             excuse.addhtml("Removal request by %s" % (item.user))
             excuse.addhtml("Package is broken, will try to remove")
+            excuse.addreason("remove")
             self.excuses.append(excuse)
 
         # sort the excuses by daysold and name
@@ -1889,6 +1833,7 @@ class Britney(object):
                         upgrade_me.remove(e.name)
                         unconsidered.append(e.name)
                         e.addhtml("Not considered")
+                        e.addreason("autopkgtest")
                         e.is_valid = False
 
         # invalidate impossible excuses
@@ -1923,6 +1868,7 @@ class Britney(object):
                         ok = True
                 if not ok:
                     e.addhtml("Impossible dependency: %s -> %s" % (e.name, d))
+                    e.addreason("depends")
         self.invalidate_excuses(upgrade_me, unconsidered)
 
         # sort the list of candidates
@@ -1931,18 +1877,12 @@ class Britney(object):
         # write excuses to the output file
         if not self.options.dry_run:
             self.__log("> Writing Excuses to %s" % self.options.excuses_output, type="I")
-            ensuredir(os.path.dirname(self.options.excuses_output))
-            f = open(self.options.excuses_output, 'w')
-            f.write("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n")
-            f.write("<html><head><title>excuses...</title>")
-            f.write("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"></head><body>\n")
-            f.write("<p>Generated: " + time.strftime("%Y.%m.%d %H:%M:%S %z", time.gmtime(time.time())) + "</p>\n")
-            f.write("<p>See the <a href=\"https://wiki.ubuntu.com/ProposedMigration\">documentation</a> for help interpreting this page.</p>\n")
-            f.write("<ul>\n")
-            for e in self.excuses:
-                f.write("<li>%s" % e.html())
-            f.write("</ul></body></html>\n")
-            f.close()
+            write_excuses(self.excuses, self.options.excuses_output,
+                          output_format="legacy-html")
+            if hasattr(self.options, 'excuses_yaml_output'):
+                self.__log("> Writing YAML Excuses to %s" % self.options.excuses_yaml_output, type="I")
+                write_excuses(self.excuses, self.options.excuses_yaml_output,
+                          output_format="yaml")
 
         self.__log("Update Excuses generation completed", type="I")
 
@@ -2541,7 +2481,7 @@ class Britney(object):
                                               newly_uninst(nuninst_start, nuninst_end)))
             self.output_write("SUCCESS (%d/%d)\n" % (len(actions or self.upgrade_me), len(extra)))
             self.nuninst_orig = nuninst_end
-            self.all_selected += [x.uvname for x in selected]
+            self.all_selected += selected
             if not actions:
                 if recurse:
                     self.upgrade_me = sorted(extra)
@@ -2643,14 +2583,14 @@ class Britney(object):
                 self.do_all(actions=removals)
                                                                                                                                      
         # smooth updates
-        if len(self.options.smooth_updates) > 0:
+        if self.options.smooth_updates:
             self.__log("> Removing old packages left in testing from smooth updates", type="I")
-            removals = self.old_libraries()
-            if len(removals) > 0:
+            removals = old_libraries(self.sources, self.binaries)
+            if removals:
                 self.output_write("Removing packages left in testing for smooth updates (%d):\n%s" % \
                     (len(removals), old_libraries_format(removals)))
                 self.do_all(actions=removals)
-                removals = self.old_libraries()
+                removals = old_libraries(self.sources, self.binaries)
         else:
             removals = ()
 
@@ -2661,7 +2601,10 @@ class Britney(object):
         if not self.options.dry_run:
             # re-write control files
             if self.options.control_files:
-                self.write_controlfiles(self.options.testing, 'testing')
+                self.__log("Writing new testing control files to %s" %
+                           self.options.testing)
+                write_controlfiles(self.sources, self.binaries,
+                                   'testing', self.options.testing)
 
             # write dates
             try:
@@ -2674,9 +2617,10 @@ class Britney(object):
             write_heidi(self.options.heidi_output, self.sources["testing"],
                         self.binaries["testing"])
 
-            # write Delta
-            if hasattr(self.options, 'delta_output'):
-                self.write_delta(self.options.delta_output)
+            self.__log("Writing delta to %s" % self.options.heidi_delta_output)
+            write_heidi_delta(self.options.heidi_delta_output,
+                              self.all_selected)
+
 
         self.printuninstchange()
         self.__log("Test completed!", type="I")
@@ -2908,27 +2852,6 @@ class Britney(object):
                 if i not in to_skip:
                     self.do_hint("easy", "autohinter", [ MigrationItem("%s/%s" % (x[0], x[1])) for x in l[i] ])
 
-    def old_libraries(self, same_source=same_source):
-        """Detect old libraries left in testing for smooth transitions
-
-        This method detects old libraries which are in testing but no longer
-        built from the source package: they are still there because other
-        packages still depend on them, but they should be removed as soon
-        as possible.
-
-        same_source is an opt to avoid "load global".
-        """
-        sources = self.sources['testing']
-        testing = self.binaries['testing']
-        unstable = self.binaries['unstable']
-        removals = []
-        for arch in self.options.architectures:
-            for pkg_name in testing[arch][0]:
-                pkg = testing[arch][0][pkg_name]
-                if pkg_name not in unstable[arch][0] and \
-                   not same_source(sources[pkg[SOURCE]][VERSION], pkg[SOURCEVER]):
-                    removals.append(MigrationItem("-" + pkg_name + "/" + arch + "/" + pkg[SOURCEVER]))
-        return removals
 
     def nuninst_arch_report(self, nuninst, arch):
         """Print a report of uninstallable packages for one architecture."""
@@ -2990,9 +2913,6 @@ class Britney(object):
 
         If nuninst_arch is not None then it also updated in the same
         way as broken is.
-
-        current_pkg is the package currently being tried, mainly used
-        to print where an AIEEE is coming from.
         """
         r = self._inst_tester.is_installable(pkg_name, pkg_version, pkg_arch)
         if not r:
