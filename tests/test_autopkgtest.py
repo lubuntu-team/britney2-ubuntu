@@ -40,8 +40,9 @@ class TestData:
         '''
         self.path = tempfile.mkdtemp(prefix='testarchive.')
         self.apt_source = 'deb file://%s /' % self.path
-        self.dirs = {False: os.path.join(self.path, 'data', 'testing'),
-                     True: os.path.join(self.path, 'data', 'unstable')}
+        self.series = 'series'
+        self.dirs = {False: os.path.join(self.path, 'data', self.series),
+                     True: os.path.join(self.path, 'data', '%s-proposed' % self.series)}
         os.makedirs(self.dirs[False])
         os.mkdir(self.dirs[True])
         self.added_sources = {False: set(), True: set()}
@@ -240,7 +241,9 @@ args.func()
         Assert that it succeeds and does not produce anything on stderr.
         Return (excuses.html, britney_out).
         '''
-        britney = subprocess.Popen([self.britney, '-v', '-c', self.britney_conf],
+        britney = subprocess.Popen([self.britney, '-v', '-c', self.britney_conf,
+                                    '--distribution=ubuntu',
+                                    '--series=%s' % self.data.series],
                                    stdout=subprocess.PIPE,
                                    stderr=subprocess.PIPE,
                                    cwd=self.data.path,
@@ -249,7 +252,8 @@ args.func()
         self.assertEqual(britney.returncode, 0, out + err)
         self.assertEqual(err, '')
 
-        with open(os.path.join(self.data.path, 'output', 'excuses.html')) as f:
+        with open(os.path.join(self.data.path, 'output', self.data.series,
+                               'excuses.html')) as f:
             excuses = f.read()
 
         return (excuses, out)
