@@ -953,6 +953,11 @@ class Britney(object):
                 l = line.split()
                 if l[0] == 'finished':
                     break
+                if l[0] == 'remark':
+                    # Ignore "no-op" hint, which sole purpose is to be
+                    # found by hint grep (and show up in "d"'s
+                    # output).
+                    continue
                 elif l[0] not in self.HINTS[who]:
                     continue
                 elif len(l) == 1:
@@ -1165,8 +1170,8 @@ class Britney(object):
 
         # if the package is blocked, skip it
         for hint in self.hints.search('block', package=pkg, removal=True):
-            excuse.addhtml("Not touching package, as requested by %s (contact #ubuntu-release "
-                "if update is needed)" % hint.user)
+            excuse.addhtml("Not touching package, as requested by %s "
+                "(contact #ubuntu-release if update is needed)" % hint.user)
             excuse.addhtml("Not considered")
             excuse.addreason("block")
             self.excuses.append(excuse)
@@ -1427,7 +1432,8 @@ class Britney(object):
                         excuse.addhtml("%s request by %s ignored due to version mismatch: %s" %
                                        (unblock_cmd.capitalize(), unblocks[0].user, unblocks[0].version))
                 if suite == 'unstable' or block_cmd == 'block-udeb':
-                    excuse.addhtml("Not touching package due to %s request by %s (contact #ubuntu-release if update is needed)" %
+                    excuse.addhtml("Not touching package due to %s request by %s "
+                                    "(contact #ubuntu-release if update is needed)" %
                                    (block_cmd, blocked[block_cmd].user))
                     excuse.addreason("block")
                 else:
@@ -1507,6 +1513,8 @@ class Britney(object):
                         run_autopkgtest = False
                     excuse.addreason("arch")
                     excuse.addreason("arch-%s" % arch)
+                    excuse.addreason("build-arch")
+                    excuse.addreason("build-arch-%s" % arch)
 
                 excuse.addhtml(text)
 
@@ -1516,6 +1524,7 @@ class Britney(object):
         built_anywhere = False
         for arch in self.options.architectures:
             oodbins = {}
+            uptodatebins = False
             # for every binary package produced by this source in the suite for this architecture
             for pkg in sorted(x.split("/")[0] for x in self.sources[suite][src][BINARIES] if x.endswith("/"+arch)):
                 if pkg not in pkgs: pkgs[pkg] = []
@@ -1526,12 +1535,16 @@ class Britney(object):
                 pkgsv = binary_u[SOURCEVER]
 
                 # if it wasn't built by the same source, it is out-of-date
+                # it there is at least one binary which is up-to-date, there
+                # is a build on this arch
                 if not same_source(source_u[VERSION], pkgsv):
                     if pkgsv not in oodbins:
                         oodbins[pkgsv] = []
                     oodbins[pkgsv].append(pkg)
                     continue
-                built_anywhere = True
+                else:
+                    uptodatebins = True
+                    built_anywhere = True
 
                 # if the package is architecture-dependent or the current arch is `nobreakall'
                 # find unsatisfied dependencies for the binary package
@@ -1548,21 +1561,17 @@ class Britney(object):
                 oodtxt = ""
                 for v in oodbins.keys():
                     if oodtxt: oodtxt = oodtxt + "; "
-                    maybe_nbs = ""
-                    if not source_t or same_source(source_t[VERSION], v):
-                        maxver = None
-                        for pkg in sorted(x.split("/")[0] for x in source_u[BINARIES] if x.endswith("/"+arch)):
-                            pkgv = self.binaries[suite][arch][0][pkg][VERSION]
-                            if maxver is None or apt_pkg.version_compare(pkgv, maxver) > 0:
-                                maxver = pkgv
-                        if maxver is not None and apt_pkg.version_compare(maxver, v) > 0:
-                            maybe_nbs = "; NBS?"
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/%s/+source/" \
                         "%s/%s\" target=\"_blank\">%s</a>%s)" % \
                         (", ".join(sorted(oodbins[v])), self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(v), v, maybe_nbs)
-                text = "out of date on <a href=\"https://launchpad.net/%s/+source/" \
-                    "%s/%s\" target=\"_blank\">%s</a>: %s" % \
-                    (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
+                if uptodatebins:
+                    text = "old binaries left on <a href=\"https://launchpad.net/%s/+source/" \
+                        "%s/%s\" target=\"_blank\">%s</a>: %s" % \
+                        (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
+                else:
+                    text = "missing build on <a href=\"https://launchpad.net/%s/+source/" \
+                        "%s/%s\" target=\"_blank\">%s</a>: %s" % \
+                        (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
 
                 if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
@@ -1572,6 +1581,12 @@ class Britney(object):
                         run_autopkgtest = False
                     excuse.addreason("arch")
                     excuse.addreason("arch-%s" % arch)
+                    if uptodatebins:
+                        excuse.addreason("cruft-arch")
+                        excuse.addreason("cruft-arch-%s" % arch)
+                    else:
+                        excuse.addreason("build-arch")
+                        excuse.addreason("build-arch-%s" % arch)
 
                 excuse.addhtml(text)
 
@@ -2149,7 +2164,17 @@ class Britney(object):
                 for p in ( bin for bin in bins if bin not in smoothbins ):
                     binary, parch = p.split("/")
                     version = binaries_t[parch][0][binary][VERSION]
-                    rms.add((binary, version, parch))
+                    # if this is a binary migration from *pu, only the arch:any
+                    # packages will be present. ideally dak would also populate
+                    # the arch-indep packages, but as that's not the case we
+                    # must keep them around; they will not be re-added by the
+                    # migration so will end up missing from testing
+                    if migration_architecture != 'source' and \
+                         suite != 'unstable' and \
+                         binaries_t[parch][0][binary][ARCHITECTURE] == 'all':
+                        continue
+                    else:    
+                        rms.add((binary, version, parch))
 
         # single binary removal; used for clearing up after smooth
         # updates but not supported as a manual hint
@@ -2170,7 +2195,7 @@ class Britney(object):
         return (adds, rms, set(smoothbins.itervalues()))
 
 
-    def doop_source(self, item, hint_undo=[], removals=frozenset()):
+    def doop_source(self, item, hint_undo=None, removals=frozenset()):
         """Apply a change to the testing distribution as requested by `pkg`
 
         An optional list of undo actions related to packages processed earlier
@@ -2303,7 +2328,7 @@ class Britney(object):
                             affected.update(get_reverse_tree(j, parch))
                     old_version = old_pkg_data[VERSION]
                     inst_tester.remove_testing_binary(binary, old_version, parch)
-                else:
+                elif hint_undo:
                     # the binary isn't in testing, but it may have been at
                     # the start of the current hint and have been removed
                     # by an earlier migration. if that's the case then we
@@ -2400,10 +2425,9 @@ class Britney(object):
         removals = set()
         all_affected = set()
         nobreakall_arches = self.options.nobreakall_arches.split()
-        binaries_t = self.binaries['testing']
-        check_packages = partial(self._check_packages, binaries_t)
-        # Deep copy nuninst (in case the hint is undone)
-        nuninst = {k:v.copy() for k,v in self.nuninst_orig.iteritems()}
+        packages_t = self.binaries['testing']
+        check_packages = partial(self._check_packages, packages_t)
+        nuninst = {}
 
 
         for item in hinted_packages:
@@ -2419,6 +2443,17 @@ class Britney(object):
             all_affected.update(affected)
             if lundo is not None:
                 lundo.append((undo,item))
+
+        # deep copy nuninst (in case the hint is undone)
+        # NB: We do this *after* updating testing and we have to filter out
+        # removed binaries.  Otherwise, uninstallable binaries that were
+        # removed by the hint would still be counted.
+        for arch in self.options.architectures:
+            nuninst_arch = self.nuninst_orig[arch]
+            nuninst_arch_all = self.nuninst_orig[arch + '+all']
+            binaries_t_a = packages_t[arch][0]
+            nuninst[arch] = set(x for x in nuninst_arch if x in binaries_t_a)
+            nuninst[arch + '+all'] = set(x for x in nuninst_arch_all if x in binaries_t_a)
 
         for arch in self.options.architectures:
             if arch not in nobreakall_arches:
@@ -2459,9 +2494,6 @@ class Britney(object):
         break_arches = self.options.break_arches.split()
         dependencies = self.dependencies
         check_packages = partial(self._check_packages, binaries)
-
-        if lundo is None:
-            lundo = []
 
         self.output_write("recur: [%s] %s %d/%d\n" % ("", ",".join(x.uvname for x in selected), len(packages), len(extra)))
 
@@ -2516,7 +2548,8 @@ class Britney(object):
 
             # check if the action improved the uninstallability counters
             if better:
-                lundo.append((undo, item))
+                if lundo is not None:
+                    lundo.append((undo, item))
                 selected.append(item)
                 packages.extend(extra)
                 extra = []
@@ -2573,7 +2606,7 @@ class Britney(object):
         lundo = None
         nuninst_end = None
         better = True
-        extra = () # empty tuple
+        extra = []
 
         if hinttype == "easy" or hinttype == "force-hint":
             force = hinttype == "force-hint"
@@ -2621,7 +2654,12 @@ class Britney(object):
                                               newly_uninst(nuninst_start, nuninst_end)))
 
         if not force:
-            break_arches = self.options.break_arches.split()
+            break_arches = set(self.options.break_arches.split())
+            if all(x.architecture in break_arches for x in selected):
+                # If we only migrated items from break-arches, then we
+                # do not allow any regressions on these architectures.
+                # This usually only happens with hints
+                break_arches = set()
             better = is_nuninst_asgood_generous(self.options.architectures,
                                                 self.nuninst_orig,
                                                 nuninst_end,
@@ -2647,10 +2685,10 @@ class Britney(object):
             self.all_selected += selected
             if not actions:
                 if recurse:
-                    self.upgrade_me = sorted(extra)
+                    self.upgrade_me = extra
+                    self.sort_actions()
                 else:
                     self.upgrade_me = [x for x in self.upgrade_me if x not in set(selected)]
-                self.sort_actions()
         else:
             self.output_write("FAILED\n")
             if not lundo: return
