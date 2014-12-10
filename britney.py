@@ -192,6 +192,7 @@ import urllib
 
 import apt_pkg
 
+from collections import defaultdict
 from functools import reduce, partial
 from itertools import chain, ifilter, product
 from operator import attrgetter
@@ -220,7 +221,7 @@ from britney_util import (old_libraries_format, same_source, undo_changes,
                           read_nuninst, write_nuninst, write_heidi,
                           eval_uninst, newly_uninst, make_migrationitem,
                           write_excuses, write_heidi_delta, write_controlfiles,
-                          old_libraries, ensuredir)
+                          old_libraries, is_nuninst_asgood_generous, ensuredir)
 from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
                    SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
                    PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH, ESSENTIAL)
@@ -454,10 +455,12 @@ class Britney(object):
 
                 depends = []
                 conflicts = []
+                possible_dep_ranges = {}
 
                 # We do not differ between depends and pre-depends
                 if pkgdata[DEPENDS]:
                     depends.extend(apt_pkg.parse_depends(pkgdata[DEPENDS], False))
+
                 if pkgdata[CONFLICTS]:
                     conflicts = apt_pkg.parse_depends(pkgdata[CONFLICTS], False)
 
@@ -465,8 +468,10 @@ class Britney(object):
 
                     for (al, dep) in [(depends, True), \
                                       (conflicts, False)]:
+
                         for block in al:
                             sat = set()
+
                             for dep_dist in binaries:
                                 (_, pkgs) = solvers(block, arch, dep_dist)
                                 for p in pkgs:
@@ -483,7 +488,37 @@ class Britney(object):
                                         # is using §7.6.2
                                         relations.add_breaks(pt)
                             if dep:
-                                relations.add_dependency_clause(sat)
+                                if len(block) != 1:
+                                    relations.add_dependency_clause(sat)
+                                else:
+                                    # This dependency might be a part
+                                    # of a version-range a la:
+                                    #
+                                    #   Depends: pkg-a (>= 1),
+                                    #            pkg-a (<< 2~)
+                                    #
+                                    # In such a case we want to reduce
+                                    # that to a single clause for
+                                    # efficiency.
+                                    #
+                                    # In theory, it could also happen
+                                    # with "non-minimal" dependencies
+                                    # a la:
+                                    #
+                                    #   Depends: pkg-a, pkg-a (>= 1)
+                                    #
+                                    # But dpkg is known to fix that up
+                                    # at build time, so we will
+                                    # probably only see "ranges" here.
+                                    key = block[0][0]
+                                    if key in possible_dep_ranges:
+                                        possible_dep_ranges[key] &= sat
+                                    else:
+                                        possible_dep_ranges[key] = sat
+
+                        if dep:
+                            for clause in possible_dep_ranges.itervalues():
+                                relations.add_dependency_clause(clause)
 
         self._inst_tester = builder.build()
 
@@ -731,7 +766,7 @@ class Britney(object):
         The method returns a dictionary where the key is the binary package
         name and the value is the list of open RC bugs for it.
         """
-        bugs = {}
+        bugs = defaultdict(list)
         filename = os.path.join(basedir, "BugsV")
         self.__log("Loading RC bugs data from %s" % filename)
         try:
@@ -742,7 +777,6 @@ class Britney(object):
                                type='W')
                     continue
                 pkg = l[0]
-                bugs.setdefault(pkg, [])
                 bugs[pkg] += l[1].split(",")
         except IOError:
             self.__log("%s missing; skipping bug-based processing" % filename)
@@ -1196,7 +1230,7 @@ class Britney(object):
             binary_u = self.binaries[suite][arch][0][pkg_name]
 
             # this is the source version for the new binary package
-            pkgsv = self.binaries[suite][arch][0][pkg_name][SOURCEVER]
+            pkgsv = binary_u[SOURCEVER]
 
             # if the new binary package is architecture-independent, then skip it
             if binary_u[ARCHITECTURE] == 'all':
@@ -1972,14 +2006,6 @@ class Britney(object):
         return "%d+%d: %s" % (total, totalbreak, ":".join(res))
 
 
-    def is_nuninst_asgood_generous(self, old, new):
-        diff = 0
-        for arch in self.options.architectures:
-            if arch in self.options.break_arches.split(): continue
-            diff = diff + (len(new[arch]) - len(old[arch]))
-        return diff <= 0
-
-
     def _compute_groups(self, source_name, suite, migration_architecture,
                         is_removal, include_hijacked=False,
                         allow_smooth_updates=True,
@@ -2159,9 +2185,9 @@ class Britney(object):
         This method applies the changes required by the action `item` tracking
         them so it will be possible to revert them.
 
-        The method returns a list of the package name, the suite where the
-        package comes from, the set of packages affected by the change and
-        the dictionary undo which can be used to rollback the changes.
+        The method returns a tuple containing a set of packages
+        affected by the change (as (name, arch)-tuples) and the
+        dictionary undo which can be used to rollback the changes.
         """
         undo = {'binaries': {}, 'sources': {}, 'virtual': {}, 'nvirtual': []}
 
@@ -2169,39 +2195,63 @@ class Britney(object):
 
         # local copies for better performances
         sources = self.sources
-        binaries = self.binaries['testing']
-        get_reverse_tree = partial(compute_reverse_tree, self.binaries["testing"])
+        packages_t = self.binaries['testing']
+        get_reverse_tree = partial(compute_reverse_tree, packages_t)
+        inst_tester = self._inst_tester
+        eqv_set = set()
+
         # remove all binary packages (if the source already exists)
         if item.architecture == 'source' or not item.is_removal:
             if item.package in sources['testing']:
                 source = sources['testing'][item.package]
 
-                _, bins, _ = self._compute_groups(item.package,
-                                                  item.suite,
-                                                  item.architecture,
-                                                  item.is_removal,
-                                                  removals=removals)
+                updates, rms, _ = self._compute_groups(item.package,
+                                                       item.suite,
+                                                       item.architecture,
+                                                       item.is_removal,
+                                                       removals=removals)
+
+                eqv_table = {}
+
+                for binary, version, parch in rms:
+                    key = (binary, parch)
+                    eqv_table[key] = version
+
+                for p1 in updates:
+                    binary, _, parch = p1
+                    key = (binary, parch)
+                    old_version = eqv_table.get(key)
+                    if old_version is not None:
+                        p2 = (binary, old_version, parch)
+                        if inst_tester.are_equivalent(p1, p2):
+                            eqv_set.add(key)
 
                 # remove all the binaries which aren't being smooth updated
-                for bin_data in bins:
-                    binary, _, parch = bin_data
+                for rm_tuple in rms:
+                    binary, version, parch = rm_tuple
                     p = binary + "/" + parch
+                    binaries_t_a, provides_t_a = packages_t[parch]
+                    pkey = (binary, parch)
+
+                    pkg_data = binaries_t_a[binary]
                     # save the old binary for undo
-                    undo['binaries'][p] = binaries[parch][0][binary]
-                    # all the reverse dependencies are affected by the change
-                    affected.update(get_reverse_tree(binary, parch))
+                    undo['binaries'][p] = pkg_data
+                    if pkey not in eqv_set:
+                        # all the reverse dependencies are affected by
+                        # the change
+                        affected.update(get_reverse_tree(binary, parch))
+
                     # remove the provided virtual packages
-                    for j in binaries[parch][0][binary][PROVIDES]:
+                    for j in pkg_data[PROVIDES]:
                         key = j + "/" + parch
                         if key not in undo['virtual']:
-                            undo['virtual'][key] = binaries[parch][1][j][:]
-                        binaries[parch][1][j].remove(binary)
-                        if len(binaries[parch][1][j]) == 0:
-                            del binaries[parch][1][j]
+                            undo['virtual'][key] = provides_t_a[j][:]
+                        provides_t_a[j].remove(binary)
+                        if not provides_t_a[j]:
+                            del provides_t_a[j]
                     # finally, remove the binary package
-                    version = binaries[parch][0][binary][VERSION]
-                    del binaries[parch][0][binary]
-                    self._inst_tester.remove_testing_binary(binary, version, parch)
+                    del binaries_t_a[binary]
+                    inst_tester.remove_testing_binary(binary, version, parch)
                 # remove the source package
                 if item.architecture == 'source':
                     undo['sources'][item.package] = source
@@ -2212,37 +2262,47 @@ class Britney(object):
 
         # single binary removal; used for clearing up after smooth
         # updates but not supported as a manual hint
-        elif item.package in binaries[item.architecture][0]:
-            undo['binaries'][item.package + "/" + item.architecture] = binaries[item.architecture][0][item.package]
+        elif item.package in packages_t[item.architecture][0]:
+            binaries_t_a = packages_t[item.architecture][0]
+            undo['binaries'][item.package + "/" + item.architecture] = binaries_t_a[item.package]
             affected.update(get_reverse_tree(item.package, item.architecture))
-            version = binaries[item.architecture][0][item.package][VERSION]
-            del binaries[item.architecture][0][item.package]
-            self._inst_tester.remove_testing_binary(item.package, version, item.architecture)
+            version = binaries_t_a[item.package][VERSION]
+            del binaries_t_a[item.package]
+            inst_tester.remove_testing_binary(item.package, version, item.architecture)
 
 
         # add the new binary packages (if we are not removing)
         if not item.is_removal:
             source = sources[item.suite][item.package]
+            packages_s = self.binaries[item.suite]
             for p in source[BINARIES]:
                 binary, parch = p.split("/")
                 if item.architecture not in ['source', parch]: continue
                 key = (binary, parch)
+                binaries_t_a, provides_t_a = packages_t[parch]
+                equivalent_replacement = key in eqv_set
+
                 # obviously, added/modified packages are affected
-                if key not in affected: affected.add(key)
+                if not equivalent_replacement and key not in affected:
+                    affected.add(key)
                 # if the binary already exists in testing, it is currently
                 # built by another source package. we therefore remove the
                 # version built by the other source package, after marking
                 # all of its reverse dependencies as affected
-                if binary in binaries[parch][0]:
+                if binary in binaries_t_a:
+                    old_pkg_data = binaries_t_a[binary]
                     # save the old binary package
-                    undo['binaries'][p] = binaries[parch][0][binary]
-                    # all the reverse dependencies are affected by the change
-                    affected.update(get_reverse_tree(binary, parch))
-                    # all the reverse conflicts and their dependency tree are affected by the change
-                    for j in binaries[parch][0][binary][RCONFLICTS]:
-                        affected.update(get_reverse_tree(j, parch))
-                    version = binaries[parch][0][binary][VERSION]
-                    self._inst_tester.remove_testing_binary(binary, version, parch)
+                    undo['binaries'][p] = old_pkg_data
+                    if not equivalent_replacement:
+                        # all the reverse dependencies are affected by
+                        # the change
+                        affected.update(get_reverse_tree(binary, parch))
+                        # all the reverse conflicts and their
+                        # dependency tree are affected by the change
+                        for j in old_pkg_data[RCONFLICTS]:
+                            affected.update(get_reverse_tree(j, parch))
+                    old_version = old_pkg_data[VERSION]
+                    inst_tester.remove_testing_binary(binary, old_version, parch)
                 else:
                     # the binary isn't in testing, but it may have been at
                     # the start of the current hint and have been removed
@@ -2258,23 +2318,26 @@ class Britney(object):
                     for (tundo, tpkg) in hint_undo:
                         if p in tundo['binaries']:
                             for rdep in tundo['binaries'][p][RDEPENDS]:
-                                if rdep in binaries[parch][0] and rdep not in source[BINARIES]:
+                                if rdep in binaries_t_a and rdep not in source[BINARIES]:
                                     affected.update(get_reverse_tree(rdep, parch))
-                # add/update the binary package
-                binaries[parch][0][binary] = self.binaries[item.suite][parch][0][binary]
-                version = binaries[parch][0][binary][VERSION]
-                self._inst_tester.add_testing_binary(binary, version, parch)
+
+                # add/update the binary package from the source suite
+                new_pkg_data = packages_s[parch][0][binary]
+                new_version = new_pkg_data[VERSION]
+                binaries_t_a[binary] = new_pkg_data
+                inst_tester.add_testing_binary(binary, new_version, parch)
                 # register new provided packages
-                for j in binaries[parch][0][binary][PROVIDES]:
+                for j in new_pkg_data[PROVIDES]:
                     key = j + "/" + parch
-                    if j not in binaries[parch][1]:
+                    if j not in provides_t_a:
                         undo['nvirtual'].append(key)
-                        binaries[parch][1][j] = []
+                        provides_t_a[j] = []
                     elif key not in undo['virtual']:
-                        undo['virtual'][key] = binaries[parch][1][j][:]
-                    binaries[parch][1][j].append(binary)
-                # all the reverse dependencies are affected by the change
-                affected.update(get_reverse_tree(binary, parch))
+                        undo['virtual'][key] = provides_t_a[j][:]
+                    provides_t_a[j].append(binary)
+                if not equivalent_replacement:
+                    # all the reverse dependencies are affected by the change
+                    affected.update(get_reverse_tree(binary, parch))
 
             # register reverse dependencies and conflicts for the new binary packages
             if item.architecture == 'source':
@@ -2282,14 +2345,14 @@ class Britney(object):
             else:
                 ext = "/" + item.architecture
                 pkg_iter = (p.split("/")[0] for p in source[BINARIES] if p.endswith(ext))
-            register_reverses(binaries[parch][0], binaries[parch][1], iterator=pkg_iter)
+            register_reverses(binaries_t_a, provides_t_a, iterator=pkg_iter)
 
             # add/update the source package
             if item.architecture == 'source':
                 sources['testing'][item.package] = sources[item.suite][item.package]
 
         # return the package name, the suite, the list of affected packages and the undo dictionary
-        return (item, affected, undo)
+        return (affected, undo)
 
 
     def _check_packages(self, binaries, arch, affected, skip_archall, nuninst):
@@ -2324,7 +2387,51 @@ class Britney(object):
                 self._installability_test(p, version, arch, broken, to_check, nuninst_arch)
 
 
-    def iter_packages(self, packages, selected, hint=False, nuninst=None, lundo=None):
+    def iter_packages_hint(self, hinted_packages, lundo=None):
+        """Iter on hinted list of actions and apply them in one go
+
+        This method applies the changes from "hinted_packages" to
+        testing and computes the uninstallability counters after te
+        actions are performed.
+
+        The method returns the new uninstallability counters.
+        """
+
+        removals = set()
+        all_affected = set()
+        nobreakall_arches = self.options.nobreakall_arches.split()
+        binaries_t = self.binaries['testing']
+        check_packages = partial(self._check_packages, binaries_t)
+        # Deep copy nuninst (in case the hint is undone)
+        nuninst = {k:v.copy() for k,v in self.nuninst_orig.iteritems()}
+
+
+        for item in hinted_packages:
+            _, rms, _ = self._compute_groups(item.package, item.suite,
+                                             item.architecture,
+                                             item.is_removal,
+                                             allow_smooth_updates=False)
+            removals.update(rms)
+
+        for item in hinted_packages:
+            affected, undo = self.doop_source(item,
+                                              removals=removals)
+            all_affected.update(affected)
+            if lundo is not None:
+                lundo.append((undo,item))
+
+        for arch in self.options.architectures:
+            if arch not in nobreakall_arches:
+                skip_archall = True
+            else:
+                skip_archall = False
+
+            check_packages(arch, all_affected, skip_archall, nuninst)
+
+        return nuninst
+
+
+    def iter_packages(self, packages, selected, nuninst=None, lundo=None):
         """Iter on the list of actions and apply them one-by-one
 
         This method applies the changes from `packages` to testing, checking the uninstallability
@@ -2353,29 +2460,14 @@ class Britney(object):
         dependencies = self.dependencies
         check_packages = partial(self._check_packages, binaries)
 
-        # pre-process a hint batch
-        pre_process = {}
-        if selected and hint:
-            removals = set()
-            for item in selected:
-                _, rms, _ = self._compute_groups(item.package, item.suite,
-                                                 item.architecture,
-                                                 item.is_removal,
-                                                 allow_smooth_updates=False)
-                removals.update(rms)
-            for package in selected:
-                pkg, affected, undo = self.doop_source(package,
-                                                       removals=removals)
-                pre_process[package] = (pkg, affected, undo)
-
         if lundo is None:
             lundo = []
-        if not hint:
-            self.output_write("recur: [%s] %s %d/%d\n" % ("", ",".join(x.uvname for x in selected), len(packages), len(extra)))
+
+        self.output_write("recur: [%s] %s %d/%d\n" % ("", ",".join(x.uvname for x in selected), len(packages), len(extra)))
 
         # loop on the packages (or better, actions)
         while packages:
-            pkg = packages.pop(0)
+            item = packages.pop(0)
 
             # this is the marker for the first loop
             if not mark_passed and position < 0:
@@ -2387,44 +2479,33 @@ class Britney(object):
             # defer packages if their dependency has been already skipped
             if not mark_passed:
                 defer = False
-                for p in dependencies.get(pkg, []):
+                for p in dependencies.get(item, []):
                     if p in skipped:
-                        deferred.append(make_migrationitem(pkg, self.sources))
-                        skipped.append(make_migrationitem(pkg, self.sources))
+                        deferred.append(item)
+                        skipped.append(item)
                         defer = True
                         break
                 if defer: continue
 
-            if not hint:
-                self.output_write("trying: %s\n" % (pkg.uvname))
+            self.output_write("trying: %s\n" % (item.uvname))
 
             better = True
             nuninst = {}
 
             # apply the changes
-            if pkg in pre_process:
-                item, affected, undo = pre_process[pkg]
-            else:
-                item, affected, undo = self.doop_source(pkg, lundo)
-            if hint:
-                lundo.append((undo, item))
+            affected, undo = self.doop_source(item, lundo)
 
             # check the affected packages on all the architectures
             for arch in (item.architecture == 'source' and architectures or (item.architecture,)):
                 if arch not in nobreakall_arches:
                     skip_archall = True
-                else: skip_archall = False
+                else:
+                    skip_archall = False
 
                 nuninst[arch] = set(x for x in nuninst_comp[arch] if x in binaries[arch][0])
                 nuninst[arch + "+all"] = set(x for x in nuninst_comp[arch + "+all"] if x in binaries[arch][0])
 
                 check_packages(arch, affected, skip_archall, nuninst)
-
-                # if we are processing hints, go ahead
-                if hint:
-                    nuninst_comp[arch] = nuninst[arch]
-                    nuninst_comp[arch + "+all"] = nuninst[arch + "+all"]
-                    continue
 
                 # if the uninstallability counter is worse than before, break the loop
                 if ((item.architecture != 'source' and arch not in new_arches) or \
@@ -2432,16 +2513,14 @@ class Britney(object):
                     better = False
                     break
 
-            # if we are processing hints or the package is already accepted, go ahead
-            if hint or item in selected: continue
 
             # check if the action improved the uninstallability counters
             if better:
                 lundo.append((undo, item))
-                selected.append(pkg)
+                selected.append(item)
                 packages.extend(extra)
                 extra = []
-                self.output_write("accepted: %s\n" % (pkg.uvname))
+                self.output_write("accepted: %s\n" % (item.uvname))
                 self.output_write("   ori: %s\n" % (self.eval_nuninst(self.nuninst_orig)))
                 self.output_write("   pre: %s\n" % (self.eval_nuninst(nuninst_comp)))
                 self.output_write("   now: %s\n" % (self.eval_nuninst(nuninst, nuninst_comp)))
@@ -2452,8 +2531,8 @@ class Britney(object):
                 for k in nuninst:
                     nuninst_comp[k] = nuninst[k]
             else:
-                self.output_write("skipped: %s (%d <- %d)\n" % (pkg.uvname, len(extra), len(packages)))
-                self.output_write("    got: %s\n" % (self.eval_nuninst(nuninst, pkg.architecture != 'source' and nuninst_comp or None)))
+                self.output_write("skipped: %s (%d <- %d)\n" % (item.uvname, len(extra), len(packages)))
+                self.output_write("    got: %s\n" % (self.eval_nuninst(nuninst, item.architecture != 'source' and nuninst_comp or None)))
                 self.output_write("    * %s: %s\n" % (arch, ", ".join(sorted(b for b in nuninst[arch] if b not in nuninst_comp[arch]))))
 
                 extra.append(item)
@@ -2463,9 +2542,6 @@ class Britney(object):
                 # (local-scope) binaries is actually self.binaries["testing"] so we cannot use it here.
                 undo_changes(single_undo, self._inst_tester, sources, self.binaries)
 
-        # if we are processing hints, return now
-        if hint:
-            return (nuninst_comp, [])
 
         self.output_write(" finish: [%s]\n" % ",".join( x.uvname for x in selected ))
         self.output_write("endloop: %s\n" % (self.eval_nuninst(self.nuninst_orig)))
@@ -2475,6 +2551,7 @@ class Britney(object):
         self.output_write("\n")
 
         return (nuninst_comp, extra)
+
 
     def do_all(self, hinttype=None, init=None, actions=None):
         """Testing update runner
@@ -2495,6 +2572,8 @@ class Britney(object):
         recurse = True
         lundo = None
         nuninst_end = None
+        better = True
+        extra = () # empty tuple
 
         if hinttype == "easy" or hinttype == "force-hint":
             force = hinttype == "force-hint"
@@ -2519,7 +2598,11 @@ class Britney(object):
 
         if init:
             # init => a hint (e.g. "easy") - so do the hint run
-            (nuninst_end, extra) = self.iter_packages(init, selected, hint=True, lundo=lundo)
+            nuninst_end = self.iter_packages_hint(selected, lundo=lundo)
+            if recurse:
+                # Ensure upgrade_me and selected do not overlap, if we
+                # follow-up with a recurse ("hint"-hint).
+                upgrade_me = [x for x in upgrade_me if x not in set(selected)]
 
         if recurse:
             # Either the main run or the recursive run of a "hint"-hint.
@@ -2537,7 +2620,14 @@ class Britney(object):
                 self.output_write(eval_uninst(self.options.architectures,
                                               newly_uninst(nuninst_start, nuninst_end)))
 
-        if force or self.is_nuninst_asgood_generous(self.nuninst_orig, nuninst_end):
+        if not force:
+            break_arches = self.options.break_arches.split()
+            better = is_nuninst_asgood_generous(self.options.architectures,
+                                                self.nuninst_orig,
+                                                nuninst_end,
+                                                break_arches)
+
+        if better:
             # Result accepted either by force or by being better than the original result.
             if recurse:
                 self.output_write("Apparently successful\n")
@@ -2559,7 +2649,7 @@ class Britney(object):
                 if recurse:
                     self.upgrade_me = sorted(extra)
                 else:
-                    self.upgrade_me = [x for x in self.upgrade_me if x not in selected]
+                    self.upgrade_me = [x for x in self.upgrade_me if x not in set(selected)]
                 self.sort_actions()
         else:
             self.output_write("FAILED\n")
@@ -2952,10 +3042,11 @@ class Britney(object):
 
     def nuninst_arch_report(self, nuninst, arch):
         """Print a report of uninstallable packages for one architecture."""
-        all = {}
+        all = defaultdict(set)
         for p in nuninst[arch]:
             pkg = self.binaries['testing'][arch][0][p]
-            all.setdefault((pkg[SOURCE], pkg[SOURCEVER]), set()).add(p)
+            all[(pkg[SOURCE], pkg[SOURCEVER])].add(p)
+
 
         print '* %s' % (arch,)
 

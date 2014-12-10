@@ -20,7 +20,7 @@ from britney_util import iter_except
 class InstallabilityTester(object):
 
     def __init__(self, universe, revuniverse, testing, broken, essentials,
-                 safe_set):
+                 safe_set, eqv_table):
         """Create a new installability tester
 
         universe is a dict mapping package tuples to their
@@ -51,6 +51,7 @@ class InstallabilityTester(object):
         self._essentials = essentials
         self._revuniverse = revuniverse
         self._safe_set = safe_set
+        self._eqv_table = eqv_table
 
         # Cache of packages known to be broken - we deliberately do not
         # include "broken" in it.  See _optimize for more info.
@@ -80,11 +81,33 @@ class InstallabilityTester(object):
         check_inst = self._check_inst
         cbroken = self._cache_broken
         cache_inst = self._cache_inst
-        tcopy = [x for x in self._testing]
+        eqv_table = self._eqv_table
+        testing = self._testing
+        tcopy = [x for x in testing]
         for t in ifilterfalse(cache_inst.__contains__, tcopy):
             if t in cbroken:
                 continue
-            check_inst(t)
+            res = check_inst(t)
+            if t in eqv_table:
+                eqv = (x for x in eqv_table[t] if x in testing)
+                if res:
+                    cache_inst.update(eqv)
+                else:
+                    eqv_set = frozenset(eqv)
+                    testing -= eqv_set
+                    cbroken |= eqv_set
+
+
+    def are_equivalent(self, p1, p2):
+        """Test if p1 and p2 are equivalent
+
+        Returns True if p1 and p2 have the same "signature" in
+        the package dependency graph (i.e. relations can not tell
+        them appart sematically except for their name)
+        """
+        eqv_table = self._eqv_table
+        return p1 in eqv_table and p2 in eqv_table[p1]
+
 
     def add_testing_binary(self, pkg_name, pkg_version, pkg_arch):
         """Add a binary package to "testing"
@@ -195,6 +218,7 @@ class InstallabilityTester(object):
         testing = self._testing
         cbroken = self._cache_broken
         safe_set = self._safe_set
+        eqv_table = self._eqv_table
 
         # Our installability verdict - start with "yes" and change if
         # prove otherwise.
@@ -235,8 +259,9 @@ class InstallabilityTester(object):
             never.update(ess_never)
 
         # curry check_loop
-        check_loop = partial(self._check_loop, universe, testing, musts,
-                             never, choices, cbroken)
+        check_loop = partial(self._check_loop, universe, testing,
+                             eqv_table, musts, never, choices,
+                             cbroken)
 
 
         # Useful things to remember:
@@ -258,7 +283,7 @@ class InstallabilityTester(object):
         #     of t via recursion (calls _check_inst).  In this case
         #     check and choices are not (always) empty.
 
-        def _pick_choice(rebuild):
+        def _pick_choice(rebuild, set=set, len=len):
             """Picks a choice from choices and updates rebuild.
 
             Prunes the choices and updates "rebuild" to reflect the
@@ -317,18 +342,55 @@ class InstallabilityTester(object):
             last = next(choice) # pick one to go last
             for p in choice:
                 musts_copy = musts.copy()
-                never_copy = never.copy()
-                choices_copy = choices.copy()
-                if self._check_inst(p, musts_copy, never_copy, choices_copy):
+                never_tmp = set()
+                choices_tmp = set()
+                check_tmp = set([p])
+                if not self._check_loop(universe, testing, eqv_table,
+                                        musts_copy, never_tmp,
+                                        choices_tmp, cbroken,
+                                        check_tmp):
+                    # p cannot be chosen/is broken (unlikely, but ...)
+                    continue
+
+                # Test if we can pick p without any consequences.
+                # - when we can, we avoid a backtrack point.
+                if never_tmp <= never and choices_tmp <= rebuild:
+                    # we can pick p without picking up new conflicts
+                    # or unresolved choices.  Therefore we commit to
+                    # using p.
+                    #
+                    # NB: Optimally, we would go to the start of this
+                    # routine, but to conserve stack-space, we return
+                    # and expect to be called again later.
+                    musts.update(musts_copy)
+                    return False
+
+                if not musts.isdisjoint(never_tmp):
+                    # If we pick p, we will definitely end up making
+                    # t uninstallable, so p is a no-go.
+                    continue
+
+                # We are not sure that p is safe, setup a backtrack
+                # point and recurse.
+                never_tmp |= never
+                choices_tmp |= rebuild
+                if self._check_inst(p, musts_copy, never_tmp,
+                                    choices_tmp):
+                    # Success, p was a valid choice and made it all
+                    # installable
                     return True
-                # If we get here, we failed to find something that would satisfy choice (without breaking
-                # the installability of t).  This means p cannot be used to satisfy the dependencies, so
-                # pretend to conflict with it - hopefully it will reduce future choices.
+
+                # If we get here, we failed to find something that
+                # would satisfy choice (without breaking the
+                # installability of t).  This means p cannot be used
+                # to satisfy the dependencies, so pretend to conflict
+                # with it - hopefully it will reduce future choices.
                 never.add(p)
 
-            # Optimization for the last case; avoid the recursive call and just
-            # assume the last will lead to a solution.  If it doesn't there is
-            # no solution and if it does, we don't have to back-track anyway.
+            # Optimization for the last case; avoid the recursive call
+            # and just assume the last will lead to a solution.  If it
+            # doesn't there is no solution and if it does, we don't
+            # have to back-track anyway.
             check.add(last)
             musts.add(last)
             return False
@@ -359,8 +421,9 @@ class InstallabilityTester(object):
         return verdict
 
 
-    def _check_loop(self, universe, testing, musts, never,
-                    choices, cbroken, check):
+    def _check_loop(self, universe, testing, eqv_table, musts, never,
+                    choices, cbroken, check, len=len,
+                    frozenset=frozenset):
         """Finds all guaranteed dependencies via "check".
 
         If it returns False, t is not installable.  If it returns True
@@ -368,8 +431,6 @@ class InstallabilityTester(object):
         returns True, then t is installable.
         """
         # Local variables for faster access...
-        l = len
-        fset = frozenset
         not_satisfied = partial(ifilter, musts.isdisjoint)
 
         # While we have guaranteed dependencies (in check), examine all
@@ -401,9 +462,9 @@ class InstallabilityTester(object):
                 #  - not in testing
                 #  - known to be broken (by cache)
                 #  - in never
-                candidates = fset((depgroup & testing) - never)
+                candidates = frozenset((depgroup & testing) - never)
 
-                if l(candidates) == 0:
+                if len(candidates) == 0:
                     # We got no candidates to satisfy it - this
                     # package cannot be installed with the current
                     # testing
@@ -413,21 +474,43 @@ class InstallabilityTester(object):
                         cbroken.add(cur)
                         testing.remove(cur)
                     return False
-                if l(candidates) == 1:
+                if len(candidates) == 1:
                     # only one possible solution to this choice and we
                     # haven't seen it before
                     check.update(candidates)
                     musts.update(candidates)
                 else:
+                    possible_eqv = set(x for x in candidates if x in eqv_table)
+                    if len(possible_eqv) > 1:
+                        # Exploit equivalency to reduce the number of
+                        # candidates if possible.  Basically, this
+                        # code maps "similar" candidates into a single
+                        # candidate that will give a identical result
+                        # to any other candidate it eliminates.
+                        #
+                        # See InstallabilityTesterBuilder's
+                        # _build_eqv_packages_table method for more
+                        # information on how this works.
+                        new_cand = set(x for x in candidates if x not in possible_eqv)
+                        for chosen in iter_except(possible_eqv.pop, KeyError):
+                            new_cand.add(chosen)
+                            possible_eqv -= eqv_table[chosen]
+                        if len(new_cand) == 1:
+                            check.update(new_cand)
+                            musts.update(new_cand)
+                            continue
+                        candidates = frozenset(new_cand)
                     # defer this choice till later
                     choices.add(candidates)
         return True
+
 
     def _get_min_pseudo_ess_set(self, arch):
         if arch not in self._cache_ess:
             # The minimal essential set cache is not present -
             # compute it now.
             testing = self._testing
+            eqv_table = self._eqv_table
             cbroken = self._cache_broken
             universe = self._universe
             safe_set = self._safe_set
@@ -439,8 +522,9 @@ class InstallabilityTester(object):
             not_satisified = partial(ifilter, start.isdisjoint)
 
             while ess_base:
-                self._check_loop(universe, testing, start, ess_never,\
-                                     ess_choices, cbroken, ess_base)
+                self._check_loop(universe, testing, eqv_table,
+                                 start, ess_never, ess_choices,
+                                 cbroken, ess_base)
                 if ess_choices:
                     # Try to break choices where possible
                     nchoice = set()
