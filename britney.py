@@ -1503,7 +1503,7 @@ class Britney(object):
                     base = 'testing'
                 else:
                     base = 'stable'
-                text = "Not yet built on <a href=\"https://launchpad.net/%s/+source/%s/%s\" target=\"_blank\">%s</a> (relative to testing)" % (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch)
+                text = "Not yet built on <a href=\"https://launchpad.net/%s/+source/%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a> (relative to testing)" % (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), urllib.quote(arch), arch)
 
                 if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
@@ -1562,16 +1562,16 @@ class Britney(object):
                 for v in oodbins.keys():
                     if oodtxt: oodtxt = oodtxt + "; "
                     oodtxt = oodtxt + "%s (from <a href=\"https://launchpad.net/%s/+source/" \
-                        "%s/%s\" target=\"_blank\">%s</a>)" % \
-                        (", ".join(sorted(oodbins[v])), self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(v), v)
+                        "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>)" % \
+                        (", ".join(sorted(oodbins[v])), self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(v), urllib.quote(arch), v)
                 if uptodatebins:
                     text = "old binaries left on <a href=\"https://launchpad.net/%s/+source/" \
-                        "%s/%s\" target=\"_blank\">%s</a>: %s" % \
-                        (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
+                        "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>: %s" % \
+                        (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), urllib.quote(arch), arch, oodtxt)
                 else:
                     text = "missing build on <a href=\"https://launchpad.net/%s/+source/" \
-                        "%s/%s\" target=\"_blank\">%s</a>: %s" % \
-                        (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), arch, oodtxt)
+                        "%s/%s/+latestbuild/%s\" target=\"_blank\">%s</a>: %s" % \
+                        (self.options.distribution, urllib.quote(src.split("/")[0]), urllib.quote(source_u[VERSION]), urllib.quote(arch), arch, oodtxt)
 
                 if arch in self.options.outofsync_arches.split():
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
