@@ -226,6 +226,8 @@ from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
                    SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
                    PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH, ESSENTIAL)
 from autopkgtest import AutoPackageTest, ADT_PASS, ADT_EXCUSES_LABELS
+from boottest import BootTest
+
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
 __version__ = '2.0'
@@ -1882,6 +1884,19 @@ class Britney(object):
                         e.addhtml("Not considered")
                         e.addreason("autopkgtest")
                         e.is_valid = False
+
+        if (getattr(self.options, "boottest_enable", "no") == "yes" and
+            self.options.series):
+            # trigger autopkgtests for valid candidates
+            boottest_debug = getattr(
+                self.options, "boottest_debug", "no") == "yes"
+            boottest = BootTest(
+                self, self.options.distribution, self.options.series,
+                debug=boottest_debug)
+            for e in self.excuses:
+                boottest_label = boottest.check(e)
+                e.addhtml("boottest for %s %s: %s" %
+                          (e.name, e.ver[1], boottest_label))
 
         # invalidate impossible excuses
         for e in self.excuses:
