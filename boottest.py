@@ -13,6 +13,8 @@
 # GNU General Public License for more details.
 import os
 
+from consts import BINARIES
+
 
 class TouchManifest(object):
     """Parses a corresponding touch image manifest.
@@ -75,7 +77,7 @@ class BootTest(object):
     def _get_status_label(self, name, version):
         """Return the current boottest status label."""
         # XXX cprov 20150120: replace with the test history latest
-        # record label.
+        # record label, or a new job request if it was not found.
         if name == 'pyqt5':
             if version == '1.1~beta':
                 return 'PASS'
@@ -93,17 +95,33 @@ class BootTest(object):
         Annotate skipped packages (currently not in phone image) or add
         the current testing status (see `_get_status_label`).
         """
-        if excuse.name not in self.phone_manifest:
-            label = 'SKIPPED'
-        else:
-            label = self._get_status_label(excuse.name, excuse.ver[1])
+        # Discover all binaries for the 'excused' source.
+        unstable_sources = self.britney.sources['unstable']
+        binary_names = [
+            bin.split('/')[0]
+            for bin in unstable_sources[excuse.name][BINARIES]
+        ]
 
-        excuse.addhtml("boottest for %s %s: %s" %
-                       (excuse.name, excuse.ver[1], label))
+        # Process (request or update) boottest attempts for each binary.
+        labels = set()
+        for name in binary_names:
+            if name in self.phone_manifest:
+                label = self._get_status_label(name, excuse.ver[1])
+            else:
+                label = 'SKIPPED'
+            excuse.addhtml("boottest for %s %s: %s" %
+                           (name, excuse.ver[1], label))
+            labels.add(label)
 
-        if label in ['PASS', 'SKIPPED']:
+        # If all boottests passed or were skipped, return False. The
+        # excuse is clean and promotion can proceed, according to the
+        # boottest criteria.
+        if labels.issubset(set(['PASS', 'SKIPPED'])):
             return False
 
+        # If one or more boottests are still in-progress or have already
+        # failed, make the excuse as invalid and blocks promotion by
+        # returning True.
         excuse.addhtml("Not considered")
         excuse.addreason("boottest")
         excuse.is_valid = False

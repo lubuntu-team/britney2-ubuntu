@@ -81,7 +81,7 @@ class TestBoottestEnd2End(TestBase):
         self.data.add(
             'green',
             False,
-            {'Depends': 'libc6 (>= 0.9), libgreen1'})
+            {'Source': 'green', 'Depends': 'libc6 (>= 0.9), libgreen1'})
         self.create_manifest([
             'green 1.0',
             'pyqt5:armhf 1.0',
@@ -108,15 +108,21 @@ class TestBoottestEnd2End(TestBase):
                 self.assertNotRegexpMatches(excuses, re)
 
     def test_runs(self):
-        # `Britney` runs and considers packages for boottesting when
-        # it is enabled in the configuration and 'in progress' tests
-        # blocks package promotion.
-        context = []
-        context.append(
-            ('green', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9)'}))
+        # `Britney` runs and considers binary packages for boottesting
+        # when it is enabled in the configuration, only binaries needed
+        # in the phone image are considered for boottesting.
+        # 'in progress' tests blocks package promotion.
+        context = [
+            ('green', {'Source': 'green', 'Version': '1.1~beta',
+                       'Depends': 'libc6 (>= 0.9)'}),
+            ('libgreen1', {'Source': 'green', 'Version': '1.1~beta',
+                           'Depends': 'libc6 (>= 0.9)'}),
+        ]
         self.do_test(
             context,
-            ['<li>boottest for green 1.1~beta: IN PROGRESS',
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>boottest for green 1.1~beta: IN PROGRESS',
+             '<li>boottest for libgreen1 1.1~beta: SKIPPED',
              '<li>Not considered'])
 
     def test_pass(self):
@@ -125,10 +131,11 @@ class TestBoottestEnd2End(TestBase):
         # promotion.
         context = []
         context.append(
-            ('pyqt5', {'Version': '1.1~beta'}))
+            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1~beta'}))
         self.do_test(
             context,
-            ['<li>boottest for pyqt5 1.1~beta: PASS',
+            [r'\bpyqt5-src\b.*\(- to .*>1.1~beta<',
+             '<li>boottest for pyqt5 1.1~beta: PASS',
              '<li>Valid candidate'])
 
     def test_fail(self):
@@ -137,10 +144,11 @@ class TestBoottestEnd2End(TestBase):
         # ('Not considered.')
         context = []
         context.append(
-            ('pyqt5', {'Version': '1.1'}))
+            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1'}))
         self.do_test(
             context,
-            ['<li>boottest for pyqt5 1.1: FAIL',
+            [r'\bpyqt5-src\b.*\(- to .*>1.1<',
+             '<li>boottest for pyqt5 1.1: FAIL',
              '<li>Not considered'])
 
     def test_skipped(self):
@@ -149,10 +157,12 @@ class TestBoottestEnd2End(TestBase):
         # promotion.
         context = []
         context.append(
-            ('apache2', {'Version': '2.4.8-1ubuntu1'}))
+            ('apache2', {'Source': 'apache2-src',
+                         'Version': '2.4.8-1ubuntu1'}))
         self.do_test(
             context,
-            ['<li>boottest for apache2 2.4.8-1ubuntu1: SKIPPED',
+            [r'\bapache2-src\b.*\(- to .*>2.4.8-1ubuntu1<',
+             '<li>boottest for apache2 2.4.8-1ubuntu1: SKIPPED',
              '<li>Valid candidate'])
 
 
