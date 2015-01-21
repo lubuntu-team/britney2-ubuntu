@@ -7,7 +7,9 @@
 # (at your option) any later version.
 
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 
 
@@ -15,6 +17,53 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_DIR)
 
 from tests import TestBase
+from boottest import TouchManifest
+
+
+def create_manifest(manifest_dir, lines):
+    """Helper function for writing touch image manifests."""
+    os.makedirs(manifest_dir)
+    with open(os.path.join(manifest_dir, 'manifest'), 'w') as fd:
+        fd.write('\n'.join(lines))
+
+
+class TestTouchManifest(unittest.TestCase):
+
+    def setUp(self):
+        super(TestTouchManifest, self).setUp()
+        self.path = tempfile.mkdtemp(prefix='boottest')
+        os.chdir(self.path)
+        self.datadir = os.path.join(self.path, 'data/boottest/')
+        os.makedirs(self.datadir)
+        self.addCleanup(shutil.rmtree, self.path)
+
+    def test_missing(self):
+        # Missing manifest file silently results in empty contents.
+        manifest = TouchManifest('ubuntu', 'vivid')
+        self.assertEqual([], manifest._manifest)
+        self.assertNotIn('foo', manifest)
+
+    def test_simple(self):
+        # Existing manifest file allows callsites to properly check presence.
+        manifest_dir = os.path.join(self.datadir, 'ubuntu/vivid')
+        manifest_lines = [
+            'bar 1234',
+            'foo:armhf       1~beta1',
+            'boing1-1.2\t666',
+            'click:com.ubuntu.shorts	0.2.346'
+        ]
+        create_manifest(manifest_dir, manifest_lines)
+
+        manifest = TouchManifest('ubuntu', 'vivid')
+        # We can dig deeper on the manifest package names list ...
+        self.assertEqual(
+            ['bar', 'boing1-1.2', 'foo'], manifest._manifest)
+        # but the '<name> in manifest' API reads better.
+        self.assertIn('foo', manifest)
+        self.assertIn('boing1-1.2', manifest)
+        self.assertNotIn('baz', manifest)
+        # 'click' name is blacklisted due to the click package syntax.
+        self.assertNotIn('click', manifest)
 
 
 class TestBoottestEnd2End(TestBase):
@@ -33,6 +82,17 @@ class TestBoottestEnd2End(TestBase):
             'green',
             False,
             {'Depends': 'libc6 (>= 0.9), libgreen1'})
+        self.create_manifest([
+            'green 1.0',
+            'pyqt5:armhf 1.0',
+        ])
+
+    def create_manifest(self, lines):
+        """Create a manifest for this britney run context."""
+        path = os.path.join(
+            self.data.path,
+            'data/boottest/ubuntu/{}'.format(self.data.series))
+        create_manifest(path, lines)
 
     def do_test(self, context, expect=None, no_expect=None):
         """Process the given package context and assert britney results."""

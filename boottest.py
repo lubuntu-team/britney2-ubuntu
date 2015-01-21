@@ -11,7 +11,52 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-from __future__ import print_function
+import os
+
+
+class TouchManifest(object):
+    """Parses a corresponding touch image manifest.
+
+    Based on http://cdimage.u.c/ubuntu-touch/daily-preinstalled/pending/vivid-preinstalled-touch-armhf.manifest
+
+    Assumes the deployment is arranged in a way the manifest is available
+    and fresh on:
+
+    'data/boottest/{distribution}/{series}/manifest'
+
+    Only binary name matters, version is ignored, so callsites can:
+
+    >>> manifest = TouchManifest('ubuntu', 'vivid')
+    >>> 'webbrowser-app' in manifest
+    True
+    >>> 'firefox' in manifest
+    False
+
+    """
+
+    def __init__(self, distribution, series):
+        self.path = 'data/boottest/{}/{}/manifest'.format(
+            distribution, series)
+        self._manifest = self._load()
+
+    def _load(self):
+        pkg_list = []
+
+        if not os.path.exists(self.path):
+            return pkg_list
+
+        with open(self.path) as fd:
+            for line in fd.readlines():
+                name, version = line.split()
+                name = name.split(':')[0]
+                if name == 'click':
+                    continue
+                pkg_list.append(name)
+
+        return sorted(pkg_list)
+
+    def __contains__(self, key):
+        return key in self._manifest
 
 
 class BootTest(object):
@@ -25,16 +70,7 @@ class BootTest(object):
         self.distribution = distribution
         self.series = series
         self.debug = debug
-
-
-    def _source_in_image(self, name):
-        """Whether or not the given source name is in the phone image."""
-        # XXX cprov 20150120: replace with a phone image manifest/content
-        # check.
-        if name == 'apache2':
-            return False
-
-        return True
+        self.phone_manifest = TouchManifest(self.distribution, self.series)
 
     def _get_status_label(self, name, version):
         """Return the current boottest status label."""
@@ -53,7 +89,7 @@ class BootTest(object):
         Annotate skipped packages (currently not in phone image) or add
         the current testing status (see `_get_status_label`).
         """
-        if not self._source_in_image(excuse.name):
+        if excuse.name not in self.phone_manifest:
             label = 'SKIPPED'
         else:
             label = self._get_status_label(excuse.name, excuse.ver[1])
