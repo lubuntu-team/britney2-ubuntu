@@ -84,7 +84,11 @@ class BootTest(object):
         return 'IN PROGRESS'
 
     def update(self, excuse):
-        """Update given 'excuse' and return True if it has failed.
+        """Update given 'excuse'.
+
+        Return True if it has already failed or still in progress (so
+        promotion should be blocked), otherwise (test skipped or passed)
+        False.
 
         Annotate skipped packages (currently not in phone image) or add
         the current testing status (see `_get_status_label`).
