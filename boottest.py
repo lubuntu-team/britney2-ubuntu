@@ -26,13 +26,45 @@ class BootTest(object):
         self.series = series
         self.debug = debug
 
-    def check(self, excuse):
-        """Check and update given 'excuse' and return its label."""
-        label = 'IN PROGRESS'
+
+    def _source_in_image(self, name):
+        """Whether or not the given source name is in the phone image."""
         # XXX cprov 20150120: replace with a phone image manifest/content
         # check.
-        if excuse.name == 'apache2':
-            label = 'SKIPPED'
-            excuse.is_valid = False
+        if name == 'apache2':
+            return False
 
-        return label
+        return True
+
+    def _get_status_label(self, name, version):
+        """Return the current boottest status label."""
+        # XXX cprov 20150120: replace with the test history latest
+        # record label.
+        if name == 'pyqt5':
+            if version == '1.1~beta':
+                return 'PASS'
+            return 'FAIL'
+
+        return 'IN PROGRESS'
+
+    def update(self, excuse):
+        """Update given 'excuse' and return True if it has failed.
+
+        Annotate skipped packages (currently not in phone image) or add
+        the current testing status (see `_get_status_label`).
+        """
+        if not self._source_in_image(excuse.name):
+            label = 'SKIPPED'
+        else:
+            label = self._get_status_label(excuse.name, excuse.ver[1])
+
+        excuse.addhtml("boottest for %s %s: %s" %
+                       (excuse.name, excuse.ver[1], label))
+
+        if label in ['PASS', 'SKIPPED']:
+            return False
+
+        excuse.addhtml("Not considered")
+        excuse.addreason("boottest")
+        excuse.is_valid = False
+        return True

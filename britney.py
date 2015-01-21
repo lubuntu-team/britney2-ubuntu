@@ -1887,16 +1887,21 @@ class Britney(object):
 
         if (getattr(self.options, "boottest_enable", "no") == "yes" and
             self.options.series):
-            # trigger autopkgtests for valid candidates
+            # trigger 'boottest'ing for valid candidates.
             boottest_debug = getattr(
                 self.options, "boottest_debug", "no") == "yes"
             boottest = BootTest(
                 self, self.options.distribution, self.options.series,
                 debug=boottest_debug)
-            for e in self.excuses:
-                boottest_label = boottest.check(e)
-                e.addhtml("boottest for %s %s: %s" %
-                          (e.name, e.ver[1], boottest_label))
+            for excuse in self.excuses:
+                # Skip already invalid excuses.
+                if not excuse.is_valid:
+                    continue
+                # Update valid excuses from the boottest context and if they
+                # have failed, block their migration.
+                if boottest.update(excuse):
+                    upgrade_me.remove(excuse.name)
+                    unconsidered.append(excuse.name)
 
         # invalidate impossible excuses
         for e in self.excuses:
