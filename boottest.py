@@ -74,8 +74,11 @@ class BootTest(object):
         self.debug = debug
         self.phone_manifest = TouchManifest(self.distribution, self.series)
 
-    def _get_status_label(self, name, version):
-        """Return the current boottest status label."""
+    def _get_status(self, name, version):
+        """Return the current boottest status.
+
+        Request a boottest attempt if it's new.
+        """
         # XXX cprov 20150120: replace with the test history latest
         # record label, or a new job request if it was not found.
         if name == 'pyqt5':
@@ -86,43 +89,28 @@ class BootTest(object):
         return 'IN PROGRESS'
 
     def update(self, excuse):
-        """Update given 'excuse'.
+        """Update given 'excuse' and yields testing status.
 
-        Return True if it has already failed or still in progress (so
-        promotion should be blocked), otherwise (test skipped or passed)
-        False.
+        Yields (status, binary_name) for each binary considered for the
+        given excuse. See `_get_status()`.
 
-        Annotate skipped packages (currently not in phone image) or add
-        the current testing status (see `_get_status_label`).
+        Binaries are considered for boottesting if they are part of the
+        phone image manifest. See `TouchManifest`.
         """
         # Discover all binaries for the 'excused' source.
         unstable_sources = self.britney.sources['unstable']
+        # XXX cprov 20150120: binaries are a seq of "<binname>/<arch>" and,
+        # practically, boottest is only concerned about armhf+all binaries.
+        # Anything else should be skipped.
         binary_names = [
             bin.split('/')[0]
             for bin in unstable_sources[excuse.name][BINARIES]
         ]
 
         # Process (request or update) boottest attempts for each binary.
-        labels = set()
         for name in binary_names:
             if name in self.phone_manifest:
-                label = self._get_status_label(name, excuse.ver[1])
+                status = self._get_status(name, excuse.ver[1])
             else:
-                label = 'SKIPPED'
-            excuse.addhtml("boottest for %s %s: %s" %
-                           (name, excuse.ver[1], label))
-            labels.add(label)
-
-        # If all boottests passed or were skipped, return False. The
-        # excuse is clean and promotion can proceed, according to the
-        # boottest criteria.
-        if labels.issubset(set(['PASS', 'SKIPPED'])):
-            return False
-
-        # If one or more boottests are still in-progress or have already
-        # failed, make the excuse as invalid and blocks promotion by
-        # returning True.
-        excuse.addhtml("Not considered")
-        excuse.addreason("boottest")
-        excuse.is_valid = False
-        return True
+                status = 'SKIPPED'
+            yield name, status

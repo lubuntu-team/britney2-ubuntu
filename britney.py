@@ -1897,9 +1897,20 @@ class Britney(object):
                 # Skip already invalid excuses.
                 if not excuse.is_valid:
                     continue
+                labels = set()
                 # Update valid excuses from the boottest context and if they
                 # have failed, block their migration.
-                if boottest.update(excuse):
+                for binary_name, label in boottest.update(excuse):
+                    excuse.addhtml("boottest for %s %s: %s" %
+                                   (binary_name, excuse.ver[1], label))
+                    labels.add(label)
+                # If all boottests passed or were skipped, the excuse is
+                # clean and promotion can proceed, according to the
+                # boottest criteria. Otherwise block the promotion.
+                if not labels.issubset(set(['PASS', 'SKIPPED'])):
+                    excuse.addhtml("Not considered")
+                    excuse.addreason("boottest")
+                    excuse.is_valid = False
                     upgrade_me.remove(excuse.name)
                     unconsidered.append(excuse.name)
 
