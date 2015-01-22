@@ -28,7 +28,7 @@ to always be fully installable and close to being a release candidate.
 
 Britney's source code is split between two different but related tasks:
 the first one is the generation of the update excuses, while the
-second tries to update testing with the valid candidates; first
+second tries to update testing with the valid candidates; first 
 each package alone, then larger and even larger sets of packages
 together. Each try is accepted if testing is not more uninstallable
 after the update than before.
@@ -53,7 +53,7 @@ Other than source and binary packages, Britney loads the following data:
   * BugsV, which contains the list of release-critical bugs for a given
     version of a source or binary package (see Britney.read_bugs).
 
-  * Dates, which contains the date of the upload of a given version
+  * Dates, which contains the date of the upload of a given version 
     of a source package (see Britney.read_dates).
 
   * Urgencies, which contains the urgency of the upload of a given
@@ -72,9 +72,9 @@ instead explained in the chapter "Excuses Generation".
 = Excuses =
 
 An excuse is a detailed explanation of why a package can or cannot
-be updated in the testing distribution from a newer package in
+be updated in the testing distribution from a newer package in 
 another distribution (like for example unstable). The main purpose
-of the excuses is to be written in an HTML file which will be
+of the excuses is to be written in an HTML file which will be 
 published over HTTP. The maintainers will be able to parse it manually
 or automatically to find the explanation of why their packages have
 been updated or not.
@@ -234,9 +234,9 @@ __version__ = '2.0'
 
 class Britney(object):
     """Britney, the Debian testing updater script
-
+    
     This is the script that updates the testing distribution. It is executed
-    each day after the installation of the updated packages. It generates the
+    each day after the installation of the updated packages. It generates the 
     `Packages' files for the testing distribution, but it does so in an
     intelligent manner; it tries to avoid any inconsistency and to use only
     non-buggy packages.
@@ -386,7 +386,7 @@ class Britney(object):
         parser.add_option("", "--series", action="store", dest="series", default=None,
                                help="set distribution series name")
         (self.options, self.args) = parser.parse_args()
-
+        
         # integrity checks
         if self.options.nuninst_cache and self.options.print_uninst:
             self.__log("nuninst_cache and print_uninst are mutually exclusive!", type="E")
@@ -427,7 +427,7 @@ class Britney(object):
 
     def __log(self, msg, type="I"):
         """Print info messages according to verbosity level
-
+        
         An easy-and-simple log method which prints messages to the standard
         output. The type parameter controls the urgency of the message, and
         can be equal to `I' for `Information', `W' for `Warning' and `E' for
@@ -530,7 +530,7 @@ class Britney(object):
 
     def read_sources(self, basedir, intern=intern):
         """Read the list of source packages from the specified directory
-
+        
         The source packages are read from the `Sources' file within the
         directory specified as `basedir' parameter. Considering the
         large amount of memory needed, not all the fields are loaded
@@ -569,14 +569,14 @@ class Britney(object):
 
     def read_binaries(self, basedir, distribution, arch, intern=intern):
         """Read the list of binary packages from the specified directory
-
+        
         The binary packages are read from the `Packages_${arch}' files
         within the directory specified as `basedir' parameter, replacing
         ${arch} with the value of the arch parameter. Considering the
         large amount of memory needed, not all the fields are loaded
         in memory. The available fields are Version, Source, Multi-Arch,
         Depends, Conflicts, Provides and Architecture.
-
+        
         After reading the packages, reverse dependencies are computed
         and saved in the `rdepends' keys, and the `Provides' field is
         used to populate the virtual packages list.
@@ -758,7 +758,7 @@ class Britney(object):
 
     def read_bugs(self, basedir):
         """Read the release critial bug summary from the specified directory
-
+        
         The RC bug summaries are read from the `BugsV' file within the
         directory specified in the `basedir' parameter. The file contains
         rows with the format:
@@ -786,7 +786,7 @@ class Britney(object):
 
     def __maxver(self, pkg, dist):
         """Return the maximum version for a given package name
-
+        
         This method returns None if the specified source package
         is not available in the `dist' distribution. If the package
         exists, then it returns the maximum version between the
@@ -804,7 +804,7 @@ class Britney(object):
 
     def normalize_bugs(self):
         """Normalize the release critical bug summaries for testing and unstable
-
+        
         The method doesn't return any value: it directly modifies the
         object attribute `bugs'.
         """
@@ -830,7 +830,7 @@ class Britney(object):
 
     def read_dates(self, basedir):
         """Read the upload date for the packages from the specified directory
-
+        
         The upload dates are read from the `Dates' file within the directory
         specified as `basedir' parameter. The file contains rows with the
         format:
@@ -876,7 +876,7 @@ class Britney(object):
 
     def read_urgencies(self, basedir):
         """Read the upload urgency of the packages from the specified directory
-
+        
         The upload urgencies are read from the `Urgency' file within the
         directory specified as `basedir' parameter. The file contains rows
         with the format:
@@ -924,12 +924,12 @@ class Britney(object):
 
     def read_hints(self, basedir):
         """Read the hint commands from the specified directory
-
+        
         The hint commands are read from the files contained in the `Hints'
-        directory within the directory specified as `basedir' parameter.
+        directory within the directory specified as `basedir' parameter. 
         The names of the files have to be the same as the authorized users
         for the hints.
-
+        
         The file contains rows with the format:
 
         <command> <package-name>[/<version>]
@@ -1148,7 +1148,7 @@ class Britney(object):
 
     def should_remove_source(self, pkg):
         """Check if a source package should be removed from testing
-
+        
         This method checks if a source package should be removed from the
         testing distribution; this happens if the source package is not
         present in the unstable distribution anymore.
@@ -1189,7 +1189,7 @@ class Britney(object):
         This method checks if the binary packages produced by the source
         package on the given architecture should be upgraded; this can
         happen also if the migration is a binary-NMU for the given arch.
-
+       
         It returns False if the given packages don't need to be upgraded,
         True otherwise. In the former case, a new excuse is appended to
         the object attribute excuses.
@@ -1207,7 +1207,7 @@ class Britney(object):
         excuse.set_vers(source_t[VERSION], source_t[VERSION])
         source_u[MAINTAINER] and excuse.set_maint(source_u[MAINTAINER].strip())
         source_u[SECTION] and excuse.set_section(source_u[SECTION].strip())
-
+        
         # if there is a `remove' hint and the requested version is the same as the
         # version in testing, then stop here and return False
         # (as a side effect, a removal may generate such excuses for both the source
@@ -1337,9 +1337,9 @@ class Britney(object):
         """Check if source package should be upgraded
 
         This method checks if a source package should be upgraded. The analysis
-        is performed for the source package specified by the `src' parameter,
+        is performed for the source package specified by the `src' parameter, 
         for the distribution `suite'.
-
+       
         It returns False if the given package doesn't need to be upgraded,
         True otherwise. In the former case, a new excuse is appended to
         the object attribute excuses.
@@ -1368,7 +1368,7 @@ class Britney(object):
         # the starting point is that we will update the candidate and run autopkgtests
         update_candidate = True
         run_autopkgtest = True
-
+        
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u[VERSION], source_t[VERSION]) < 0:
             excuse.addhtml("ALERT: %s is newer in testing (%s %s)" % (src, source_t[VERSION], source_u[VERSION]))
@@ -1485,13 +1485,13 @@ class Britney(object):
             for arch in self.options.architectures:
                 if src not in self.sources["testing"]:
                     continue
-
+                    
                 # if the package in testing has no binaries on this
                 # architecture, it can't be out-of-date
                 if not any(x for x in self.sources["testing"][src][BINARIES]
                            if x.endswith("/"+arch) and self.binaries["testing"][arch][0][x.split("/")[0]][ARCHITECTURE] != 'all'):
                     continue
-
+                    
                 # if the (t-)p-u package has produced any binaries on
                 # this architecture then we assume it's ok. this allows for
                 # uploads to (t-)p-u which intentionally drop binary
@@ -1621,7 +1621,7 @@ class Britney(object):
                         bugs_t.extend(self.bugs['testing'][spkg])
                     if spkg in self.bugs['unstable']:
                         bugs_u.extend(self.bugs['unstable'][spkg])
-
+ 
                 new_bugs = sorted(set(bugs_u).difference(bugs_t))
                 old_bugs = sorted(set(bugs_t).difference(bugs_u))
 
@@ -1722,7 +1722,7 @@ class Britney(object):
                     exclookup[x].addreason("depends")
                     exclookup[x].is_valid = False
             i = i + 1
-
+ 
     def write_excuses(self, same_source=same_source):
         """Produce and write the update excuses
 
@@ -2204,7 +2204,7 @@ class Britney(object):
                          suite != 'unstable' and \
                          binaries_t[parch][0][binary][ARCHITECTURE] == 'all':
                         continue
-                    else:
+                    else:    
                         rms.add((binary, version, parch))
 
         # single binary removal; used for clearing up after smooth
@@ -2654,7 +2654,7 @@ class Britney(object):
                     return None
                 selected.append(x)
                 upgrade_me.remove(x)
-
+        
         self.output_write("start: %s\n" % self.eval_nuninst(nuninst_start))
         if not force:
             self.output_write("orig: %s\n" % self.eval_nuninst(nuninst_start))
@@ -2813,7 +2813,7 @@ class Britney(object):
             if len(removals) > 0:
                 self.output_write("Removing obsolete source packages from testing (%d):\n" % (len(removals)))
                 self.do_all(actions=removals)
-
+                                                                                                                                     
         # smooth updates
         if self.options.smooth_updates:
             self.__log("> Removing old packages left in testing from smooth updates", type="I")
@@ -3008,7 +3008,7 @@ class Britney(object):
     def auto_hinter(self):
         """Auto-generate "easy" hints.
 
-        This method attempts to generate "easy" hints for sets of packages which
+        This method attempts to generate "easy" hints for sets of packages which    
         must migrate together. Beginning with a package which does not depend on
         any other package (in terms of excuses), a list of dependencies and
         reverse dependencies is recursively created.
@@ -3131,7 +3131,7 @@ class Britney(object):
 
     def main(self):
         """Main method
-
+        
         This is the entry point for the class: it includes the list of calls
         for the member methods which will produce the output files.
         """
