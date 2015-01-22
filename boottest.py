@@ -24,7 +24,7 @@ class TouchManifest(object):
     Assumes the deployment is arranged in a way the manifest is available
     and fresh on:
 
-    'data/boottest/{distribution}/{series}/manifest'
+    '{britney_cwd}/boottest/images/{distribution}/{series}/manifest'
 
     Only binary name matters, version is ignored, so callsites can:
 
@@ -37,7 +37,7 @@ class TouchManifest(object):
     """
 
     def __init__(self, distribution, series):
-        self.path = 'data/boottest/{}/{}/manifest'.format(
+        self.path = 'boottest/images/{}/{}/manifest'.format(
             distribution, series)
         self._manifest = self._load()
 
@@ -66,6 +66,14 @@ class BootTest(object):
 
     TBD!
     """
+    VALID_STATUSES = ('PASS', 'SKIPPED')
+
+    EXCUSE_LABELS = {
+        "PASS": '<span style="background:#87d96c">Pass</span>',
+        "SKIPPED": '<span style="background:#e5c545">Skipped</span>',
+        "FAIL": '<span style="background:#ff6666">Regression</span>',
+        "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
+    }
 
     def __init__(self, britney, distribution, series, debug=False):
         self.britney = britney
@@ -86,7 +94,7 @@ class BootTest(object):
                 return 'PASS'
             return 'FAIL'
 
-        return 'IN PROGRESS'
+        return 'RUNNING'
 
     def update(self, excuse):
         """Update given 'excuse' and yields testing status.

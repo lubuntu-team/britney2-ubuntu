@@ -17,7 +17,10 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_DIR)
 
 from tests import TestBase
-from boottest import TouchManifest
+from boottest import (
+    BootTest,
+    TouchManifest,
+)
 
 
 def create_manifest(manifest_dir, lines):
@@ -33,8 +36,8 @@ class TestTouchManifest(unittest.TestCase):
         super(TestTouchManifest, self).setUp()
         self.path = tempfile.mkdtemp(prefix='boottest')
         os.chdir(self.path)
-        self.datadir = os.path.join(self.path, 'data/boottest/')
-        os.makedirs(self.datadir)
+        self.imagesdir = os.path.join(self.path, 'boottest/images')
+        os.makedirs(self.imagesdir)
         self.addCleanup(shutil.rmtree, self.path)
 
     def test_missing(self):
@@ -45,7 +48,7 @@ class TestTouchManifest(unittest.TestCase):
 
     def test_simple(self):
         # Existing manifest file allows callsites to properly check presence.
-        manifest_dir = os.path.join(self.datadir, 'ubuntu/vivid')
+        manifest_dir = os.path.join(self.imagesdir, 'ubuntu/vivid')
         manifest_lines = [
             'bar 1234',
             'foo:armhf       1~beta1',
@@ -91,7 +94,7 @@ class TestBoottestEnd2End(TestBase):
         """Create a manifest for this britney run context."""
         path = os.path.join(
             self.data.path,
-            'data/boottest/ubuntu/{}'.format(self.data.series))
+            'boottest/images/ubuntu/{}'.format(self.data.series))
         create_manifest(path, lines)
 
     def do_test(self, context, expect=None, no_expect=None):
@@ -121,8 +124,10 @@ class TestBoottestEnd2End(TestBase):
         self.do_test(
             context,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>boottest for green 1.1~beta: IN PROGRESS',
-             '<li>boottest for libgreen1 1.1~beta: SKIPPED',
+             '<li>boottest for green 1.1~beta: {}'.format(
+                 BootTest.EXCUSE_LABELS['RUNNING']),
+             '<li>boottest for libgreen1 1.1~beta: {}'.format(
+                 BootTest.EXCUSE_LABELS['SKIPPED']),
              '<li>Not considered'])
 
     def test_pass(self):
@@ -135,7 +140,8 @@ class TestBoottestEnd2End(TestBase):
         self.do_test(
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1~beta<',
-             '<li>boottest for pyqt5 1.1~beta: PASS',
+             '<li>boottest for pyqt5 1.1~beta: {}'.format(
+                 BootTest.EXCUSE_LABELS['PASS']),
              '<li>Valid candidate'])
 
     def test_fail(self):
@@ -148,7 +154,8 @@ class TestBoottestEnd2End(TestBase):
         self.do_test(
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1<',
-             '<li>boottest for pyqt5 1.1: FAIL',
+             '<li>boottest for pyqt5 1.1: {}'.format(
+                 BootTest.EXCUSE_LABELS['FAIL']),
              '<li>Not considered'])
 
     def test_skipped(self):
@@ -162,7 +169,8 @@ class TestBoottestEnd2End(TestBase):
         self.do_test(
             context,
             [r'\bapache2-src\b.*\(- to .*>2.4.8-1ubuntu1<',
-             '<li>boottest for apache2 2.4.8-1ubuntu1: SKIPPED',
+             '<li>boottest for apache2 2.4.8-1ubuntu1: {}'.format(
+                 BootTest.EXCUSE_LABELS['SKIPPED']),
              '<li>Valid candidate'])
 
 
