@@ -76,15 +76,18 @@ class TestBoottestEnd2End(TestBase):
         super(TestBoottestEnd2End, self).setUp()
         self.britney_conf = os.path.join(
             PROJECT_DIR, 'britney_boottest.conf')
-        self.data.add('libc6', False)
+        self.data.add('libc6', False, {'Architecture': 'armhf'}),
+
         self.data.add(
             'libgreen1',
             False,
-            {'Source': 'green', 'Depends': 'libc6 (>= 0.9)'})
+            {'Source': 'green', 'Architecture': 'armhf',
+             'Depends': 'libc6 (>= 0.9)'})
         self.data.add(
             'green',
             False,
-            {'Source': 'green', 'Depends': 'libc6 (>= 0.9), libgreen1'})
+            {'Source': 'green', 'Architecture': 'armhf',
+             'Depends': 'libc6 (>= 0.9), libgreen1'})
         self.create_manifest([
             'green 1.0',
             'pyqt5:armhf 1.0',
@@ -117,8 +120,9 @@ class TestBoottestEnd2End(TestBase):
         # 'in progress' tests blocks package promotion.
         context = [
             ('green', {'Source': 'green', 'Version': '1.1~beta',
-                       'Depends': 'libc6 (>= 0.9)'}),
+                       'Architecture': 'armhf', 'Depends': 'libc6 (>= 0.9)'}),
             ('libgreen1', {'Source': 'green', 'Version': '1.1~beta',
+                           'Architecture': 'armhf',
                            'Depends': 'libc6 (>= 0.9)'}),
         ]
         self.do_test(
@@ -136,7 +140,8 @@ class TestBoottestEnd2End(TestBase):
         # promotion.
         context = []
         context.append(
-            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1~beta'}))
+            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1~beta',
+                       'Architecture': 'all'}))
         self.do_test(
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1~beta<',
@@ -150,7 +155,8 @@ class TestBoottestEnd2End(TestBase):
         # ('Not considered.')
         context = []
         context.append(
-            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1'}))
+            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1',
+                       'Architecture': 'all'}))
         self.do_test(
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1<',
@@ -158,13 +164,13 @@ class TestBoottestEnd2End(TestBase):
                  BootTest.EXCUSE_LABELS['FAIL']),
              '<li>Not considered'])
 
-    def test_skipped(self):
+    def test_skipped_not_on_phone(self):
         # `Britney` updates boottesting information in excuses when the
         # package was skipped and marks the package as a valid candidate for
         # promotion.
         context = []
         context.append(
-            ('apache2', {'Source': 'apache2-src',
+            ('apache2', {'Source': 'apache2-src', 'Architecture': 'all',
                          'Version': '2.4.8-1ubuntu1'}))
         self.do_test(
             context,
@@ -172,6 +178,22 @@ class TestBoottestEnd2End(TestBase):
              '<li>boottest for apache2 2.4.8-1ubuntu1: {}'.format(
                  BootTest.EXCUSE_LABELS['SKIPPED']),
              '<li>Valid candidate'])
+
+    def test_skipped_architecture_not_allowed(self):
+        # `Britney` does not trigger boottests for source not yet built on
+        # the allowed architectures.
+        self.data.add(
+            'pyqt5', False, {'Source': 'pyqt5-src', 'Architecture': 'armhf'})
+        context = [
+            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1',
+                       'Architecture': 'amd64'}),
+        ]
+        self.do_test(
+            context,
+            [r'\bpyqt5-src\b.*>1</a> to .*>1.1<',
+             r'<li>missing build on .*>armhf</a>: pyqt5 \(from .*>1</a>\)',
+             '<li>Not considered'])
+
 
 
 if __name__ == '__main__':

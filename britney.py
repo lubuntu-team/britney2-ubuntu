@@ -1897,18 +1897,27 @@ class Britney(object):
                 # Skip already invalid excuses.
                 if not excuse.is_valid:
                     continue
+                # Also skip removals, binary-only candidates, proposed-updates
+                # and unknown versions.
+                if (e.name.startswith("-") or
+                    "/" in e.name or
+                    "_" in e.name or
+                    e.ver[1] == "-"):
+                    continue
                 statuses = set()
-                # Update valid excuses from the boottest context and if they
-                # have failed, block their migration.
+                # Update valid excuses from the boottest context.
                 for binary_name, status in boottest.update(excuse):
                     label = BootTest.EXCUSE_LABELS.get(
                         status, 'UNKNOWN STATUS')
                     excuse.addhtml("boottest for %s %s: %s" %
                                    (binary_name, excuse.ver[1], label))
                     statuses.add(status)
-                # If all boottests passed or were skipped, the excuse is
-                # clean and promotion can proceed, according to the
-                # boottest criteria. Otherwise block the promotion.
+                # No boottest attemps requested, it's not relevant in this
+                # context, rely on other checks to judge promotion.
+                if not statuses:
+                    continue
+                # Block promotion if any boottests attempt has failed or
+                # still in progress.
                 if not statuses.issubset(set(BootTest.VALID_STATUSES)):
                     excuse.addhtml("Not considered")
                     excuse.addreason("boottest")

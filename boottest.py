@@ -75,6 +75,8 @@ class BootTest(object):
         "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
     }
 
+    ARCHITECTURES = ('all', 'armhf')
+
     def __init__(self, britney, distribution, series, debug=False):
         self.britney = britney
         self.distribution = distribution
@@ -107,12 +109,16 @@ class BootTest(object):
         """
         # Discover all binaries for the 'excused' source.
         unstable_sources = self.britney.sources['unstable']
+        # Dismiss if source is not yet recognized (??).
+        if excuse.name not in unstable_sources:
+            raise StopIteration
         # XXX cprov 20150120: binaries are a seq of "<binname>/<arch>" and,
         # practically, boottest is only concerned about armhf+all binaries.
         # Anything else should be skipped.
         binary_names = [
-            bin.split('/')[0]
-            for bin in unstable_sources[excuse.name][BINARIES]
+            b.split('/')[0]
+            for b in unstable_sources[excuse.name][BINARIES]
+            if b.split('/')[1] in self.ARCHITECTURES
         ]
 
         # Process (request or update) boottest attempts for each binary.
