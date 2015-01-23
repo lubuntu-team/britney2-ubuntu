@@ -1911,6 +1911,21 @@ class Britney(object):
                         status, 'UNKNOWN STATUS')
                     excuse.addhtml("boottest for %s %s: %s" %
                                    (binary_name, excuse.ver[1], label))
+                    # Allows hints to force boottest failures/attempts
+                    # to be ignored.
+                    hints = self.hints.search('force', package=excuse.name)
+                    hints.extend(
+                        self.hints.search(
+                            'force-skiptest', package=excuse.name))
+                    forces = [
+                        x for x in hints
+                        if same_source(excuse.ver[1], x.version)]
+                    if forces:
+                        e.addhtml(
+                            "Should wait for %s %s boottest, but forced by "
+                            "%s" % (binary_name, excuse.ver[1],
+                                    forces[0].user))
+                        status = 'PASS'
                     statuses.add(status)
                 # No boottest attemps requested, it's not relevant in this
                 # context, rely on other checks to judge promotion.

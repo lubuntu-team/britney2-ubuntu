@@ -164,6 +164,48 @@ class TestBoottestEnd2End(TestBase):
                  BootTest.EXCUSE_LABELS['FAIL']),
              '<li>Not considered'])
 
+    def create_hint(self, username, content):
+        """Populates a hint file for the given 'username' with 'content'."""
+        hints_path = os.path.join(
+            self.data.path,
+            'data/{}-proposed/Hints/{}'.format(self.data.series, username))
+        with open(hints_path, 'w') as fd:
+            fd.write(content)
+
+    def test_fail_but_forced_by_hints(self):
+        # `Britney` allows boottests results to be ignored by hinting the
+        # corresponding source with 'force' or 'force-skiptest'. The boottest
+        # attempt will still be requested and its results would be considered
+        # for other non-forced sources.
+        context = [
+            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1',
+                       'Architecture': 'all'}),
+        ]
+        self.create_hint('cjwatson', 'force pyqt5-src/1.1')
+        self.do_test(
+            context,
+            [r'\bpyqt5-src\b.*\(- to .*>1.1<',
+             '<li>boottest for pyqt5 1.1: {}'.format(
+                 BootTest.EXCUSE_LABELS['FAIL']),
+             '<li>Should wait for pyqt5 1.1 boottest, but forced by cjwatson',
+             '<li>Valid candidate'])
+
+    def test_fail_but_skipped_by_hints(self):
+        # See `test_fail_but_forced_by_hints`.
+        context = [
+            ('green', {'Source': 'green', 'Version': '1.1~beta',
+                       'Architecture': 'armhf', 'Depends': 'libc6 (>= 0.9)'}),
+        ]
+        self.create_hint('cjwatson', 'force-skiptest green/1.1~beta')
+        self.do_test(
+            context,
+            [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
+             '<li>boottest for green 1.1~beta: {}'.format(
+                 BootTest.EXCUSE_LABELS['RUNNING']),
+             '<li>Should wait for green 1.1~beta boottest, but forced '
+             'by cjwatson',
+             '<li>Valid candidate'])
+
     def test_skipped_not_on_phone(self):
         # `Britney` updates boottesting information in excuses when the
         # package was skipped and marks the package as a valid candidate for
