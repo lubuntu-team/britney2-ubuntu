@@ -1899,10 +1899,10 @@ class Britney(object):
                     continue
                 # Also skip removals, binary-only candidates, proposed-updates
                 # and unknown versions.
-                if (e.name.startswith("-") or
-                    "/" in e.name or
-                    "_" in e.name or
-                    e.ver[1] == "-"):
+                if (excuse.name.startswith("-") or
+                    "/" in excuse.name or
+                    "_" in excuse.name or
+                    excuse.ver[1] == "-"):
                     continue
                 statuses = set()
                 # Update valid excuses from the boottest context.
@@ -1921,7 +1921,7 @@ class Britney(object):
                         x for x in hints
                         if same_source(excuse.ver[1], x.version)]
                     if forces:
-                        e.addhtml(
+                        excuse.addhtml(
                             "Should wait for %s %s boottest, but forced by "
                             "%s" % (binary_name, excuse.ver[1],
                                     forces[0].user))
