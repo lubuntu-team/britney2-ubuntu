@@ -92,7 +92,15 @@ class TestBoottestEnd2End(TestBase):
     def setUp(self):
         super(TestBoottestEnd2End, self).setUp()
         self.britney_conf = os.path.join(
-            PROJECT_DIR, 'britney_boottest.conf')
+            PROJECT_DIR, 'britney.conf')
+        old_config = None
+        with open(self.britney_conf, 'r') as fp:
+            self.old_config = fp.read()
+        config = self.old_config.replace(
+            'ADT_ENABLE        = yes', 'ADT_ENABLE        = no')
+        with open(self.britney_conf, 'w') as fp:
+            fp.write(config)
+
         self.data.add('libc6', False, {'Architecture': 'armhf'}),
 
         self.data.add(
@@ -109,6 +117,11 @@ class TestBoottestEnd2End(TestBase):
             'green 1.0',
             'pyqt5:armhf 1.0',
         ])
+
+    def tearDown(self):
+        """ Replace the old_config. """
+        with open(self.britney_conf, 'w') as fp:
+            fp.write(self.old_config)
 
     def create_manifest(self, lines):
         """Create a manifest for this britney run context."""

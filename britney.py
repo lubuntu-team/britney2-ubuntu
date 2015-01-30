@@ -1368,6 +1368,7 @@ class Britney(object):
         # the starting point is that we will update the candidate and run autopkgtests
         update_candidate = True
         run_autopkgtest = True
+        run_boottest = True
         
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u[VERSION], source_t[VERSION]) < 0:
@@ -1381,6 +1382,7 @@ class Britney(object):
             excuse.addhtml("%s source package doesn't exist" % (src))
             update_candidate = False
             run_autopkgtest = False
+            run_boottest = False
 
         # retrieve the urgency for the upload, ignoring it if this is a NEW package (not present in testing)
         urgency = self.urgencies.get(src, self.options.default_urgency)
@@ -1399,6 +1401,7 @@ class Britney(object):
                 excuse.addreason("remove")
                 update_candidate = False
                 run_autopkgtest = False
+                run_boottest = False
 
         # check if there is a `block' or `block-udeb' hint for this package, or a `block-all source' hint
         blocked = {}
@@ -1478,6 +1481,7 @@ class Britney(object):
                 else:
                     update_candidate = False
                     run_autopkgtest = False
+                    run_boottest = False
                     excuse.addreason("age")
 
         if suite in ['pu', 'tpu']:
@@ -1513,6 +1517,8 @@ class Britney(object):
                     update_candidate = False
                     if arch in self.options.adt_arches.split():
                         run_autopkgtest = False
+                    if arch in self.options.boottest_arches.split():
+                        run_boottest = False
                     excuse.addreason("arch")
                     excuse.addreason("arch-%s" % arch)
                     excuse.addreason("build-arch")
@@ -1555,6 +1561,8 @@ class Britney(object):
                         update_candidate = False
                         if arch in self.options.adt_arches.split():
                             run_autopkgtest = False
+                        if arch in self.options.boottest_arches.split():
+                            run_boottest = False
 
             # if there are out-of-date packages, warn about them in the excuse and set update_candidate
             # to False to block the update; if the architecture where the package is out-of-date is
@@ -1581,6 +1589,8 @@ class Britney(object):
                     update_candidate = False
                     if arch in self.options.adt_arches.split():
                         run_autopkgtest = False
+                    if arch in self.options.boottest_arches.split():
+                        run_boottest = False
                     excuse.addreason("arch")
                     excuse.addreason("arch-%s" % arch)
                     if uptodatebins:
@@ -1598,11 +1608,13 @@ class Britney(object):
             excuse.addreason("no-binaries")
             update_candidate = False
             run_autopkgtest = False
+            run_boottest = False
         elif not built_anywhere:
             excuse.addhtml("%s has no up-to-date binaries on any arch" % src)
             excuse.addreason("no-binaries")
             update_candidate = False
             run_autopkgtest = False
+            run_boottest = False
 
         # if the suite is unstable, then we have to check the release-critical bug lists before
         # updating testing; if the unstable package has RC bugs that do not apply to the testing
@@ -1635,6 +1647,7 @@ class Britney(object):
                         ["<a href=\"http://bugs.debian.org/%s\">#%s</a>" % (urllib.quote(a), a) for a in new_bugs])))
                     update_candidate = False
                     run_autopkgtest = False
+                    run_boottest = False
                     excuse.addreason("buggy")
 
                 if len(old_bugs) > 0:
@@ -1653,6 +1666,7 @@ class Britney(object):
             excuse.force()
             update_candidate = True
             run_autopkgtest = True
+            run_boottest = True
 
         # if the package can be updated, it is a valid candidate
         if update_candidate:
@@ -1662,6 +1676,7 @@ class Britney(object):
             # TODO
             excuse.addhtml("Not considered")
         excuse.run_autopkgtest = run_autopkgtest
+        excuse.run_boottest = run_boottest
 
         self.excuses.append(excuse)
         return update_candidate
@@ -1895,7 +1910,7 @@ class Britney(object):
                 debug=boottest_debug)
             for excuse in self.excuses:
                 # Skip already invalid excuses.
-                if not excuse.is_valid:
+                if not excuse.run_boottest:
                     continue
                 # Also skip removals, binary-only candidates, proposed-updates
                 # and unknown versions.
@@ -1927,7 +1942,7 @@ class Britney(object):
                                     forces[0].user))
                         status = 'PASS'
                     statuses.add(status)
-                # No boottest attemps requested, it's not relevant in this
+                # No boottest attempts requested, it's not relevant in this
                 # context, rely on other checks to judge promotion.
                 if not statuses:
                     continue
