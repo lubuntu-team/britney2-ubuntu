@@ -46,6 +46,23 @@ class TestTouchManifest(unittest.TestCase):
         self.assertEqual([], manifest._manifest)
         self.assertNotIn('foo', manifest)
 
+    def test_fetch(self):
+        # Missing manifest file is fetched dynamically
+        manifest = TouchManifest('ubuntu-touch', 'vivid')
+        self.assertNotEqual([], manifest._manifest)
+
+    def test_fetch_fails(self):
+        distribution = 'fake'
+        series = 'fake'
+        manifest_dir = os.path.join(self.imagesdir, distribution, series)
+        manifest_lines = [
+            'foo:armhf       1~beta1',
+        ]
+        create_manifest(manifest_dir, manifest_lines)
+        manifest = TouchManifest(distribution, series)
+        self.assertEqual(1, len(manifest._manifest))
+        self.assertIn('foo', manifest)
+
     def test_simple(self):
         # Existing manifest file allows callsites to properly check presence.
         manifest_dir = os.path.join(self.imagesdir, 'ubuntu/vivid')
