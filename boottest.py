@@ -12,6 +12,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 import os
+import urllib
 
 from consts import BINARIES
 
@@ -36,9 +37,25 @@ class TouchManifest(object):
 
     """
 
+    def __fetch_manifest(self, distribution, series):
+        url = "http://cdimage.ubuntu.com/{}/daily-preinstalled/" \
+              "pending/{}-preinstalled-touch-armhf.manifest".format(
+                  distribution, series
+        )
+        response = urllib.urlopen(url)
+        # Only [re]create the manifest file if one was successfully downloaded
+        # this allows for an existing image to be used if the download fails.
+        if response.code == 200:
+            os.makedirs(os.path.dirname(self.path))
+            with open(self.path, 'w') as fp:
+                fp.write(response.read())
+
     def __init__(self, distribution, series):
-        self.path = 'boottest/images/{}/{}/manifest'.format(
+        self.path = "boottest/images/{}/{}/manifest".format(
             distribution, series)
+
+        self.__fetch_manifest(distribution, series)
+
         self._manifest = self._load()
 
     def _load(self):
@@ -49,6 +66,9 @@ class TouchManifest(object):
 
         with open(self.path) as fd:
             for line in fd.readlines():
+                # skip headers and metadata
+                if 'DOCTYPE' in line:
+                    continue
                 name, version = line.split()
                 name = name.split(':')[0]
                 if name == 'click':
