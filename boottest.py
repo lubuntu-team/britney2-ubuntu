@@ -14,6 +14,7 @@
 from __future__ import print_function
 
 import os
+import subprocess
 import time
 import urllib
 
@@ -86,10 +87,52 @@ class TouchManifest(object):
         return key in self._manifest
 
 
+class BootTestJenkinsJob(object):
+    """Boottest - Jenkins **glue**.
+
+    Wraps 'boottest/jenkins/boottest-britney' script for:
+
+    * 'check' existing boottest job status ('check <binary> <version>')
+    * 'submit' new boottest jobs ('submit <binary> <version>')
+
+    """
+
+    script_path = "boottest/jenkins/boottest-britney"
+
+    def __init__(self, distribution, series):
+        self.distribution = distribution
+        self.series = series
+
+    def _run(self, *args):
+        if not os.path.exists(self.script_path):
+            print("E: [%s] - Boottest/Jenking glue script missing: %s" % (
+                time.asctime(), self.script_path))
+            return '-'
+        command = [
+            self.script_path,
+            "-d", self.distribution, "-s", self.series,
+            ]
+        command.extend(args)
+        return subprocess.check_output(command).strip()
+
+    def get_status(self, name, version):
+        """Return the current boottest jenkins job status.
+
+        Request a boottest attempt if it's new.
+        """
+        try:
+            status = self._run('check', name, version)
+        except subprocess.CalledProcessError as err:
+            status = self._run('submit', name, version)
+        return status
+
+
 class BootTest(object):
     """Boottest criteria for Britney.
 
-    TBD!
+    Process (update) excuses for the 'boottest' criteria. Request and monitor
+    boottest attempts (see `BootTestJenkinsJob`) for binaries present in the
+    phone image manifest (see `TouchManifest`).
     """
     VALID_STATUSES = ('PASS', 'SKIPPED')
 
@@ -109,26 +152,13 @@ class BootTest(object):
             self.britney.options, "boottest_fetch", "no") == "yes"
         self.phone_manifest = TouchManifest(
             self.distribution, self.series, fetch=manifest_fetch)
-
-    def _get_status(self, name, version):
-        """Return the current boottest status.
-
-        Request a boottest attempt if it's new.
-        """
-        # XXX cprov 20150120: replace with the test history latest
-        # record label, or a new job request if it was not found.
-        if name == 'pyqt5':
-            if version == '1.1~beta':
-                return 'PASS'
-            return 'FAIL'
-
-        return 'RUNNING'
+        self.dispatcher = BootTestJenkinsJob(self.distribution, self.series)
 
     def update(self, excuse):
         """Update given 'excuse' and yields testing status.
 
         Yields (status, binary_name) for each binary considered for the
-        given excuse. See `_get_status()`.
+        given excuse. See `BootTestJenkinsJob.get_status`.
 
         Binaries are considered for boottesting if they are part of the
         phone image manifest. See `TouchManifest`.
@@ -138,8 +168,8 @@ class BootTest(object):
         # Dismiss if source is not yet recognized (??).
         if excuse.name not in unstable_sources:
             raise StopIteration
-        # XXX cprov 20150120: binaries are a seq of "<binname>/<arch>" and,
-        # practically, boottest is only concerned about armhf+all binaries.
+        # Binaries are a seq of "<binname>/<arch>" and, practically, boottest
+        # is only concerned about armhf+all binaries.
         # Anything else should be skipped.
         binary_names = [
             b.split('/')[0]
@@ -150,7 +180,7 @@ class BootTest(object):
         # Process (request or update) boottest attempts for each binary.
         for name in binary_names:
             if name in self.phone_manifest:
-                status = self._get_status(name, excuse.ver[1])
+                status = self.dispatcher.get_status(name, excuse.ver[1])
             else:
                 status = 'SKIPPED'
             yield name, status

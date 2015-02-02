@@ -20,6 +20,7 @@ sys.path.insert(0, PROJECT_DIR)
 from tests import TestBase
 from boottest import (
     BootTest,
+    BootTestJenkinsJob,
     TouchManifest,
 )
 
@@ -157,10 +158,50 @@ class TestBoottestEnd2End(TestBase):
             'boottest/images/ubuntu/{}'.format(self.data.series))
         create_manifest(path, lines)
 
+    def make_boottest(self):
+        """Create a stub version of boottest-britney script."""
+        script_path = os.path.join(
+            self.data.path, 'boottest/jenkins/boottest-britney')
+        os.makedirs(os.path.dirname(script_path))
+        with open(script_path, 'w') as f:
+            f.write('''#!%(py)s
+import argparse
+import sys
+
+def submit():
+    print 'RUNNING'
+
+def check():
+    if args.name != 'pyqt5':
+       sys.exit(100)
+    if args.version == '1.1~beta':
+       print 'PASS'
+    else:
+       print 'FAIL'
+
+p = argparse.ArgumentParser()
+p.add_argument('-d')
+p.add_argument('-s')
+sp = p.add_subparsers()
+psubmit = sp.add_parser('submit')
+psubmit.add_argument('name')
+psubmit.add_argument('version')
+psubmit.set_defaults(func=submit)
+pcheck = sp.add_parser('check')
+pcheck.add_argument('name')
+pcheck.add_argument('version')
+pcheck.set_defaults(func=check)
+
+args = p.parse_args()
+args.func()
+                    ''' % {'py': sys.executable})
+        os.chmod(script_path, 0o755)
+
     def do_test(self, context, expect=None, no_expect=None):
         """Process the given package context and assert britney results."""
         for (pkg, fields) in context:
             self.data.add(pkg, True, fields)
+        self.make_boottest()
         (excuses, out) = self.run_britney()
         #print('-------\nexcuses: %s\n-----' % excuses)
         if expect:
