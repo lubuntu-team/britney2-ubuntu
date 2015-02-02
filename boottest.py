@@ -50,11 +50,12 @@ class TouchManifest(object):
             with open(self.path, 'w') as fp:
                 fp.write(response.read())
 
-    def __init__(self, distribution, series):
+    def __init__(self, distribution, series, fetch=True):
         self.path = "boottest/images/{}/{}/manifest".format(
             distribution, series)
 
-        self.__fetch_manifest(distribution, series)
+        if fetch:
+            self.__fetch_manifest(distribution, series)
 
         self._manifest = self._load()
 
@@ -102,7 +103,10 @@ class BootTest(object):
         self.distribution = distribution
         self.series = series
         self.debug = debug
-        self.phone_manifest = TouchManifest(self.distribution, self.series)
+        manifest_fetch = getattr(
+            self.britney.options, "boottest_fetch", "no") == "yes"
+        self.phone_manifest = TouchManifest(
+            self.distribution, self.series, fetch=manifest_fetch)
 
     def _get_status(self, name, version):
         """Return the current boottest status.

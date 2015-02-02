@@ -6,6 +6,7 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+import mock
 import os
 import shutil
 import sys
@@ -30,6 +31,16 @@ def create_manifest(manifest_dir, lines):
         fd.write('\n'.join(lines))
 
 
+class FakeResponse(object):
+
+    def __init__(self, code=404, content=''):
+        self.code = code
+        self.content = content
+        
+    def read(self):
+        return self.content
+
+
 class TestTouchManifest(unittest.TestCase):
 
     def setUp(self):
@@ -39,6 +50,10 @@ class TestTouchManifest(unittest.TestCase):
         self.imagesdir = os.path.join(self.path, 'boottest/images')
         os.makedirs(self.imagesdir)
         self.addCleanup(shutil.rmtree, self.path)
+        _p = mock.patch('urllib.urlopen')
+        self.mocked_urlopen = _p.start()
+        self.mocked_urlopen.side_effect = [FakeResponse(code=404),]
+        self.addCleanup(_p.stop)
 
     def test_missing(self):
         # Missing manifest file silently results in empty contents.
@@ -48,8 +63,17 @@ class TestTouchManifest(unittest.TestCase):
 
     def test_fetch(self):
         # Missing manifest file is fetched dynamically
+        self.mocked_urlopen.side_effect = [
+            FakeResponse(code=200, content='foo 1.0'),
+        ]
         manifest = TouchManifest('ubuntu-touch', 'vivid')
         self.assertNotEqual([], manifest._manifest)
+
+    def test_fetch_disabled(self):
+        # Manifest auto-fetching can be disabled. 
+        manifest = TouchManifest('ubuntu-touch', 'vivid', fetch=False)
+        self.mocked_urlopen.assert_not_called()
+        self.assertEqual([], manifest._manifest)
 
     def test_fetch_fails(self):
         distribution = 'fake'
@@ -98,6 +122,9 @@ class TestBoottestEnd2End(TestBase):
             self.old_config = fp.read()
         config = self.old_config.replace(
             'ADT_ENABLE        = yes', 'ADT_ENABLE        = no')
+        # Disable TouchManifest auto-fetching.
+        config = config.replace(
+            'BOOTTEST_FETCH    = yes', 'BOOTTEST_FETCH    = no')
         with open(self.britney_conf, 'w') as fp:
             fp.write(config)
 
