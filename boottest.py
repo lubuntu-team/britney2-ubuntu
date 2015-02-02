@@ -11,7 +11,10 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
+from __future__ import print_function
+
 import os
+import time
 import urllib
 
 from consts import BINARIES
@@ -42,6 +45,7 @@ class TouchManifest(object):
               "pending/{}-preinstalled-touch-armhf.manifest".format(
                   distribution, series
         )
+        print("I: [%s] - Fetching manifest from %s" % (time.asctime(), url))
         response = urllib.urlopen(url)
         # Only [re]create the manifest file if one was successfully downloaded
         # this allows for an existing image to be used if the download fails.
