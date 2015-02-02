@@ -96,8 +96,6 @@ class BootTest(object):
         "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
     }
 
-    ARCHITECTURES = ('all', 'armhf')
-
     def __init__(self, britney, distribution, series, debug=False):
         self.britney = britney
         self.distribution = distribution
@@ -142,7 +140,7 @@ class BootTest(object):
         binary_names = [
             b.split('/')[0]
             for b in unstable_sources[excuse.name][BINARIES]
-            if b.split('/')[1] in self.ARCHITECTURES
+            if b.split('/')[1] in self.britney.options.boottest_arches.split()
         ]
 
         # Process (request or update) boottest attempts for each binary.
