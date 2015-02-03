@@ -92,8 +92,8 @@ class BootTestJenkinsJob(object):
 
     Wraps 'boottest/jenkins/boottest-britney' script for:
 
-    * 'check' existing boottest job status ('check <binary> <version>')
-    * 'submit' new boottest jobs ('submit <binary> <version>')
+    * 'check' existing boottest job status ('check <source> <version>')
+    * 'submit' new boottest jobs ('submit <source> <version>')
 
     """
 
@@ -155,32 +155,36 @@ class BootTest(object):
         self.dispatcher = BootTestJenkinsJob(self.distribution, self.series)
 
     def update(self, excuse):
-        """Update given 'excuse' and yields testing status.
+        """Return the boottest status for the given excuse.
 
-        Yields (status, binary_name) for each binary considered for the
-        given excuse. See `BootTestJenkinsJob.get_status`.
+        A new boottest job will be requested if the the source was not
+        yet processed, otherwise the status of the corresponding job will
+        be returned.
 
-        Binaries are considered for boottesting if they are part of the
-        phone image manifest. See `TouchManifest`.
+        Sources are only considered for boottesting if they produce binaries
+        that are part of the phone image manifest. See `TouchManifest`.
         """
         # Discover all binaries for the 'excused' source.
         unstable_sources = self.britney.sources['unstable']
+
         # Dismiss if source is not yet recognized (??).
         if excuse.name not in unstable_sources:
-            raise StopIteration
+            return None
+
         # Binaries are a seq of "<binname>/<arch>" and, practically, boottest
-        # is only concerned about armhf+all binaries.
-        # Anything else should be skipped.
-        binary_names = [
-            b.split('/')[0]
-            for b in unstable_sources[excuse.name][BINARIES]
+        # is only concerned about armhf binaries mentioned in the phone
+        # manifest. Anything else should be skipped.
+        phone_binaries = [
+            b for b in unstable_sources[excuse.name][BINARIES]
             if b.split('/')[1] in self.britney.options.boottest_arches.split()
+            and b.split('/')[0] in self.phone_manifest
         ]
 
-        # Process (request or update) boottest attempts for each binary.
-        for name in binary_names:
-            if name in self.phone_manifest:
-                status = self.dispatcher.get_status(name, excuse.ver[1])
-            else:
-                status = 'SKIPPED'
-            yield name, status
+        # Process (request or update) a boottest attempt for the source
+        # if one or more of its binaries are part of the phone image.
+        if phone_binaries:
+            status = self.dispatcher.get_status(excuse.name, excuse.ver[1])
+        else:
+            status = 'SKIPPED'
+
+        return status

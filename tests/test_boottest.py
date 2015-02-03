@@ -172,7 +172,7 @@ def submit():
     print 'RUNNING'
 
 def check():
-    if args.name != 'pyqt5':
+    if args.name != 'pyqt5-src':
        sys.exit(100)
     if args.version == '1.1~beta':
        print 'PASS'
@@ -226,10 +226,8 @@ args.func()
         self.do_test(
             context,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>boottest for green 1.1~beta: {}'.format(
+             '<li>Boottest result: {}'.format(
                  BootTest.EXCUSE_LABELS['RUNNING']),
-             '<li>boottest for libgreen1 1.1~beta: {}'.format(
-                 BootTest.EXCUSE_LABELS['SKIPPED']),
              '<li>Not considered'])
 
     def test_pass(self):
@@ -243,7 +241,7 @@ args.func()
         self.do_test(
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1~beta<',
-             '<li>boottest for pyqt5 1.1~beta: {}'.format(
+             '<li>Boottest result: {}'.format(
                  BootTest.EXCUSE_LABELS['PASS']),
              '<li>Valid candidate'])
 
@@ -258,7 +256,7 @@ args.func()
         self.do_test(
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1<',
-             '<li>boottest for pyqt5 1.1: {}'.format(
+             '<li>Boottest result: {}'.format(
                  BootTest.EXCUSE_LABELS['FAIL']),
              '<li>Not considered'])
 
@@ -283,9 +281,10 @@ args.func()
         self.do_test(
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1<',
-             '<li>boottest for pyqt5 1.1: {}'.format(
+             '<li>Boottest result: {}'.format(
                  BootTest.EXCUSE_LABELS['FAIL']),
-             '<li>Should wait for pyqt5 1.1 boottest, but forced by cjwatson',
+             '<li>Should wait for pyqt5-src 1.1 boottest, '
+             'but forced by cjwatson',
              '<li>Valid candidate'])
 
     def test_fail_but_skipped_by_hints(self):
@@ -298,7 +297,7 @@ args.func()
         self.do_test(
             context,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>boottest for green 1.1~beta: {}'.format(
+             '<li>Boottest result: {}'.format(
                  BootTest.EXCUSE_LABELS['RUNNING']),
              '<li>Should wait for green 1.1~beta boottest, but forced '
              'by cjwatson',
@@ -315,7 +314,7 @@ args.func()
         self.do_test(
             context,
             [r'\bapache2-src\b.*\(- to .*>2.4.8-1ubuntu1<',
-             '<li>boottest for apache2 2.4.8-1ubuntu1: {}'.format(
+             '<li>Boottest result: {}'.format(
                  BootTest.EXCUSE_LABELS['SKIPPED']),
              '<li>Valid candidate'])
 

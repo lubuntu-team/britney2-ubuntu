@@ -1919,36 +1919,26 @@ class Britney(object):
                     "_" in excuse.name or
                     excuse.ver[1] == "-"):
                     continue
-                statuses = set()
                 # Update valid excuses from the boottest context.
-                for binary_name, status in boottest.update(excuse):
-                    label = BootTest.EXCUSE_LABELS.get(
-                        status, 'UNKNOWN STATUS')
-                    excuse.addhtml("boottest for %s %s: %s" %
-                                   (binary_name, excuse.ver[1], label))
-                    # Allows hints to force boottest failures/attempts
-                    # to be ignored.
-                    hints = self.hints.search('force', package=excuse.name)
-                    hints.extend(
-                        self.hints.search(
-                            'force-skiptest', package=excuse.name))
-                    forces = [
-                        x for x in hints
-                        if same_source(excuse.ver[1], x.version)]
-                    if forces:
-                        excuse.addhtml(
-                            "Should wait for %s %s boottest, but forced by "
-                            "%s" % (binary_name, excuse.ver[1],
-                                    forces[0].user))
-                        status = 'PASS'
-                    statuses.add(status)
-                # No boottest attempts requested, it's not relevant in this
-                # context, rely on other checks to judge promotion.
-                if not statuses:
+                status = boottest.update(excuse)
+                label = BootTest.EXCUSE_LABELS.get(status, 'UNKNOWN STATUS')
+                excuse.addhtml("Boottest result: %s" % (label))
+                # Allows hints to force boottest failures/attempts
+                # to be ignored.
+                hints = self.hints.search('force', package=excuse.name)
+                hints.extend(
+                    self.hints.search('force-skiptest', package=excuse.name))
+                forces = [x for x in hints
+                          if same_source(excuse.ver[1], x.version)]
+                if forces:
+                    excuse.addhtml(
+                        "Should wait for %s %s boottest, but forced by "
+                        "%s" % (excuse.name, excuse.ver[1],
+                                forces[0].user))
                     continue
                 # Block promotion if any boottests attempt has failed or
                 # still in progress.
-                if not statuses.issubset(set(BootTest.VALID_STATUSES)):
+                if status not in BootTest.VALID_STATUSES:
                     excuse.addhtml("Not considered")
                     excuse.addreason("boottest")
                     excuse.is_valid = False
