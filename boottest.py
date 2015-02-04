@@ -79,7 +79,8 @@ class TouchManifest(object):
         # Only [re]create the manifest file if one was successfully downloaded
         # this allows for an existing image to be used if the download fails.
         if response.code == 200:
-            os.makedirs(os.path.dirname(self.path))
+            if not os.path.exists(os.path.dirname(self.path)):
+                os.makedirs(os.path.dirname(self.path))
             with open(self.path, 'w') as fp:
                 fp.write(response.read())
             success = True
