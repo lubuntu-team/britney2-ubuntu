@@ -158,7 +158,7 @@ class BootTest(object):
         command = [
             self.script_path,
             "-c", self.rc_path,
-            "-d", self.distribution, "-s", self.series,
+            "-r", self.series,
             ]
         command.extend(args)
         return subprocess.check_output(command).strip()

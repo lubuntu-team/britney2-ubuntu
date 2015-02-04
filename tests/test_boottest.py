@@ -190,8 +190,7 @@ def collect():
         f.write(template)
 
 p = argparse.ArgumentParser()
-p.add_argument('-d')
-p.add_argument('-s')
+p.add_argument('-r')
 p.add_argument('-c')
 
 sp = p.add_subparsers()
