@@ -61,6 +61,9 @@ class TouchManifest(object):
             while retries > 0 and not success:
                 success = self.__fetch_manifest(distribution, series)
                 retries -= 1
+        if not success:
+            print("E: [%s] - Unable to fetch manifest: %s %s" % (
+                time.asctime(), distribution, series))
 
         self._manifest = self._load()
 
