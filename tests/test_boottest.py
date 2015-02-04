@@ -166,22 +166,24 @@ class TestBoottestEnd2End(TestBase):
             f.write('''#!%(py)s
 import argparse
 import os
+import shutil
 import sys
 
 template = """
-green 1.1~beta RUNNING green 1.1~beta
-pyqt5-src 1.1~beta PASS pyqt5-src 1.1~beta
-pyqt5-src 1.1 FAIL pyqt5-src 1.1
+green 1.1~beta RUNNING
+pyqt5-src 1.1~beta PASS
+pyqt5-src 1.1 FAIL
 """
 
 def request():
-    os.makedirs(os.path.dirname(args.output))
+    work_path = os.path.dirname(args.output)
+    os.makedirs(work_path)
+    shutil.copy(args.input, os.path.join(work_path, 'test_input'))
     with open(args.output, 'w') as f:
         f.write(template)
 
 def submit():
-    with open(args.input, 'w') as f:
-        f.write(template)
+    pass
 
 def collect():
     with open(args.output, 'w') as f:
@@ -191,7 +193,9 @@ p = argparse.ArgumentParser()
 p.add_argument('-d')
 p.add_argument('-s')
 p.add_argument('-c')
+
 sp = p.add_subparsers()
+
 psubmit = sp.add_parser('submit')
 psubmit.add_argument('input')
 psubmit.set_defaults(func=submit)
@@ -242,6 +246,14 @@ args.func()
              '<li>Boottest result: {}'.format(
                  BootTest.EXCUSE_LABELS['RUNNING']),
              '<li>Not considered'])
+
+        # The `boottest-britney` input (recorded for testing purposes),
+        # contains a line matching the requested boottest attempt.
+        # '<source> <version>\n'
+        test_input_path = os.path.join(
+            self.data.path, 'boottest/work/test_input')
+        self.assertEqual(
+            ['green 1.1~beta\n'], open(test_input_path).readlines())
 
     def test_pass(self):
         # `Britney` updates boottesting information in excuses when the
