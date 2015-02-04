@@ -27,6 +27,9 @@ import apt_pkg
 from consts import BINARIES
 
 
+FETCH_RETRIES = 3
+
+
 class TouchManifest(object):
     """Parses a corresponding touch image manifest.
 
@@ -52,14 +55,22 @@ class TouchManifest(object):
         self.path = "boottest/images/{}/{}/manifest".format(
             distribution, series)
         if fetch:
-            self.__fetch_manifest(distribution, series)
+            retries = FETCH_RETRIES
+            success = self.__fetch_manifest(distribution, series)
+
+            while retries > 0 and not success:
+                success = self.__fetch_manifest(distribution, series)
+                retries -= 1
+        if not success:
+            print("E: [%s] - Unable to fetch manifest: %s %s" % (
+                time.asctime(), distribution, series))
+
         self._manifest = self._load()
 
     def __fetch_manifest(self, distribution, series):
-        url = "http://cdimage.ubuntu.com/{}/daily-preinstalled/" \
-              "pending/{}-preinstalled-touch-armhf.manifest".format(
-                  distribution, series
-        )
+        url = "http://cdimage.ubuntu.com/ubuntu-touch/daily-preinstalled/" \
+              "pending/{}-preinstalled-touch-armhf.manifest".format(series)
+        success = False
         if self.verbose:
             print(
                 "I: [%s] - Fetching manifest from %s" % (
@@ -71,6 +82,9 @@ class TouchManifest(object):
             os.makedirs(os.path.dirname(self.path))
             with open(self.path, 'w') as fp:
                 fp.write(response.read())
+            success = True
+
+        return success
 
     def _load(self):
         pkg_list = []
