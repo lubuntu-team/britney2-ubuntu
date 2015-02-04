@@ -20,7 +20,6 @@ sys.path.insert(0, PROJECT_DIR)
 from tests import TestBase
 from boottest import (
     BootTest,
-    BootTestJenkinsJob,
     TouchManifest,
 )
 
@@ -166,31 +165,45 @@ class TestBoottestEnd2End(TestBase):
         with open(script_path, 'w') as f:
             f.write('''#!%(py)s
 import argparse
+import os
 import sys
 
-def submit():
-    print 'RUNNING'
+template = """
+green 1.1~beta RUNNING green 1.1~beta
+pyqt5-src 1.1~beta PASS pyqt5-src 1.1~beta
+pyqt5-src 1.1 FAIL pyqt5-src 1.1
+"""
 
-def check():
-    if args.name != 'pyqt5-src':
-       sys.exit(100)
-    if args.version == '1.1~beta':
-       print 'PASS'
-    else:
-       print 'FAIL'
+def request():
+    os.makedirs(os.path.dirname(args.output))
+    with open(args.output, 'w') as f:
+        f.write(template)
+
+def submit():
+    with open(args.input, 'w') as f:
+        f.write(template)
+
+def collect():
+    with open(args.output, 'w') as f:
+        f.write(template)
 
 p = argparse.ArgumentParser()
 p.add_argument('-d')
 p.add_argument('-s')
+p.add_argument('-c')
 sp = p.add_subparsers()
 psubmit = sp.add_parser('submit')
-psubmit.add_argument('name')
-psubmit.add_argument('version')
+psubmit.add_argument('input')
 psubmit.set_defaults(func=submit)
-pcheck = sp.add_parser('check')
-pcheck.add_argument('name')
-pcheck.add_argument('version')
-pcheck.set_defaults(func=check)
+
+prequest = sp.add_parser('request')
+prequest.add_argument('-O', dest='output')
+prequest.add_argument('input')
+prequest.set_defaults(func=request)
+
+pcollect = sp.add_parser('collect')
+pcollect.add_argument('-O', dest='output')
+pcollect.set_defaults(func=collect)
 
 args = p.parse_args()
 args.func()
@@ -268,9 +281,24 @@ args.func()
         with open(hints_path, 'w') as fd:
             fd.write(content)
 
+    def test_skipped_by_hints(self):
+        # `Britney` allows boottests to be skipped by hinting the
+        # corresponding source with 'force-skiptest'. The boottest
+        # attempt will not be requested.
+        context = [
+            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1',
+                       'Architecture': 'all'}),
+        ]
+        self.create_hint('cjwatson', 'force-skiptest pyqt5-src/1.1')
+        self.do_test(
+            context,
+            [r'\bpyqt5-src\b.*\(- to .*>1.1<',
+             '<li>boottest skipped from hints by cjwatson',
+             '<li>Valid candidate'])
+
     def test_fail_but_forced_by_hints(self):
         # `Britney` allows boottests results to be ignored by hinting the
-        # corresponding source with 'force' or 'force-skiptest'. The boottest
+        # corresponding source with 'force' or 'force-badtest'. The boottest
         # attempt will still be requested and its results would be considered
         # for other non-forced sources.
         context = [
@@ -287,13 +315,13 @@ args.func()
              'but forced by cjwatson',
              '<li>Valid candidate'])
 
-    def test_fail_but_skipped_by_hints(self):
+    def test_fail_but_ignored_by_hints(self):
         # See `test_fail_but_forced_by_hints`.
         context = [
             ('green', {'Source': 'green', 'Version': '1.1~beta',
                        'Architecture': 'armhf', 'Depends': 'libc6 (>= 0.9)'}),
         ]
-        self.create_hint('cjwatson', 'force-skiptest green/1.1~beta')
+        self.create_hint('cjwatson', 'force-badtest green/1.1~beta')
         self.do_test(
             context,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',

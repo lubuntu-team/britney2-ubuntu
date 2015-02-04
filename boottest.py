@@ -13,10 +13,16 @@
 # GNU General Public License for more details.
 from __future__ import print_function
 
+from collections import defaultdict
+from contextlib import closing
 import os
 import subprocess
+import tempfile
+from textwrap import dedent
 import time
 import urllib
+
+import apt_pkg
 
 from consts import BINARIES
 
@@ -41,12 +47,23 @@ class TouchManifest(object):
 
     """
 
+    def __init__(self, distribution, series, verbose=False, fetch=True):
+        self.verbose = verbose
+        self.path = "boottest/images/{}/{}/manifest".format(
+            distribution, series)
+        if fetch:
+            self.__fetch_manifest(distribution, series)
+        self._manifest = self._load()
+
     def __fetch_manifest(self, distribution, series):
         url = "http://cdimage.ubuntu.com/{}/daily-preinstalled/" \
               "pending/{}-preinstalled-touch-armhf.manifest".format(
                   distribution, series
         )
-        print("I: [%s] - Fetching manifest from %s" % (time.asctime(), url))
+        if self.verbose:
+            print(
+                "I: [%s] - Fetching manifest from %s" % (
+                    time.asctime(), url))
         response = urllib.urlopen(url)
         # Only [re]create the manifest file if one was successfully downloaded
         # this allows for an existing image to be used if the download fails.
@@ -54,15 +71,6 @@ class TouchManifest(object):
             os.makedirs(os.path.dirname(self.path))
             with open(self.path, 'w') as fp:
                 fp.write(response.read())
-
-    def __init__(self, distribution, series, fetch=True):
-        self.path = "boottest/images/{}/{}/manifest".format(
-            distribution, series)
-
-        if fetch:
-            self.__fetch_manifest(distribution, series)
-
-        self._manifest = self._load()
 
     def _load(self):
         pkg_list = []
@@ -87,52 +95,11 @@ class TouchManifest(object):
         return key in self._manifest
 
 
-class BootTestJenkinsJob(object):
-    """Boottest - Jenkins **glue**.
-
-    Wraps 'boottest/jenkins/boottest-britney' script for:
-
-    * 'check' existing boottest job status ('check <source> <version>')
-    * 'submit' new boottest jobs ('submit <source> <version>')
-
-    """
-
-    script_path = "boottest/jenkins/boottest-britney"
-
-    def __init__(self, distribution, series):
-        self.distribution = distribution
-        self.series = series
-
-    def _run(self, *args):
-        if not os.path.exists(self.script_path):
-            print("E: [%s] - Boottest/Jenking glue script missing: %s" % (
-                time.asctime(), self.script_path))
-            return '-'
-        command = [
-            self.script_path,
-            "-d", self.distribution, "-s", self.series,
-            ]
-        command.extend(args)
-        return subprocess.check_output(command).strip()
-
-    def get_status(self, name, version):
-        """Return the current boottest jenkins job status.
-
-        Request a boottest attempt if it's new.
-        """
-        try:
-            status = self._run('check', name, version)
-        except subprocess.CalledProcessError as err:
-            status = self._run('submit', name, version)
-        return status
-
-
 class BootTest(object):
     """Boottest criteria for Britney.
 
-    Process (update) excuses for the 'boottest' criteria. Request and monitor
-    boottest attempts (see `BootTestJenkinsJob`) for binaries present in the
-    phone image manifest (see `TouchManifest`).
+    This class provides an API for handling the boottest-jenkins
+    integration layer (mostly derived from auto-package-testing/adt):
     """
     VALID_STATUSES = ('PASS', 'SKIPPED')
 
@@ -143,48 +110,126 @@ class BootTest(object):
         "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
     }
 
+    script_path = "boottest/jenkins/boottest-britney"
+
     def __init__(self, britney, distribution, series, debug=False):
         self.britney = britney
         self.distribution = distribution
         self.series = series
         self.debug = debug
+        self.rc_path = None
+        self._read()
         manifest_fetch = getattr(
             self.britney.options, "boottest_fetch", "no") == "yes"
         self.phone_manifest = TouchManifest(
-            self.distribution, self.series, fetch=manifest_fetch)
-        self.dispatcher = BootTestJenkinsJob(self.distribution, self.series)
+            self.distribution, self.series, fetch=manifest_fetch,
+            verbose=self.britney.options.verbose)
 
-    def update(self, excuse):
-        """Return the boottest status for the given excuse.
+    @property
+    def _request_path(self):
+        return "boottest/work/adt.request.%s" % self.series
 
-        A new boottest job will be requested if the the source was not
-        yet processed, otherwise the status of the corresponding job will
-        be returned.
+    @property
+    def _result_path(self):
+        return "boottest/work/adt.result.%s" % self.series
+
+    def _ensure_rc_file(self):
+        if self.rc_path:
+            return
+        self.rc_path = os.path.abspath("boottest/rc.%s" % self.series)
+        with open(self.rc_path, "w") as rc_file:
+            home = os.path.expanduser("~")
+            print(dedent("""\
+                release: %s
+                aptroot: ~/.chdist/%s-proposed-armhf/
+                apturi: file:%s/mirror/%s
+                components: main restricted universe multiverse
+                rsync_host: rsync://tachash.ubuntu-ci/adt/
+                datadir: ~/proposed-migration/boottest/data""" %
+                         (self.series, self.series, home, self.distribution)),
+                         file=rc_file)
+
+    def _run(self, *args):
+        self._ensure_rc_file()
+        if not os.path.exists(self.script_path):
+            print("E: [%s] - Boottest/Jenking glue script missing: %s" % (
+                time.asctime(), self.script_path))
+            return '-'
+        command = [
+            self.script_path,
+            "-c", self.rc_path,
+            "-d", self.distribution, "-s", self.series,
+            ]
+        command.extend(args)
+        return subprocess.check_output(command).strip()
+
+    def _read(self):
+        """Loads a list of results (sources tests and their status).
+
+        Provides internal data for `get_status()`.
+        """
+        self.pkglist = defaultdict(dict)
+        if not os.path.exists(self._result_path):
+            return
+        with open(self._result_path) as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("Suite:") or line.startswith("Date:"):
+                    continue
+                linebits = line.split()
+                if len(linebits) < 2:
+                    print("W: Invalid line format: '%s', skipped" % line)
+                    continue
+                (src, ver, status) = linebits[:3]
+                if not (src in self.pkglist and ver in self.pkglist[src]):
+                    self.pkglist[src][ver] = status
+
+    def get_status(self, name, version):
+        """Return test status for the given source name and version."""
+        return self.pkglist[name][version]
+
+    def request(self, packages):
+        """Requests boottests for the given sources list ([(src, ver),])."""
+        request_path = self._request_path
+        if os.path.exists(request_path):
+            os.unlink(request_path)
+        with closing(tempfile.NamedTemporaryFile(mode="w")) as request_file:
+            for src, ver in packages:
+                if src in self.pkglist and ver in self.pkglist[src]:
+                    continue
+                print("%s %s" % (src, ver), file=request_file)
+                # Update 'pkglist' so even if submit/collect is not called
+                # (dry-run), britney has some results.
+                self.pkglist[src][ver] = 'RUNNING'
+            request_file.flush()
+            self._run("request", "-O", request_path, request_file.name)
+
+    def submit(self):
+        """Submits the current boottests requests for processing."""
+        self._run("submit", self._request_path)
+
+    def collect(self):
+        """Collects boottests results and updates internal registry."""
+        self._run("collect", "-O", self._result_path)
+        self._read()
+
+    def needs_test(self, name, version):
+        """Whether or not the given source and version should be tested.
 
         Sources are only considered for boottesting if they produce binaries
         that are part of the phone image manifest. See `TouchManifest`.
         """
         # Discover all binaries for the 'excused' source.
         unstable_sources = self.britney.sources['unstable']
-
         # Dismiss if source is not yet recognized (??).
-        if excuse.name not in unstable_sources:
-            return None
-
+        if name not in unstable_sources:
+            return False
         # Binaries are a seq of "<binname>/<arch>" and, practically, boottest
         # is only concerned about armhf binaries mentioned in the phone
         # manifest. Anything else should be skipped.
         phone_binaries = [
-            b for b in unstable_sources[excuse.name][BINARIES]
+            b for b in unstable_sources[name][BINARIES]
             if b.split('/')[1] in self.britney.options.boottest_arches.split()
             and b.split('/')[0] in self.phone_manifest
         ]
-
-        # Process (request or update) a boottest attempt for the source
-        # if one or more of its binaries are part of the phone image.
-        if phone_binaries:
-            status = self.dispatcher.get_status(excuse.name, excuse.ver[1])
-        else:
-            status = 'SKIPPED'
-
-        return status
+        return bool(phone_binaries)

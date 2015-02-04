@@ -1908,6 +1908,7 @@ class Britney(object):
             boottest = BootTest(
                 self, self.options.distribution, self.options.series,
                 debug=boottest_debug)
+            boottest_excuses = []
             for excuse in self.excuses:
                 # Skip already invalid excuses.
                 if not excuse.run_boottest:
@@ -1919,15 +1920,38 @@ class Britney(object):
                     "_" in excuse.name or
                     excuse.ver[1] == "-"):
                     continue
-                # Update valid excuses from the boottest context.
-                status = boottest.update(excuse)
+                # Allows hints to skip boottest attempts
+                hints = self.hints.search(
+                    'force-skiptest', package=excuse.name)
+                forces = [x for x in hints
+                          if same_source(excuse.ver[1], x.version)]
+                if forces:
+                    excuse.addhtml(
+                        "boottest skipped from hints by %s" % forces[0].user)
+                    continue
+                # Only sources whitelisted in the boottest context should
+                # be tested (currently only sources building phone binaries).
+                if not boottest.needs_test(excuse.name, excuse.ver[1]):
+                    label = BootTest.EXCUSE_LABELS.get('SKIPPED')
+                    excuse.addhtml("Boottest result: %s" % (label))
+                    continue
+                # Okay, aggregate required boottests requests.
+                boottest_excuses.append(excuse)
+            boottest.request([(e.name, e.ver[1]) for e in boottest_excuses])
+            # Dry-run avoids data exchange with external systems.
+            if not self.options.dry_run:
+                boottest.submit()
+                boottest.collect()
+            # Update excuses from the boottest context.
+            for excuse in boottest_excuses:
+                status = boottest.get_status(excuse.name, excuse.ver[1])
                 label = BootTest.EXCUSE_LABELS.get(status, 'UNKNOWN STATUS')
                 excuse.addhtml("Boottest result: %s" % (label))
                 # Allows hints to force boottest failures/attempts
                 # to be ignored.
                 hints = self.hints.search('force', package=excuse.name)
                 hints.extend(
-                    self.hints.search('force-skiptest', package=excuse.name))
+                    self.hints.search('force-badtest', package=excuse.name))
                 forces = [x for x in hints
                           if same_source(excuse.ver[1], x.version)]
                 if forces:
