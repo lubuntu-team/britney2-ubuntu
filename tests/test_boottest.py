@@ -146,6 +146,7 @@ class TestBoottestEnd2End(TestBase):
         self.create_manifest([
             'green 1.0',
             'pyqt5:armhf 1.0',
+            'signon 1.0'
         ])
 
     def create_manifest(self, lines):
@@ -171,6 +172,7 @@ template = """
 green 1.1~beta RUNNING
 pyqt5-src 1.1~beta PASS
 pyqt5-src 1.1 FAIL
+signon 1.0 PASS
 """
 
 def request():
@@ -190,6 +192,9 @@ def collect():
 p = argparse.ArgumentParser()
 p.add_argument('-r')
 p.add_argument('-c')
+p.add_argument('-d', default=False, action='store_true')
+p.add_argument('-P', default=False, action='store_true')
+p.add_argument('-U', default=False, action='store_true')
 
 sp = p.add_subparsers()
 
@@ -258,11 +263,10 @@ args.func()
         # promotion.
         context = []
         context.append(
-            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.1~beta',
-                       'Architecture': 'all'}))
+            ('signon', {'Version': '1.1', 'Architecture': 'armhf'}))
         self.do_test(
             context,
-            [r'\bpyqt5-src\b.*\(- to .*>1.1~beta<',
+            [r'\bsignon\b.*\(- to .*>1.1<',
              '<li>Boottest result: {}'.format(
                  boottest.BootTest.EXCUSE_LABELS['PASS']),
              '<li>Valid candidate'])

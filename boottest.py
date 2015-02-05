@@ -208,9 +208,11 @@ class BootTest(object):
                 if not (src in self.pkglist and ver in self.pkglist[src]):
                     self.pkglist[src][ver] = status
 
-    def get_status(self, name, version):
-        """Return test status for the given source name and version."""
-        return self.pkglist[name][version]
+    def get_status(self, name):
+        """Return test status for the given source name."""
+        last_version = sorted(
+            self.pkglist[name], cmp=apt_pkg.version_compare)[-1]
+        return self.pkglist[name][last_version]
 
     def request(self, packages):
         """Requests boottests for the given sources list ([(src, ver),])."""
@@ -236,6 +238,13 @@ class BootTest(object):
         """Collects boottests results and updates internal registry."""
         self._run("collect", "-O", self._result_path)
         self._read()
+        if not self.britney.options.verbose:
+            return
+        for src in sorted(self.pkglist):
+            for ver in sorted(self.pkglist[src], cmp=apt_pkg.version_compare):
+                status = self.pkglist[src][ver]
+                print("I: [%s] - Collected boottest status for %s_%s: "
+                      "%s" % (time.asctime(), src, ver, status))
 
     def needs_test(self, name, version):
         """Whether or not the given source and version should be tested.

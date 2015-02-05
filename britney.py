@@ -1944,7 +1944,7 @@ class Britney(object):
                 boottest.collect()
             # Update excuses from the boottest context.
             for excuse in boottest_excuses:
-                status = boottest.get_status(excuse.name, excuse.ver[1])
+                status = boottest.get_status(excuse.name)
                 label = BootTest.EXCUSE_LABELS.get(status, 'UNKNOWN STATUS')
                 excuse.addhtml("Boottest result: %s" % (label))
                 # Allows hints to force boottest failures/attempts
