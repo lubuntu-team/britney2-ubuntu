@@ -165,7 +165,7 @@ class BootTest(object):
                 aptroot: ~/.chdist/%s-proposed-armhf/
                 apturi: file:%s/mirror/%s
                 components: main restricted universe multiverse
-                rsync_host: rsync://tachash.ubuntu-ci/adt/
+                rsync_host: rsync://tachash.ubuntu-ci/boottest/
                 datadir: ~/proposed-migration/boottest/data""" %
                          (self.series, self.series, home, self.distribution)),
                          file=rc_file)
@@ -178,6 +178,7 @@ class BootTest(object):
             return '-'
         command = [
             self.script_path,
+            "-dPU",
             "-c", self.rc_path,
             "-r", self.series,
             ]
