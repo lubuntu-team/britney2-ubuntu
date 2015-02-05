@@ -117,18 +117,19 @@ class TestBoottestEnd2End(TestBase):
 
     def setUp(self):
         super(TestBoottestEnd2End, self).setUp()
-        self.britney_conf = os.path.join(
-            PROJECT_DIR, 'britney.conf')
-        old_config = None
+
+        # Modify shared configuration file.
         with open(self.britney_conf, 'r') as fp:
-            self.old_config = fp.read()
-        config = self.old_config.replace(
+            original_config = fp.read()
+        # Disable autopkgtests.
+        new_config = original_config.replace(
             'ADT_ENABLE        = yes', 'ADT_ENABLE        = no')
         # Disable TouchManifest auto-fetching.
-        config = config.replace(
+        new_config = new_config.replace(
             'BOOTTEST_FETCH    = yes', 'BOOTTEST_FETCH    = no')
         with open(self.britney_conf, 'w') as fp:
-            fp.write(config)
+            fp.write(new_config)
+        self.addCleanup(self.restore_config, original_config)
 
         self.data.add('libc6', False, {'Architecture': 'armhf'}),
 
@@ -146,11 +147,6 @@ class TestBoottestEnd2End(TestBase):
             'green 1.0',
             'pyqt5:armhf 1.0',
         ])
-
-    def tearDown(self):
-        """ Replace the old_config. """
-        with open(self.britney_conf, 'w') as fp:
-            fp.write(self.old_config)
 
     def create_manifest(self, lines):
         """Create a manifest for this britney run context."""

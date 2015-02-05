@@ -31,6 +31,16 @@ class TestAutoPkgTest(TestBase):
     def setUp(self):
         super(TestAutoPkgTest, self).setUp()
 
+        # Mofify configuration according to the test context.
+        with open(self.britney_conf, 'r') as fp:
+            original_config = fp.read()
+        # Disable boottests.
+        new_config = original_config.replace(
+            'BOOTTEST_ENABLE   = yes', 'BOOTTEST_ENABLE   = no')
+        with open(self.britney_conf, 'w') as fp:
+            fp.write(new_config)
+        self.addCleanup(self.restore_config, original_config)
+
         # fake adt-britney script
         self.adt_britney = os.path.join(
             self.data.home, 'auto-package-testing', 'jenkins', 'adt-britney')

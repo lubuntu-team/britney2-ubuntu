@@ -135,6 +135,11 @@ class TestBase(unittest.TestCase):
     def tearDown(self):
         del self.data
 
+    def restore_config(self, content):
+        """Helper for restoring configuration contents on cleanup."""
+        with open(self.britney_conf, 'w') as fp:
+            fp.write(content)
+
     def run_britney(self, args=[]):
         '''Run britney.
 
