@@ -90,10 +90,7 @@ class TestTouchManifest(unittest.TestCase):
         self.assertIn('foo', manifest)
 
     def test_fetch_exception(self):
-        _p = mock.patch('urllib.urlopen')
-        mocked_urlopen = _p.start()
-        self.addCleanup(_p.stop)
-        mocked_urlopen.side_effect = [IOError("connection refused")]
+        self.mocked_urlopen.side_effect = [IOError("connection refused")]
         manifest = boottest.TouchManifest('not-real', 'not-real')
         self.assertEqual(0, len(manifest._manifest))
 
