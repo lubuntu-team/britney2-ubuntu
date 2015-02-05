@@ -89,7 +89,7 @@ class TestTouchManifest(unittest.TestCase):
         self.assertEqual(1, len(manifest._manifest))
         self.assertIn('foo', manifest)
 
-    def test_fetch_excpetion(self):
+    def test_fetch_exception(self):
         _p = mock.patch('urllib.urlopen')
         mocked_urlopen = _p.start()
         self.addCleanup(_p.stop)

@@ -82,8 +82,8 @@ class TouchManifest(object):
         try:
             response = urllib.urlopen(url)
         except IOError as e:
-            print("W: [%s] - error connecting to %s" % (
-                    time.asctime(), self.path))
+            print("W: [%s] - error connecting to %s: %s" % (
+                    time.asctime(), self.path, e))
             return success  # failure
 
         # Only [re]create the manifest file if one was successfully downloaded
