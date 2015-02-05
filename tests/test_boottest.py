@@ -156,13 +156,13 @@ class TestBoottestEnd2End(TestBase):
         """Create a manifest for this britney run context."""
         path = os.path.join(
             self.data.path,
-            'boottest/images/ubuntu/{}'.format(self.data.series))
+            'boottest/images/ubuntu-touch/{}'.format(self.data.series))
         create_manifest(path, lines)
 
     def make_boottest(self):
         """Create a stub version of boottest-britney script."""
-        script_path = os.path.join(
-            self.data.path, 'boottest/jenkins/boottest-britney')
+        script_path = os.path.expanduser(
+            "~/auto-package-testing/jenkins/boottest-britney")
         os.makedirs(os.path.dirname(script_path))
         with open(script_path, 'w') as f:
             f.write('''#!%(py)s
