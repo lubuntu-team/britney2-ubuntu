@@ -31,6 +31,16 @@ class TestAutoPkgTest(TestBase):
     def setUp(self):
         super(TestAutoPkgTest, self).setUp()
 
+        # Mofify configuration according to the test context.
+        self.old_config = None
+        with open(self.britney_conf, 'r') as fp:
+            self.old_config = fp.read()
+        # Disable boottests.
+        config = self.old_config.replace(
+            'BOOTTEST_ENABLE   = yes', 'BOOTTEST_ENABLE   = no')
+        with open(self.britney_conf, 'w') as fp:
+            fp.write(config)
+
         # fake adt-britney script
         self.adt_britney = os.path.join(
             self.data.home, 'auto-package-testing', 'jenkins', 'adt-britney')
@@ -52,6 +62,12 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         self.data.add('blue', False, {'Depends': 'libc6 (>= 0.9)',
                                       'Conflicts': 'green'})
         self.data.add('justdata', False, {'Architecture': 'all'})
+
+    def tearDown(self):
+        """Replace the old_config."""
+        with open(self.britney_conf, 'w') as fp:
+            fp.write(self.old_config)
+        super(TestAutoPkgTest, self).tearDown()
 
     def __merge_records(self, results, history=""):
         '''Merges a list of results with records in history.

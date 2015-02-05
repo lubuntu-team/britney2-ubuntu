@@ -117,11 +117,10 @@ class TestBoottestEnd2End(TestBase):
 
     def setUp(self):
         super(TestBoottestEnd2End, self).setUp()
-        self.britney_conf = os.path.join(
-            PROJECT_DIR, 'britney.conf')
-        old_config = None
+        self.old_config = None
         with open(self.britney_conf, 'r') as fp:
             self.old_config = fp.read()
+        # Disable autopkgtests.
         config = self.old_config.replace(
             'ADT_ENABLE        = yes', 'ADT_ENABLE        = no')
         # Disable TouchManifest auto-fetching.
@@ -151,6 +150,7 @@ class TestBoottestEnd2End(TestBase):
         """ Replace the old_config. """
         with open(self.britney_conf, 'w') as fp:
             fp.write(self.old_config)
+        super(TestBoottestEnd2End, self).tearDown()
 
     def create_manifest(self, lines):
         """Create a manifest for this britney run context."""
