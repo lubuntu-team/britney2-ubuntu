@@ -42,7 +42,7 @@ class TouchManifest(object):
 
     Only binary name matters, version is ignored, so callsites can:
 
-    >>> manifest = TouchManifest('ubuntu', 'vivid')
+    >>> manifest = TouchManifest('ubuntu-touch', 'vivid')
     >>> 'webbrowser-app' in manifest
     True
     >>> 'firefox' in manifest
@@ -50,37 +50,42 @@ class TouchManifest(object):
 
     """
 
-    def __init__(self, distribution, series, verbose=False, fetch=True):
+    def __init__(self, project, series, verbose=False, fetch=True):
         self.verbose = verbose
         self.path = "boottest/images/{}/{}/manifest".format(
-            distribution, series)
+            project, series)
+        success = False
         if fetch:
             retries = FETCH_RETRIES
-            success = self.__fetch_manifest(distribution, series)
+            success = self.__fetch_manifest(project, series)
 
             while retries > 0 and not success:
-                success = self.__fetch_manifest(distribution, series)
+                success = self.__fetch_manifest(project, series)
                 retries -= 1
         if not success:
             print("E: [%s] - Unable to fetch manifest: %s %s" % (
-                time.asctime(), distribution, series))
+                time.asctime(), project, series))
 
         self._manifest = self._load()
 
-    def __fetch_manifest(self, distribution, series):
-        url = "http://cdimage.ubuntu.com/ubuntu-touch/daily-preinstalled/" \
-              "pending/{}-preinstalled-touch-armhf.manifest".format(series)
+    def __fetch_manifest(self, project, series):
+        url = "http://cdimage.ubuntu.com/{}/daily-preinstalled/" \
+              "pending/{}-preinstalled-touch-armhf.manifest".format(
+                  project, series
+        )
         success = False
         if self.verbose:
             print(
                 "I: [%s] - Fetching manifest from %s" % (
                     time.asctime(), url))
+            print("I: [%s] - saving it to %s" % (time.asctime(), self.path))
         response = urllib.urlopen(url)
         # Only [re]create the manifest file if one was successfully downloaded
         # this allows for an existing image to be used if the download fails.
         if response.code == 200:
-            if not os.path.exists(os.path.dirname(self.path)):
-                os.makedirs(os.path.dirname(self.path))
+            path_dir = os.path.dirname(self.path)
+            if not os.path.exists(path_dir):
+                os.makedirs(path_dir)
             with open(self.path, 'w') as fp:
                 fp.write(response.read())
             success = True
@@ -125,7 +130,8 @@ class BootTest(object):
         "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
     }
 
-    script_path = "boottest/jenkins/boottest-britney"
+    script_path = os.path.expanduser(
+        "~/auto-package-testing/jenkins/boottest-britney")
 
     def __init__(self, britney, distribution, series, debug=False):
         self.britney = britney
@@ -137,7 +143,7 @@ class BootTest(object):
         manifest_fetch = getattr(
             self.britney.options, "boottest_fetch", "no") == "yes"
         self.phone_manifest = TouchManifest(
-            self.distribution, self.series, fetch=manifest_fetch,
+            'ubuntu-touch', self.series, fetch=manifest_fetch,
             verbose=self.britney.options.verbose)
 
     @property

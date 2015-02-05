@@ -17,11 +17,8 @@ import unittest
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_DIR)
 
+import boottest
 from tests import TestBase
-from boottest import (
-    BootTest,
-    TouchManifest,
-)
 
 
 def create_manifest(manifest_dir, lines):
@@ -36,7 +33,7 @@ class FakeResponse(object):
     def __init__(self, code=404, content=''):
         self.code = code
         self.content = content
-        
+
     def read(self):
         return self.content
 
@@ -54,10 +51,15 @@ class TestTouchManifest(unittest.TestCase):
         self.mocked_urlopen = _p.start()
         self.mocked_urlopen.side_effect = [FakeResponse(code=404),]
         self.addCleanup(_p.stop)
+        self.fetch_retries_orig = boottest.FETCH_RETRIES
+        def restore_fetch_retries():
+            boottest.FETCH_RETRIES = self.fetch_retries_orig
+        boottest.FETCH_RETRIES = 0
+        self.addCleanup(restore_fetch_retries)
 
     def test_missing(self):
         # Missing manifest file silently results in empty contents.
-        manifest = TouchManifest('ubuntu', 'vivid')
+        manifest = boottest.TouchManifest('I-dont-exist', 'vivid')
         self.assertEqual([], manifest._manifest)
         self.assertNotIn('foo', manifest)
 
@@ -66,24 +68,24 @@ class TestTouchManifest(unittest.TestCase):
         self.mocked_urlopen.side_effect = [
             FakeResponse(code=200, content='foo 1.0'),
         ]
-        manifest = TouchManifest('ubuntu-touch', 'vivid')
+        manifest = boottest.TouchManifest('ubuntu-touch', 'vivid')
         self.assertNotEqual([], manifest._manifest)
 
     def test_fetch_disabled(self):
         # Manifest auto-fetching can be disabled. 
-        manifest = TouchManifest('ubuntu-touch', 'vivid', fetch=False)
+        manifest = boottest.TouchManifest('ubuntu-touch', 'vivid', fetch=False)
         self.mocked_urlopen.assert_not_called()
         self.assertEqual([], manifest._manifest)
 
     def test_fetch_fails(self):
-        distribution = 'fake'
+        project = 'fake'
         series = 'fake'
-        manifest_dir = os.path.join(self.imagesdir, distribution, series)
+        manifest_dir = os.path.join(self.imagesdir, project, series)
         manifest_lines = [
             'foo:armhf       1~beta1',
         ]
         create_manifest(manifest_dir, manifest_lines)
-        manifest = TouchManifest(distribution, series)
+        manifest = boottest.TouchManifest(project, series)
         self.assertEqual(1, len(manifest._manifest))
         self.assertIn('foo', manifest)
 
@@ -98,7 +100,7 @@ class TestTouchManifest(unittest.TestCase):
         ]
         create_manifest(manifest_dir, manifest_lines)
 
-        manifest = TouchManifest('ubuntu', 'vivid')
+        manifest = boottest.TouchManifest('ubuntu', 'vivid')
         # We can dig deeper on the manifest package names list ...
         self.assertEqual(
             ['bar', 'boing1-1.2', 'foo'], manifest._manifest)
@@ -243,7 +245,7 @@ args.func()
             context,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              '<li>Boottest result: {}'.format(
-                 BootTest.EXCUSE_LABELS['RUNNING']),
+                 boottest.BootTest.EXCUSE_LABELS['RUNNING']),
              '<li>Not considered'])
 
         # The `boottest-britney` input (recorded for testing purposes),
@@ -266,7 +268,7 @@ args.func()
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1~beta<',
              '<li>Boottest result: {}'.format(
-                 BootTest.EXCUSE_LABELS['PASS']),
+                 boottest.BootTest.EXCUSE_LABELS['PASS']),
              '<li>Valid candidate'])
 
     def test_fail(self):
@@ -281,7 +283,7 @@ args.func()
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1<',
              '<li>Boottest result: {}'.format(
-                 BootTest.EXCUSE_LABELS['FAIL']),
+                 boottest.BootTest.EXCUSE_LABELS['FAIL']),
              '<li>Not considered'])
 
     def create_hint(self, username, content):
@@ -321,7 +323,7 @@ args.func()
             context,
             [r'\bpyqt5-src\b.*\(- to .*>1.1<',
              '<li>Boottest result: {}'.format(
-                 BootTest.EXCUSE_LABELS['FAIL']),
+                 boottest.BootTest.EXCUSE_LABELS['FAIL']),
              '<li>Should wait for pyqt5-src 1.1 boottest, '
              'but forced by cjwatson',
              '<li>Valid candidate'])
@@ -337,7 +339,7 @@ args.func()
             context,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
              '<li>Boottest result: {}'.format(
-                 BootTest.EXCUSE_LABELS['RUNNING']),
+                 boottest.BootTest.EXCUSE_LABELS['RUNNING']),
              '<li>Should wait for green 1.1~beta boottest, but forced '
              'by cjwatson',
              '<li>Valid candidate'])
@@ -354,7 +356,7 @@ args.func()
             context,
             [r'\bapache2-src\b.*\(- to .*>2.4.8-1ubuntu1<',
              '<li>Boottest result: {}'.format(
-                 BootTest.EXCUSE_LABELS['SKIPPED']),
+                 boottest.BootTest.EXCUSE_LABELS['SKIPPED']),
              '<li>Valid candidate'])
 
     def test_skipped_architecture_not_allowed(self):
