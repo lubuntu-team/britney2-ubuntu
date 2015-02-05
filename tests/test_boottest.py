@@ -156,7 +156,7 @@ class TestBoottestEnd2End(TestBase):
         """Create a manifest for this britney run context."""
         path = os.path.join(
             self.data.path,
-            'boottest/images/ubuntu/{}'.format(self.data.series))
+            'boottest/images/ubuntu-touch/{}'.format(self.data.series))
         create_manifest(path, lines)
 
     def make_boottest(self):
