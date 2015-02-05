@@ -161,8 +161,8 @@ class TestBoottestEnd2End(TestBase):
 
     def make_boottest(self):
         """Create a stub version of boottest-britney script."""
-        script_path = os.path.join(
-            self.data.path, 'boottest/jenkins/boottest-britney')
+        script_path = os.path.expanduser(
+            "~/auto-package-testing/jenkins/boottest-britney")
         os.makedirs(os.path.dirname(script_path))
         with open(script_path, 'w') as f:
             f.write('''#!%(py)s

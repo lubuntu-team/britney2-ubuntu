@@ -130,9 +130,8 @@ class BootTest(object):
         "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
     }
 
-    #script_path = os.path.expanduser(
-    #    "~/auto-package-testing/jenkins/boottest-britney")
-    script_path = 'boottest/jenkins/boottest-britney'
+    script_path = os.path.expanduser(
+        "~/auto-package-testing/jenkins/boottest-britney")
 
     def __init__(self, britney, distribution, series, debug=False):
         self.britney = britney
