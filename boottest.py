@@ -79,7 +79,13 @@ class TouchManifest(object):
                 "I: [%s] - Fetching manifest from %s" % (
                     time.asctime(), url))
             print("I: [%s] - saving it to %s" % (time.asctime(), self.path))
-        response = urllib.urlopen(url)
+        try:
+            response = urllib.urlopen(url)
+        except IOError as e:
+            print("W: [%s] - error connecting to %s: %s" % (
+                    time.asctime(), self.path, e))
+            return success  # failure
+
         # Only [re]create the manifest file if one was successfully downloaded
         # this allows for an existing image to be used if the download fails.
         if response.code == 200:

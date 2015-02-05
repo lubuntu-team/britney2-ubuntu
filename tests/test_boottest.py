@@ -89,6 +89,11 @@ class TestTouchManifest(unittest.TestCase):
         self.assertEqual(1, len(manifest._manifest))
         self.assertIn('foo', manifest)
 
+    def test_fetch_exception(self):
+        self.mocked_urlopen.side_effect = [IOError("connection refused")]
+        manifest = boottest.TouchManifest('not-real', 'not-real')
+        self.assertEqual(0, len(manifest._manifest))
+
     def test_simple(self):
         # Existing manifest file allows callsites to properly check presence.
         manifest_dir = os.path.join(self.imagesdir, 'ubuntu/vivid')
