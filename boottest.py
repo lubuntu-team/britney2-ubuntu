@@ -178,10 +178,12 @@ class BootTest(object):
             return '-'
         command = [
             self.script_path,
-            "-dPU",
             "-c", self.rc_path,
             "-r", self.series,
+            "-PU",
             ]
+        if self.debug:
+            command.append("-d")
         command.extend(args)
         return subprocess.check_output(command).strip()
 
