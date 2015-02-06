@@ -209,9 +209,7 @@ class BootTest(object):
                     self.pkglist[src][ver] = status
 
     def get_status(self, name, version):
-        """Return test status for the given source name."""
-        #version = sorted(
-        #    self.pkglist[name], cmp=apt_pkg.version_compare)[-1]
+        """Return test status for the given source name and version."""
         return self.pkglist[name][version]
 
     def request(self, packages):
