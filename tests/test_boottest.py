@@ -172,7 +172,7 @@ template = """
 green 1.1~beta RUNNING
 pyqt5-src 1.1~beta PASS
 pyqt5-src 1.1 FAIL
-signon 1.0 PASS
+signon 1.1 PASS
 """
 
 def request():

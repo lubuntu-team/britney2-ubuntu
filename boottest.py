@@ -208,11 +208,11 @@ class BootTest(object):
                 if not (src in self.pkglist and ver in self.pkglist[src]):
                     self.pkglist[src][ver] = status
 
-    def get_status(self, name):
+    def get_status(self, name, version):
         """Return test status for the given source name."""
-        last_version = sorted(
-            self.pkglist[name], cmp=apt_pkg.version_compare)[-1]
-        return self.pkglist[name][last_version]
+        #version = sorted(
+        #    self.pkglist[name], cmp=apt_pkg.version_compare)[-1]
+        return self.pkglist[name][version]
 
     def request(self, packages):
         """Requests boottests for the given sources list ([(src, ver),])."""
