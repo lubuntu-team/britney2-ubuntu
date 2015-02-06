@@ -171,7 +171,7 @@ class BootTest(object):
                 aptroot: ~/.chdist/%s-proposed-armhf/
                 apturi: file:%s/mirror/%s
                 components: main restricted universe multiverse
-                rsync_host: rsync://tachash.ubuntu-ci/adt/
+                rsync_host: rsync://tachash.ubuntu-ci/boottest/
                 datadir: ~/proposed-migration/boottest/data""" %
                          (self.series, self.series, home, self.distribution)),
                          file=rc_file)
@@ -186,7 +186,10 @@ class BootTest(object):
             self.script_path,
             "-c", self.rc_path,
             "-r", self.series,
+            "-PU",
             ]
+        if self.debug:
+            command.append("-d")
         command.extend(args)
         return subprocess.check_output(command).strip()
 
@@ -239,6 +242,13 @@ class BootTest(object):
         """Collects boottests results and updates internal registry."""
         self._run("collect", "-O", self._result_path)
         self._read()
+        if not self.britney.options.verbose:
+            return
+        for src in sorted(self.pkglist):
+            for ver in sorted(self.pkglist[src], cmp=apt_pkg.version_compare):
+                status = self.pkglist[src][ver]
+                print("I: [%s] - Collected boottest status for %s_%s: "
+                      "%s" % (time.asctime(), src, ver, status))
 
     def needs_test(self, name, version):
         """Whether or not the given source and version should be tested.
