@@ -1932,8 +1932,7 @@ class Britney(object):
                 # Only sources whitelisted in the boottest context should
                 # be tested (currently only sources building phone binaries).
                 if not boottest.needs_test(excuse.name, excuse.ver[1]):
-                    label = BootTest.EXCUSE_LABELS.get('SKIPPED')
-                    excuse.addhtml("Boottest result: %s" % (label))
+                    # Silently skipping.
                     continue
                 # Okay, aggregate required boottests requests.
                 boottest_excuses.append(excuse)

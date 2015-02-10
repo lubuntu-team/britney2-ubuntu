@@ -127,11 +127,10 @@ class BootTest(object):
     This class provides an API for handling the boottest-jenkins
     integration layer (mostly derived from auto-package-testing/adt):
     """
-    VALID_STATUSES = ('PASS', 'SKIPPED')
+    VALID_STATUSES = ('PASS',)
 
     EXCUSE_LABELS = {
         "PASS": '<span style="background:#87d96c">Pass</span>',
-        "SKIPPED": '<span style="background:#e5c545">Skipped</span>',
         "FAIL": '<span style="background:#ff6666">Regression</span>',
         "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
     }
