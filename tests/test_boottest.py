@@ -239,6 +239,8 @@ args.func()
         # `Britney` runs and considers binary packages for boottesting
         # when it is enabled in the configuration, only binaries needed
         # in the phone image are considered for boottesting.
+        # The boottest status is presented along with its corresponding
+        # jenkins job urls for the public and the private servers.
         # 'in progress' tests blocks package promotion.
         context = [
             ('green', {'Source': 'green', 'Version': '1.1~beta',
@@ -247,11 +249,19 @@ args.func()
                            'Architecture': 'armhf',
                            'Depends': 'libc6 (>= 0.9)'}),
         ]
+        public_jenkins_url = (
+            'https://jenkins.qa.ubuntu.com/job/series-boottest-green/'
+            'lastBuild')
+        private_jenkins_url = (
+            'http://d-jenkins.ubuntu-ci:8080/view/Series/view/BootTest/'
+            'job/series-boottest-green/lastBuild')
         self.do_test(
             context,
             [r'\bgreen\b.*>1</a> to .*>1.1~beta<',
-             '<li>Boottest result: {}'.format(
-                 boottest.BootTest.EXCUSE_LABELS['RUNNING']),
+             r'<li>Boottest result: {} \(Jenkins: '
+             r'<a href="{}">public</a>, <a href="{}">private</a>\)'.format(
+                 boottest.BootTest.EXCUSE_LABELS['RUNNING'],
+                 public_jenkins_url, private_jenkins_url),
              '<li>Not considered'])
 
         # The `boottest-britney` input (recorded for testing purposes),

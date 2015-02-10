@@ -1942,11 +1942,25 @@ class Britney(object):
             if not self.options.dry_run:
                 boottest.submit()
                 boottest.collect()
+            # Boottest Jenkins views location.
+            jenkins_public = "https://jenkins.qa.ubuntu.com/job"
+            jenkins_private = (
+                "http://d-jenkins.ubuntu-ci:8080/view/%s/view/BootTest/job" %
+                self.options.series.title())
             # Update excuses from the boottest context.
             for excuse in boottest_excuses:
                 status = boottest.get_status(excuse.name, excuse.ver[1])
                 label = BootTest.EXCUSE_LABELS.get(status, 'UNKNOWN STATUS')
-                excuse.addhtml("Boottest result: %s" % (label))
+                public_url = "%s/%s-boottest-%s/lastBuild" % (
+                    jenkins_public, self.options.series,
+                    excuse.name.replace("+", "-"))
+                private_url = "%s/%s-boottest-%s/lastBuild" % (
+                    jenkins_private, self.options.series,
+                    excuse.name.replace("+", "-"))
+                excuse.addhtml(
+                    "Boottest result: %s (Jenkins: <a href=\"%s\">public</a>"
+                    ", <a href=\"%s\">private</a>)" % (
+                        label, public_url, private_url))
                 # Allows hints to force boottest failures/attempts
                 # to be ignored.
                 hints = self.hints.search('force', package=excuse.name)
