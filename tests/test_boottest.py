@@ -352,7 +352,7 @@ args.func()
     def test_skipped_not_on_phone(self):
         # `Britney` updates boottesting information in excuses when the
         # package was skipped and marks the package as a valid candidate for
-        # promotion.
+        # promotion, but no notice about 'boottest' is added to the excuse.
         context = []
         context.append(
             ('apache2', {'Source': 'apache2-src', 'Architecture': 'all',
@@ -360,9 +360,9 @@ args.func()
         self.do_test(
             context,
             [r'\bapache2-src\b.*\(- to .*>2.4.8-1ubuntu1<',
-             '<li>Boottest result: {}'.format(
-                 boottest.BootTest.EXCUSE_LABELS['SKIPPED']),
-             '<li>Valid candidate'])
+             '<li>Valid candidate'],
+            ['<li>Boottest result:'],
+        )
 
     def test_skipped_architecture_not_allowed(self):
         # `Britney` does not trigger boottests for source not yet built on
