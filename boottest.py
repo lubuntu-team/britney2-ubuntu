@@ -215,7 +215,18 @@ class BootTest(object):
 
     def get_status(self, name, version):
         """Return test status for the given source name and version."""
-        return self.pkglist[name][version]
+        try:
+            return self.pkglist[name][version]
+        except KeyError:
+            # This error handling accounts for outdated apt caches, when
+            # `boottest-britney` erroneously reports results for the
+            # current source version, instead of the proposed.
+            # Returning None here will block source promotion with:
+            # 'UNKNOWN STATUS' excuse. If the jobs are retried and its
+            # results find an up-to-date cache, the problem is gone.
+            print("E: [%s] - Missing boottest results for %s_%s" % (
+                time.asctime(), name, version))
+            return None
 
     def request(self, packages):
         """Requests boottests for the given sources list ([(src, ver),])."""

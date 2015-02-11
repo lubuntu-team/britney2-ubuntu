@@ -301,6 +301,22 @@ args.func()
                  boottest.BootTest.EXCUSE_LABELS['FAIL']),
              '<li>Not considered'])
 
+    def test_unknown(self):
+        # `Britney` does not block on missing boottest results for a
+        # particular source/version, in this case pyqt5-src_1.2 (not
+        # listed in the testing result history). Instead it renders
+        # excuses with 'UNKNOWN STATUS' and links to the corresponding
+        # jenkins jobs for further investigation. Source promotion is
+        # blocked, though.
+        context = [
+            ('pyqt5', {'Source': 'pyqt5-src', 'Version': '1.2',
+                       'Architecture': 'armhf'})]
+        self.do_test(
+            context,
+            [r'\bpyqt5-src\b.*\(- to .*>1.2<',
+             r'<li>Boottest result: UNKNOWN STATUS \(Jenkins: .*\)',
+             '<li>Not considered'])
+
     def create_hint(self, username, content):
         """Populates a hint file for the given 'username' with 'content'."""
         hints_path = os.path.join(
