@@ -301,7 +301,7 @@ args.func()
                  boottest.BootTest.EXCUSE_LABELS['FAIL']),
              '<li>Not considered'])
 
-    def test_unknonw(self):
+    def test_unknown(self):
         # `Britney` does not block on missing boottest results for a
         # particular source/version, in this case pyqt5-src_1.2 (not
         # listed in the testing result history). Instead it renders
