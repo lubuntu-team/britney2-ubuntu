@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2001-2004 Anthony Towns <ajt@debian.org>
+# Copyright (C) 2006, 2011-2015 Anthony Towns <ajt@debian.org>
 #                         Andreas Barth <aba@debian.org>
 #                         Fabio Tranchitella <kobold@debian.org>
 
@@ -52,6 +52,7 @@ class Excuse(object):
         self._dontinvalidate = False
         self.forced = False
         self.run_autopkgtest = False
+        self.run_boottest = False
         self.distribution = "ubuntu"
 
         self.invalid_deps = []
