@@ -129,6 +129,9 @@ class TestBoottestEnd2End(TestBase):
         # Disable autopkgtests.
         new_config = original_config.replace(
             'ADT_ENABLE        = yes', 'ADT_ENABLE        = no')
+        # Enable boottest.
+        new_config = new_config.replace(
+            'BOOTTEST_ENABLE   = no', 'BOOTTEST_ENABLE   = yes')
         # Disable TouchManifest auto-fetching.
         new_config = new_config.replace(
             'BOOTTEST_FETCH    = yes', 'BOOTTEST_FETCH    = no')
