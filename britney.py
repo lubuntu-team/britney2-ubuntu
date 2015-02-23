@@ -1973,14 +1973,16 @@ class Britney(object):
                         "%s" % (excuse.name, excuse.ver[1],
                                 forces[0].user))
                     continue
-                # Block promotion if any boottests attempt has failed or
-                # still in progress.
+                # Block promotion if the excuse is still valid (adt tests
+                # passed) but the boottests attempt has failed or still in
+                # progress.
                 if status not in BootTest.VALID_STATUSES:
-                    excuse.addhtml("Not considered")
                     excuse.addreason("boottest")
-                    excuse.is_valid = False
-                    upgrade_me.remove(excuse.name)
-                    unconsidered.append(excuse.name)
+                    if excuse.is_valid:
+                        excuse.is_valid = False
+                        excuse.addhtml("Not considered")
+                        upgrade_me.remove(excuse.name)
+                        unconsidered.append(excuse.name)
 
         # invalidate impossible excuses
         for e in self.excuses:

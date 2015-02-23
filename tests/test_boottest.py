@@ -129,6 +129,9 @@ class TestBoottestEnd2End(TestBase):
         # Disable autopkgtests.
         new_config = original_config.replace(
             'ADT_ENABLE        = yes', 'ADT_ENABLE        = no')
+        # Enable boottest.
+        new_config = new_config.replace(
+            'BOOTTEST_ENABLE   = no', 'BOOTTEST_ENABLE   = yes')
         # Disable TouchManifest auto-fetching.
         new_config = new_config.replace(
             'BOOTTEST_FETCH    = yes', 'BOOTTEST_FETCH    = no')
@@ -151,7 +154,8 @@ class TestBoottestEnd2End(TestBase):
         self.create_manifest([
             'green 1.0',
             'pyqt5:armhf 1.0',
-            'signon 1.0'
+            'signon 1.0',
+            'purple 1.1',
         ])
 
     def create_manifest(self, lines):
@@ -165,7 +169,8 @@ class TestBoottestEnd2End(TestBase):
         """Create a stub version of boottest-britney script."""
         script_path = os.path.expanduser(
             "~/auto-package-testing/jenkins/boottest-britney")
-        os.makedirs(os.path.dirname(script_path))
+        if not os.path.exists(os.path.dirname(script_path)):
+            os.makedirs(os.path.dirname(script_path))
         with open(script_path, 'w') as f:
             f.write('''#!%(py)s
 import argparse
@@ -178,6 +183,7 @@ green 1.1~beta RUNNING
 pyqt5-src 1.1~beta PASS
 pyqt5-src 1.1 FAIL
 signon 1.1 PASS
+purple 1.1 RUNNING
 """
 
 def request():
@@ -405,6 +411,43 @@ args.func()
              r'<li>missing build on .*>armhf</a>: pyqt5 \(from .*>1</a>\)',
              '<li>Not considered'])
 
+    def test_with_adt(self):
+        # Boottest can run simultaneously with autopkgtest (adt).
+
+        # Enable ADT in britney configuration.
+        with open(self.britney_conf, 'r') as fp:
+            original_config = fp.read()
+        new_config = original_config.replace(
+            'ADT_ENABLE        = no', 'ADT_ENABLE        = yes')
+        with open(self.britney_conf, 'w') as fp:
+            fp.write(new_config)
+
+        # Create a fake 'adt-britney' that reports a RUNNING job for
+        # the testing source ('purple_1.1').
+        script_path = os.path.expanduser(
+            "~/auto-package-testing/jenkins/adt-britney")
+        os.makedirs(os.path.dirname(script_path))
+        with open(script_path, 'w') as f:
+            f.write('''#!/bin/sh -e
+mkdir -p ~/proposed-migration/autopkgtest/work
+touch ~/proposed-migration/autopkgtest/work/adt.request.series
+echo "purple 1.1 RUNNING purple 1.1" >> ~/proposed-migration/autopkgtest/work/adt.result.series''')
+        os.chmod(script_path, 0o755)
+
+        # Britney blocks testing source promotion while ADT and boottest
+        # are running.
+        self.data.add('purple', False, {'Version': '1.0'})
+        context = [
+            ('purple', {'Version': '1.1'}),
+        ]
+        self.do_test(
+            context,
+            [r'\bpurple\b.*>1.0<.* to .*>1.1<',
+             '<li>autopkgtest for purple 1.1: {}'.format(
+                 boottest.BootTest.EXCUSE_LABELS['RUNNING']),
+             '<li>Boottest result: {}'.format(
+                 boottest.BootTest.EXCUSE_LABELS['RUNNING']),
+             '<li>Not considered'])
 
 
 if __name__ == '__main__':
