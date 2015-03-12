@@ -218,13 +218,13 @@ class AutoPackageTest(object):
 
     def results(self, trigsrc, trigver):
         for status, src, ver in self.pkgcauses[trigsrc][trigver]:
-            # Check for regresssion
+            # Check for regression
             if status == 'FAIL':
                 passed_once = False
-                for ver in self.pkglist[src]:
-                    for trigsrc in self.pkglist[src][ver]['causes']:
+                for lver in self.pkglist[src]:
+                    for trigsrc in self.pkglist[src][lver]['causes']:
                         for trigver, status \
-                                in self.pkglist[src][ver]['causes'][trigsrc]:
+                                in self.pkglist[src][lver]['causes'][trigsrc]:
                             if status == 'PASS':
                                 passed_once = True
                 if not passed_once:
