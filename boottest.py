@@ -92,20 +92,20 @@ class TouchManifest(object):
             try:
                 response = urllib.urlopen(url)
                 if response.code == 200:
+                    # Only [re]create the manifest file if one was successfully
+                    # downloaded. This allows for an existing image to be used
+                    # if the download fails.
+                    path_dir = os.path.dirname(self.path)
+                    if not os.path.exists(path_dir):
+                        os.makedirs(path_dir)
+                    with open(self.path, 'w') as fp:
+                        fp.write(response.read())
+                    success = True
                     break
+
             except IOError as e:
                 print("W: [%s] - error connecting to %s: %s" % (
                         time.asctime(), self.path, e))
-
-        # Only [re]create the manifest file if one was successfully downloaded
-        # this allows for an existing image to be used if the download fails.
-        if response.code == 200:
-            path_dir = os.path.dirname(self.path)
-            if not os.path.exists(path_dir):
-                os.makedirs(path_dir)
-            with open(self.path, 'w') as fp:
-                fp.write(response.read())
-            success = True
 
         return success
 

@@ -49,7 +49,10 @@ class TestTouchManifest(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.path)
         _p = mock.patch('urllib.urlopen')
         self.mocked_urlopen = _p.start()
-        self.mocked_urlopen.side_effect = [FakeResponse(code=404),]
+        self.mocked_urlopen.side_effect = [
+            FakeResponse(code=404),
+            FakeResponse(code=404),
+        ]
         self.addCleanup(_p.stop)
         self.fetch_retries_orig = boottest.FETCH_RETRIES
         def restore_fetch_retries():
@@ -90,7 +93,10 @@ class TestTouchManifest(unittest.TestCase):
         self.assertIn('foo', manifest)
 
     def test_fetch_exception(self):
-        self.mocked_urlopen.side_effect = [IOError("connection refused")]
+        self.mocked_urlopen.side_effect = [
+            IOError("connection refused"),
+            IOError("connection refused"),
+        ]
         manifest = boottest.TouchManifest('not-real', 'not-real')
         self.assertEqual(0, len(manifest._manifest))
 
