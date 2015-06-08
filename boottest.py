@@ -69,32 +69,43 @@ class TouchManifest(object):
         self._manifest = self._load()
 
     def __fetch_manifest(self, project, series):
-        url = "http://cdimage.ubuntu.com/{}/daily-preinstalled/" \
-              "pending/{}-preinstalled-touch-armhf.manifest".format(
-                  project, series
-        )
-        success = False
-        if self.verbose:
-            print(
-                "I: [%s] - Fetching manifest from %s" % (
-                    time.asctime(), url))
-            print("I: [%s] - saving it to %s" % (time.asctime(), self.path))
-        try:
-            response = urllib.urlopen(url)
-        except IOError as e:
-            print("W: [%s] - error connecting to %s: %s" % (
-                    time.asctime(), self.path, e))
-            return success  # failure
+        # There are two url formats that may lead to the proper manifest
+        # file. The first form is for series that have been released,
+        # the second form is for the current development series.
+        # Only one of these is expected to exist for any given series.
+        url_list = [
+            "http://cdimage.ubuntu.com/{}/{}/daily-preinstalled/pending/" \
+            "{}-preinstalled-touch-armhf.manifest".format(
+                project, series, series),
+            "http://cdimage.ubuntu.com/{}/daily-preinstalled/pending/" \
+            "{}-preinstalled-touch-armhf.manifest".format(
+                project, series),
+        ]
 
-        # Only [re]create the manifest file if one was successfully downloaded
-        # this allows for an existing image to be used if the download fails.
-        if response.code == 200:
-            path_dir = os.path.dirname(self.path)
-            if not os.path.exists(path_dir):
-                os.makedirs(path_dir)
-            with open(self.path, 'w') as fp:
-                fp.write(response.read())
-            success = True
+        success = False
+        for url in url_list:
+            if self.verbose:
+                print("I: [%s] - Fetching manifest from %s" %
+                      (time.asctime(), url))
+                print("I: [%s] - saving it to %s" %
+                      (time.asctime(), self.path))
+            try:
+                response = urllib.urlopen(url)
+                if response.code == 200:
+                    # Only [re]create the manifest file if one was successfully
+                    # downloaded. This allows for an existing image to be used
+                    # if the download fails.
+                    path_dir = os.path.dirname(self.path)
+                    if not os.path.exists(path_dir):
+                        os.makedirs(path_dir)
+                    with open(self.path, 'w') as fp:
+                        fp.write(response.read())
+                    success = True
+                    break
+
+            except IOError as e:
+                print("W: [%s] - error connecting to %s: %s" % (
+                        time.asctime(), self.path, e))
 
         return success
 
