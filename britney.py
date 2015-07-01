@@ -234,14 +234,17 @@ check_fields = sorted(check_field_name)
 
 class SourcePackage(object):
 
-    __slots__ = ['version', 'section', 'binaries', 'maintainer', 'is_fakesrc']
+    __slots__ = ['version', 'section', 'binaries', 'maintainer', 'is_fakesrc',
+                'testsuite']
 
-    def __init__(self, version, section, binaries, maintainer, is_fakesrc):
+    def __init__(self, version, section, binaries, maintainer, is_fakesrc,
+                 testsuite):
         self.version = version
         self.section = section
         self.binaries = binaries
         self.maintainer = maintainer
         self.is_fakesrc = is_fakesrc
+        self.testsuite = testsuite
 
     def __getitem__(self, item):
         return getattr(self, self.__slots__[item])
@@ -582,6 +585,7 @@ class Britney(object):
                         [],
                         None,
                         True,
+                        [],
                         )
 
             self.sources['testing'][pkg_name] = src_data
@@ -656,6 +660,7 @@ class Britney(object):
                         [],
                         None,
                         True,
+                        [],
                         )
             self.sources['testing'][pkg_name] = src_data
             self.sources['unstable'][pkg_name] = src_data
@@ -837,6 +842,7 @@ class Britney(object):
                             [],
                             maint,
                             False,
+                            get_field('Testsuite', '').split(),
                             )
         return sources
 
@@ -986,7 +992,7 @@ class Britney(object):
                     srcdist[source].binaries.append(pkg_id)
             # if the source package doesn't exist, create a fake one
             else:
-                srcdist[source] = SourcePackage(source_version, 'faux', [pkg_id], None, True)
+                srcdist[source] = SourcePackage(source_version, 'faux', [pkg_id], None, True, [])
 
             # add the resulting dictionary to the package list
             packages[pkg] = dpkg
