@@ -24,6 +24,7 @@ SECTION = 1
 BINARIES = 2
 MAINTAINER = 3
 FAKESRC = 4
+AUTOPKGTEST = 5
 
 # binary package
 SOURCE = 2

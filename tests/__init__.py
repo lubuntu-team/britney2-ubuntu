@@ -63,7 +63,7 @@ class TestData:
     def __del__(self):
         shutil.rmtree(self.path)
 
-    def add(self, name, unstable, fields={}, add_src=True):
+    def add(self, name, unstable, fields={}, add_src=True, testsuite=None):
         '''Add a binary package to the index file.
 
         You need to specify at least the package name and in which list to put
@@ -73,7 +73,8 @@ class TestData:
         fields.
 
         Unless add_src is set to False, this will also automatically create a
-        source record, based on fields['Source'] and name.
+        source record, based on fields['Source'] and name. In that case, the
+        "Testsuite:" field is set to the testsuite argument.
         '''
         assert (name not in self.added_binaries[unstable])
         self.added_binaries[unstable].add(name)
@@ -93,8 +94,11 @@ class TestData:
         if add_src:
             src = fields.get('Source', name)
             if src not in self.added_sources[unstable]:
-                self.add_src(src, unstable, {'Version': fields['Version'],
-                                             'Section': fields['Section']})
+                srcfields = {'Version': fields['Version'],
+                             'Section': fields['Section']}
+                if testsuite:
+                    srcfields['Testsuite'] = testsuite
+                self.add_src(src, unstable, srcfields)
 
     def add_src(self, name, unstable, fields={}):
         '''Add a source package to the index file.
@@ -102,7 +106,8 @@ class TestData:
         You need to specify at least the package name and in which list to put
         it (unstable==True for unstable/proposed, or False for
         testing/release). fields specifies all additional entries, which can be
-        Version (default: 1), Section (default: devel), and Extra-Source-Only.
+        Version (default: 1), Section (default: devel), Testsuite (default:
+        none), and Extra-Source-Only.
         '''
         assert (name not in self.added_sources[unstable])
         self.added_sources[unstable].add(name)
