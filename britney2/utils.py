@@ -738,6 +738,7 @@ def read_sources_file(filename, sources=None, intern=sys.intern):
                                              [],
                                              maint,
                                              False,
+                                             get_field('Testsuite', '').split(),
                                              )
     return sources
 

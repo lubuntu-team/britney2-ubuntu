@@ -575,6 +575,7 @@ class Britney(object):
                         [],
                         None,
                         True,
+                        [],
                         )
 
             self.sources['testing'][pkg_name] = src_data
@@ -649,6 +650,7 @@ class Britney(object):
                         [],
                         None,
                         True,
+                        [],
                         )
             self.sources['testing'][pkg_name] = src_data
             self.sources['unstable'][pkg_name] = src_data
@@ -850,7 +852,7 @@ class Britney(object):
                     srcdist[source].binaries.append(pkg_id)
             # if the source package doesn't exist, create a fake one
             else:
-                srcdist[source] = SourcePackage(source_version, 'faux', [pkg_id], None, True)
+                srcdist[source] = SourcePackage(source_version, 'faux', [pkg_id], None, True, [])
 
             # add the resulting dictionary to the package list
             packages[pkg] = dpkg
