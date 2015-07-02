@@ -55,6 +55,13 @@ class AutoPackageTest(object):
         self.read()
         self.rc_path = None
 
+    def log_verbose(self, msg):
+        if self.britney.options.verbose:
+            print('I: [%s] - %s' % (time.asctime(), msg))
+
+    def log_error(self, msg):
+        print('E: [%s] - %s' % (time.asctime(), msg))
+
     def _ensure_rc_file(self):
         if self.rc_path:
             return
@@ -164,9 +171,8 @@ class AutoPackageTest(object):
                     request_file.write(line)
                 else:
                     if self.britney.options.verbose:
-                        print("I: [%s] - Requested autopkgtest for %s but "
-                              "run_autopkgtest set to False" %
-                              (time.asctime(), src))
+                        self.log_verbose("Requested autopkgtest for %s but "
+                                         "run_autopkgtest set to False" % src)
 
         for linebits in self._parse(request_path):
             # Make sure that there's an entry in pkgcauses for each new
@@ -176,8 +182,8 @@ class AutoPackageTest(object):
             src = linebits.pop(0)
             ver = linebits.pop(0)
             if self.britney.options.verbose:
-                print("I: [%s] - Requested autopkgtest for %s_%s (%s)" %
-                      (time.asctime(), src, ver, " ".join(linebits)))
+                self.log_verbose("Requested autopkgtest for %s_%s (%s)" %
+                                 (src, ver, " ".join(linebits)))
             try:
                 status = linebits.pop(0).upper()
                 while True:
@@ -211,10 +217,9 @@ class AutoPackageTest(object):
                     for trigsrc in sorted(self.pkglist[src][ver]['causes']):
                         for trigver, status \
                                 in self.pkglist[src][ver]['causes'][trigsrc]:
-                            print("I: [%s] - Collected autopkgtest status "
-                                  "for %s_%s/%s_%s: " "%s" % (
-                                      time.asctime(), src, ver, trigsrc,
-                                      trigver, status))
+                            self.log_verbose("Collected autopkgtest status "
+                                             "for %s_%s/%s_%s: " "%s" %
+                                             (src, ver, trigsrc, trigver, status))
 
     def results(self, trigsrc, trigver):
         for status, src, ver in self.pkgcauses[trigsrc][trigver]:
