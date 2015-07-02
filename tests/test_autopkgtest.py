@@ -39,7 +39,6 @@ class TestAutoPkgTest(TestBase):
             'BOOTTEST_ENABLE   = yes', 'BOOTTEST_ENABLE   = no')
         with open(self.britney_conf, 'w') as fp:
             fp.write(new_config)
-        self.addCleanup(self.restore_config, original_config)
 
         # fake adt-britney script
         self.adt_britney = os.path.join(

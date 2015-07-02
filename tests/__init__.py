@@ -133,17 +133,13 @@ class TestBase(unittest.TestCase):
         super(TestBase, self).setUp()
         self.data = TestData()
         self.britney = os.path.join(PROJECT_DIR, 'britney.py')
-        self.britney_conf = os.path.join(PROJECT_DIR, 'britney.conf')
+        # create temporary config so that tests can hack it
+        self.britney_conf = os.path.join(self.data.path, 'britney.conf')
+        shutil.copy(os.path.join(PROJECT_DIR, 'britney.conf'), self.britney_conf)
         assert os.path.exists(self.britney)
-        assert os.path.exists(self.britney_conf)
 
     def tearDown(self):
         del self.data
-
-    def restore_config(self, content):
-        """Helper for restoring configuration contents on cleanup."""
-        with open(self.britney_conf, 'w') as fp:
-            fp.write(content)
 
     def run_britney(self, args=[]):
         '''Run britney.
