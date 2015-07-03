@@ -85,7 +85,7 @@ class AutoPackageTest(object):
     def read_pending_tests(self):
         '''Read pending test requests from previous britney runs
 
-        Read test_state_dir/requested.txt with the format:
+        Read UNSTABLE/autopkgtest/requested.txt with the format:
             srcpkg srcver triggering-srcpkg triggering-srcver
 
         Initialize self.pending_tests with that data.
@@ -119,8 +119,8 @@ class AutoPackageTest(object):
     def update_pending_tests(self):
         '''Update pending tests after submitting requested tests
 
-        Update test_state_dir/requested.txt, see read_pending_tests() for the
-        format.
+        Update UNSTABLE/autopkgtest/requested.txt, see read_pending_tests() for
+        the format.
         '''
         # merge requested_tests into pending_tests
         for src, verinfo in self.requested_tests.items():
