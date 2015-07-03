@@ -350,10 +350,11 @@ class AutoPackageTest(object):
         if amqp_url.startswith('amqp://'):
             with kombu.Connection(amqp_url) as conn:
                 for q in queues:
-                    amqp_queue = conn.SimpleQueue(q)
-                    for pkg in self.requested_tests:
-                        amqp_queue.put(pkg)
-                    amqp_queue.close()
+                    # don't use SimpleQueue here as it always declares queues;
+                    # ACLs might not allow that
+                    with kombu.Producer(conn, routing_key=q, auto_declare=False) as p:
+                        for pkg in self.requested_tests:
+                            p.publish(pkg)
         elif amqp_url.startswith('file://'):
             # in testing mode, adt_amqp will be a file:// URL
             with open(amqp_url[7:], 'a') as f:
