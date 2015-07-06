@@ -151,6 +151,8 @@ class AutoPackageTest(object):
             for ver, triggers in verinfo.items():
                 self.pending_tests.setdefault(src, {}).setdefault(
                     ver, set()).update(triggers)
+        self.requested_tests = {}
+
         # write it
         with open(self.pending_tests_file + '.new', 'w') as f:
             for src in sorted(self.pending_tests):
