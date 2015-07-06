@@ -78,6 +78,30 @@ class AutoPackageTest(object):
     def log_error(self, msg):
         print('E: [%s] - %s' % (time.asctime(), msg))
 
+    def tests_for_source(self, src, ver):
+        '''Iterate over all tests that should be run for given source'''
+
+        sources_info = self.britney.sources['unstable']
+        # FIXME: For now assume that amd64 has all binaries that we are
+        # interested in for reverse dependency checking
+        binaries_info = self.britney.binaries['unstable']['amd64'][0]
+
+        srcinfo = sources_info[src]
+        # we want to test the package itself, if it still has a test in
+        # unstable
+        if srcinfo[AUTOPKGTEST]:
+            yield (src, ver)
+
+        # plus all direct reverse dependencies of its binaries which have
+        # an autopkgtest
+        for binary in srcinfo[BINARIES]:
+            binary = binary.split('/')[0]  # chop off arch
+            for rdep in binaries_info[binary][RDEPENDS]:
+                rdep_src = binaries_info[rdep][SOURCE]
+                if sources_info[rdep_src][AUTOPKGTEST]:
+                    # we don't care about the version of rdep
+                    yield (rdep_src, None)
+
     #
     # AMQP/cloud interface helpers
     #
@@ -252,34 +276,16 @@ class AutoPackageTest(object):
 
         self.log_verbose('Requested autopkgtests for %s, exclusions: %s' %
                          (['%s/%s' % i for i in packages], str(excludes)))
-        # add new test requests to self.requested_tests from reverse
-        # dependencies, unless they are already in self.pending_tests
-        # build a source -> {triggering-source1, ...} map from reverse
-        # dependencies
-        sources_info = self.britney.sources['unstable']
-        # FIXME: For now assume that amd64 has all binaries that we are
-        binaries_info = self.britney.binaries['unstable']['amd64'][0]
-        # interested in for reverse dependency checking
         for src, ver in packages:
-            srcinfo = sources_info[src]
-            # we want to test the package itself, if it still has a test in
-            # unstable
-            if srcinfo[AUTOPKGTEST] and src not in excludes:
-                self.add_test_request(src, ver, src, ver)
-            # plus all direct reverse dependencies of its binaries which have
-            # an autopkgtest
-            for binary in srcinfo[BINARIES]:
-                binary = binary.split('/')[0]  # chop off arch
-                for rdep in binaries_info[binary][RDEPENDS]:
-                    rdep_src = binaries_info[rdep][SOURCE]
-                    if sources_info[rdep_src][AUTOPKGTEST] and rdep_src not in excludes:
-                        # we don't care about the version of rdep
-                        self.add_test_request(rdep_src, None, src, ver)
+            for (testsrc, testver) in self.tests_for_source(src, ver):
+                if testsrc not in excludes:
+                    self.add_test_request(testsrc, testver, src, ver)
 
-        for src, verinfo in self.requested_tests.items():
-            for ver, triggers in verinfo.items():
-                self.log_verbose('Requesting %s/%s autopkgtest to verify %s' %
-                                 (src, ver, ', '.join(['%s/%s' % i for i in triggers])))
+        if self.britney.options.verbose:
+            for src, verinfo in self.requested_tests.items():
+                for ver, triggers in verinfo.items():
+                    self.log_verbose('Requesting %s/%s autopkgtest to verify %s' %
+                                     (src, ver, ', '.join(['%s/%s' % i for i in triggers])))
 
         # deprecated requests for old Jenkins/lp:auto-package-testing, will go
         # away
