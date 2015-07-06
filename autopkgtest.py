@@ -26,6 +26,10 @@ from textwrap import dedent
 import time
 import apt_pkg
 
+import kombu
+
+from consts import (AUTOPKGTEST, BINARIES, RDEPENDS, SOURCE)
+
 
 adt_britney = os.path.expanduser("~/auto-package-testing/jenkins/adt-britney")
 
@@ -53,7 +57,139 @@ class AutoPackageTest(object):
         self.series = series
         self.debug = debug
         self.read()
-        self.rc_path = None
+        self.rc_path = None  # for adt-britney, obsolete
+        self.test_state_dir = os.path.join(britney.options.unstable,
+                                           'autopkgtest')
+        # map of requested tests from request()
+        # src -> ver -> {(triggering-src1, ver1), ...}
+        self.requested_tests = {}
+        # same map for tests requested in previous runs
+        self.pending_tests = None
+        self.pending_tests_file = os.path.join(self.test_state_dir, 'pending.txt')
+
+        if not os.path.isdir(self.test_state_dir):
+            os.mkdir(self.test_state_dir)
+        self.read_pending_tests()
+
+    def log_verbose(self, msg):
+        if self.britney.options.verbose:
+            print('I: [%s] - %s' % (time.asctime(), msg))
+
+    def log_error(self, msg):
+        print('E: [%s] - %s' % (time.asctime(), msg))
+
+    def tests_for_source(self, src, ver):
+        '''Iterate over all tests that should be run for given source'''
+
+        sources_info = self.britney.sources['unstable']
+        # FIXME: For now assume that amd64 has all binaries that we are
+        # interested in for reverse dependency checking
+        binaries_info = self.britney.binaries['unstable']['amd64'][0]
+
+        srcinfo = sources_info[src]
+        # we want to test the package itself, if it still has a test in
+        # unstable
+        if srcinfo[AUTOPKGTEST]:
+            yield (src, ver)
+
+        # plus all direct reverse dependencies of its binaries which have
+        # an autopkgtest
+        for binary in srcinfo[BINARIES]:
+            binary = binary.split('/')[0]  # chop off arch
+            try:
+                rdeps = binaries_info[binary][RDEPENDS]
+            except KeyError:
+                self.log_verbose('Ignoring nonexistant binary %s (FTBFS/NBS)?' % binary)
+                continue
+            for rdep in rdeps:
+                rdep_src = binaries_info[rdep][SOURCE]
+                if sources_info[rdep_src][AUTOPKGTEST]:
+                    # we don't care about the version of rdep
+                    yield (rdep_src, None)
+
+    #
+    # AMQP/cloud interface helpers
+    #
+
+    def read_pending_tests(self):
+        '''Read pending test requests from previous britney runs
+
+        Read UNSTABLE/autopkgtest/requested.txt with the format:
+            srcpkg srcver triggering-srcpkg triggering-srcver
+
+        Initialize self.pending_tests with that data.
+        '''
+        assert self.pending_tests is None, 'already initialized'
+        self.pending_tests = {}
+        if not os.path.exists(self.pending_tests_file):
+            self.log_verbose('No %s, starting with no pending tests' %
+                             self.pending_tests_file)
+            return
+        with open(self.pending_tests_file) as f:
+            for l in f:
+                l = l.strip()
+                if not l:
+                    continue
+                try:
+                    (src, ver, trigsrc, trigver) = l.split()
+                except ValueError:
+                    self.log_error('ignoring malformed line in %s: %s' %
+                                   (self.pending_tests_file, l))
+                    continue
+                if ver == '-':
+                    ver = None
+                if trigver == '-':
+                    trigver = None
+                self.pending_tests.setdefault(src, {}).setdefault(
+                    ver, set()).add((trigsrc, trigver))
+        self.log_verbose('Read pending requested tests from %s: %s' %
+                         (self.pending_tests_file, self.pending_tests))
+
+    def update_pending_tests(self):
+        '''Update pending tests after submitting requested tests
+
+        Update UNSTABLE/autopkgtest/requested.txt, see read_pending_tests() for
+        the format.
+        '''
+        # merge requested_tests into pending_tests
+        for src, verinfo in self.requested_tests.items():
+            for ver, triggers in verinfo.items():
+                self.pending_tests.setdefault(src, {}).setdefault(
+                    ver, set()).update(triggers)
+        self.requested_tests = {}
+
+        # write it
+        with open(self.pending_tests_file + '.new', 'w') as f:
+            for src in sorted(self.pending_tests):
+                for ver in sorted(self.pending_tests[src]):
+                    for (trigsrc, trigver) in sorted(self.pending_tests[src][ver]):
+                        if ver is None:
+                            ver = '-'
+                        if trigver is None:
+                            trigver = '-'
+                        f.write('%s %s %s %s\n' % (src, ver, trigsrc, trigver))
+        os.rename(self.pending_tests_file + '.new', self.pending_tests_file)
+        self.log_verbose('Updated pending requested tests in %s' %
+                         self.pending_tests_file)
+
+    def add_test_request(self, src, ver, trigsrc, trigver):
+        '''Add one test request to the local self.requested_tests queue
+
+        This will only be done if that test wasn't already requested in a
+        previous run, i. e. it is already in self.pending_tests.
+
+        versions can be None if you don't care about the particular version.
+        '''
+        if (trigsrc, trigver) in self.pending_tests.get(src, {}).get(ver, set()):
+            self.log_verbose('test %s/%s for %s/%s is already pending, not queueing' %
+                             (src, ver, trigsrc, trigver))
+            return
+        self.requested_tests.setdefault(src, {}).setdefault(
+            ver, set()).add((trigsrc, trigver))
+
+    #
+    # obsolete adt-britney helpers
+    #
 
     def _ensure_rc_file(self):
         if self.rc_path:
@@ -137,9 +273,29 @@ class AutoPackageTest(object):
         command.extend(args)
         subprocess.check_call(command)
 
+    #
+    # Public API
+    #
+
     def request(self, packages, excludes=None):
         if excludes is None:
             excludes = []
+
+        self.log_verbose('Requested autopkgtests for %s, exclusions: %s' %
+                         (['%s/%s' % i for i in packages], str(excludes)))
+        for src, ver in packages:
+            for (testsrc, testver) in self.tests_for_source(src, ver):
+                if testsrc not in excludes:
+                    self.add_test_request(testsrc, testver, src, ver)
+
+        if self.britney.options.verbose:
+            for src, verinfo in self.requested_tests.items():
+                for ver, triggers in verinfo.items():
+                    self.log_verbose('Requesting %s/%s autopkgtest to verify %s' %
+                                     (src, ver, ', '.join(['%s/%s' % i for i in triggers])))
+
+        # deprecated requests for old Jenkins/lp:auto-package-testing, will go
+        # away
 
         self._ensure_rc_file()
         request_path = self._request_path
@@ -164,9 +320,8 @@ class AutoPackageTest(object):
                     request_file.write(line)
                 else:
                     if self.britney.options.verbose:
-                        print("I: [%s] - Requested autopkgtest for %s but "
-                              "run_autopkgtest set to False" %
-                              (time.asctime(), src))
+                        self.log_verbose("Requested autopkgtest for %s but "
+                                         "run_autopkgtest set to False" % src)
 
         for linebits in self._parse(request_path):
             # Make sure that there's an entry in pkgcauses for each new
@@ -176,8 +331,8 @@ class AutoPackageTest(object):
             src = linebits.pop(0)
             ver = linebits.pop(0)
             if self.britney.options.verbose:
-                print("I: [%s] - Requested autopkgtest for %s_%s (%s)" %
-                      (time.asctime(), src, ver, " ".join(linebits)))
+                self.log_verbose("Requested autopkgtest for %s_%s (%s)" %
+                                 (src, ver, " ".join(linebits)))
             try:
                 status = linebits.pop(0).upper()
                 while True:
@@ -194,6 +349,40 @@ class AutoPackageTest(object):
                 pass
 
     def submit(self):
+        # send AMQP requests for new test requests
+        # TODO: Once we support version constraints in AMQP requests, add them
+        queues = ['debci-%s-%s' % (self.series, arch)
+                  for arch in self.britney.options.adt_arches.split()]
+
+        try:
+            amqp_url = self.britney.options.adt_amqp
+        except AttributeError:
+            self.log_error('ADT_AMQP not set, cannot submit requests')
+            return
+
+        if amqp_url.startswith('amqp://'):
+            with kombu.Connection(amqp_url) as conn:
+                for q in queues:
+                    # don't use SimpleQueue here as it always declares queues;
+                    # ACLs might not allow that
+                    with kombu.Producer(conn, routing_key=q, auto_declare=False) as p:
+                        for pkg in self.requested_tests:
+                            p.publish(pkg)
+        elif amqp_url.startswith('file://'):
+            # in testing mode, adt_amqp will be a file:// URL
+            with open(amqp_url[7:], 'a') as f:
+                for pkg in self.requested_tests:
+                    for q in queues:
+                        f.write('%s:%s\n' % (q, pkg))
+        else:
+            self.log_error('Unknown ADT_AMQP schema in %s' %
+                           self.britney.options.adt_amqp)
+
+        # mark them as pending now
+        self.update_pending_tests()
+
+        # deprecated requests for old Jenkins/lp:auto-package-testing, will go
+        # away
         self._ensure_rc_file()
         request_path = self._request_path
         if os.path.exists(request_path):
@@ -211,10 +400,9 @@ class AutoPackageTest(object):
                     for trigsrc in sorted(self.pkglist[src][ver]['causes']):
                         for trigver, status \
                                 in self.pkglist[src][ver]['causes'][trigsrc]:
-                            print("I: [%s] - Collected autopkgtest status "
-                                  "for %s_%s/%s_%s: " "%s" % (
-                                      time.asctime(), src, ver, trigsrc,
-                                      trigver, status))
+                            self.log_verbose("Collected autopkgtest status "
+                                             "for %s_%s/%s_%s: " "%s" %
+                                             (src, ver, trigsrc, trigver, status))
 
     def results(self, trigsrc, trigver):
         for status, src, ver in self.pkgcauses[trigsrc][trigver]:

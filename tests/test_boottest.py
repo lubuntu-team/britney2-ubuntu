@@ -143,7 +143,6 @@ class TestBoottestEnd2End(TestBase):
             'BOOTTEST_FETCH    = yes', 'BOOTTEST_FETCH    = no')
         with open(self.britney_conf, 'w') as fp:
             fp.write(new_config)
-        self.addCleanup(self.restore_config, original_config)
 
         self.data.add('libc6', False, {'Architecture': 'armhf'}),
 

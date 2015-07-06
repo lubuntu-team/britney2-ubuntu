@@ -11,6 +11,7 @@ import operator
 import os
 import sys
 import subprocess
+import fileinput
 import unittest
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,9 +28,139 @@ apt_pkg.init()
 
 
 class TestAutoPkgTest(TestBase):
+    '''AMQP/cloud interface'''
 
     def setUp(self):
         super(TestAutoPkgTest, self).setUp()
+        self.fake_amqp = os.path.join(self.data.path, 'amqp')
+
+        # Disable boottests and set fake AMQP server
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if line.startswith('BOOTTEST_ENABLE'):
+                print('BOOTTEST_ENABLE   = no')
+            elif line.startswith('ADT_AMQP'):
+                print('ADT_AMQP = file://%s' % self.fake_amqp)
+            else:
+                sys.stdout.write(line)
+
+        # fake adt-britney script; necessary until we drop that code
+        self.adt_britney = os.path.join(
+            self.data.home, 'auto-package-testing', 'jenkins', 'adt-britney')
+        os.makedirs(os.path.dirname(self.adt_britney))
+        with open(self.adt_britney, 'w') as f:
+            f.write('''#!/bin/sh -e
+touch $HOME/proposed-migration/autopkgtest/work/adt.request.series
+echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
+        os.chmod(self.adt_britney, 0o755)
+
+        # add a bunch of packages to testing to avoid repetition
+        self.data.add('libc6', False)
+        self.data.add('libgreen1', False, {'Source': 'green',
+                                           'Depends': 'libc6 (>= 0.9)'})
+        self.data.add('green', False, {'Depends': 'libc6 (>= 0.9), libgreen1',
+                                       'Conflicts': 'blue'},
+                      testsuite='autopkgtest')
+        self.data.add('lightgreen', False, {'Depends': 'libgreen1'},
+                      testsuite='autopkgtest')
+        # autodep8 or similar test
+        self.data.add('darkgreen', False, {'Depends': 'libgreen1'},
+                      testsuite='autopkgtest-pkg-foo')
+        self.data.add('blue', False, {'Depends': 'libc6 (>= 0.9)',
+                                      'Conflicts': 'green'},
+                      testsuite='specialtest')
+        self.data.add('justdata', False, {'Architecture': 'all'})
+
+    def do_test(self, unstable_add, considered, excuses_expect=None, excuses_no_expect=None):
+        for (pkg, fields, testsuite) in unstable_add:
+            self.data.add(pkg, True, fields, True, testsuite)
+
+        (excuses, out) = self.run_britney()
+        #print('-------\nexcuses: %s\n-----' % excuses)
+        #print('-------\nout: %s\n-----' % out)
+        #print('run:\n%s -c %s\n' % (self.britney, self.britney_conf))
+        #subprocess.call(['bash', '-i'], cwd=self.data.path)
+        if considered:
+            self.assertIn('Valid candidate', excuses)
+        else:
+            self.assertIn('Not considered', excuses)
+
+        if excuses_expect:
+            for re in excuses_expect:
+                self.assertRegexpMatches(excuses, re)
+        if excuses_no_expect:
+            for re in excuses_no_expect:
+                self.assertNotRegexpMatches(excuses, re)
+
+        self.amqp_requests = set()
+        try:
+            with open(self.fake_amqp) as f:
+                for line in f:
+                    self.amqp_requests.add(line.strip())
+        except IOError:
+            pass
+
+        try:
+            with open(os.path.join(self.data.path, 'data/series-proposed/autopkgtest/pending.txt')) as f:
+                self.pending_requests = f.read()
+        except IOError:
+                self.pending_requests = None
+
+    def test_multi_rdepends_with_tests(self):
+        '''Multiple reverse dependencies with tests'''
+
+        # FIXME: while we only submit requests through AMQP, but don't consider
+        # their results, we don't expect this to hold back stuff.
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<'])
+
+        # we expect the package's and its reverse dependencies' tests to get
+        # triggered
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:green', 'debci-series-amd64:green',
+                 'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen',
+                ]))
+        os.unlink(self.fake_amqp)
+
+        expected_pending = '''darkgreen - green 2
+green 2 green 2
+lightgreen - green 2
+'''
+
+        # ... and that they get recorded as pending
+        self.assertEqual(self.pending_requests, expected_pending)
+
+        # if we run britney again this should *not* trigger any new tests
+        self.do_test([], VALID_CANDIDATE, [r'\bgreen\b.*>1</a> to .*>2<'])
+        self.assertEqual(self.amqp_requests, set())
+        # but the set of pending tests doesn't change
+        self.assertEqual(self.pending_requests, expected_pending)
+
+    def test_no_amqp_config(self):
+        '''Run without autopkgtest requests'''
+
+        # Disable AMQP server config
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if not line.startswith('ADT_AMQP'):
+                sys.stdout.write(line)
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<'], ['autopkgtest'])
+
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, None)
+
+
+class TestAdtBritney(TestBase):
+    '''Legacy adt-britney/lp:auto-package-testing interface'''
+
+    def setUp(self):
+        super(TestAdtBritney, self).setUp()
 
         # Mofify configuration according to the test context.
         with open(self.britney_conf, 'r') as fp:
@@ -39,7 +170,6 @@ class TestAutoPkgTest(TestBase):
             'BOOTTEST_ENABLE   = yes', 'BOOTTEST_ENABLE   = no')
         with open(self.britney_conf, 'w') as fp:
             fp.write(new_config)
-        self.addCleanup(self.restore_config, original_config)
 
         # fake adt-britney script
         self.adt_britney = os.path.join(

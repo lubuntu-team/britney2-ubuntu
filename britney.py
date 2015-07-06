@@ -564,6 +564,7 @@ class Britney(object):
                             [],
                             get_field('Maintainer'),
                             False,
+                            get_field('Testsuite', '').startswith('autopkgtest'),
                            ]
         return sources
 
