@@ -96,7 +96,12 @@ class AutoPackageTest(object):
         # an autopkgtest
         for binary in srcinfo[BINARIES]:
             binary = binary.split('/')[0]  # chop off arch
-            for rdep in binaries_info[binary][RDEPENDS]:
+            try:
+                rdeps = binaries_info[binary][RDEPENDS]
+            except KeyError:
+                self.log_verbose('Ignoring nonexistant binary %s (FTBFS/NBS)?' % binary)
+                continue
+            for rdep in rdeps:
                 rdep_src = binaries_info[rdep][SOURCE]
                 if sources_info[rdep_src][AUTOPKGTEST]:
                     # we don't care about the version of rdep
