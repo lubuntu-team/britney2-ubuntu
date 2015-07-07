@@ -61,7 +61,7 @@ class AutoPackageTest(object):
         self.test_state_dir = os.path.join(britney.options.unstable,
                                            'autopkgtest')
         # map of requested tests from request()
-        # src -> ver -> {(triggering-src1, ver1), ...}
+        # src -> ver -> arch -> {(triggering-src1, ver1), ...}
         self.requested_tests = {}
         # same map for tests requested in previous runs
         self.pending_tests = None
@@ -136,13 +136,13 @@ class AutoPackageTest(object):
                 if not l:
                     continue
                 try:
-                    (src, ver, trigsrc, trigver) = l.split()
+                    (src, ver, arch, trigsrc, trigver) = l.split()
                 except ValueError:
                     self.log_error('ignoring malformed line in %s: %s' %
                                    (self.pending_tests_file, l))
                     continue
                 self.pending_tests.setdefault(src, {}).setdefault(
-                    ver, set()).add((trigsrc, trigver))
+                    ver, {}).setdefault(arch, set()).add((trigsrc, trigver))
         self.log_verbose('Read pending requested tests from %s: %s' %
                          (self.pending_tests_file, self.pending_tests))
 
@@ -154,33 +154,36 @@ class AutoPackageTest(object):
         '''
         # merge requested_tests into pending_tests
         for src, verinfo in self.requested_tests.items():
-            for ver, triggers in verinfo.items():
-                self.pending_tests.setdefault(src, {}).setdefault(
-                    ver, set()).update(triggers)
+            for ver, archinfo in verinfo.items():
+                for arch, triggers in archinfo.items():
+                    self.pending_tests.setdefault(src, {}).setdefault(
+                        ver, {}).setdefault(arch, set()).update(triggers)
         self.requested_tests = {}
 
         # write it
         with open(self.pending_tests_file + '.new', 'w') as f:
             for src in sorted(self.pending_tests):
                 for ver in sorted(self.pending_tests[src]):
-                    for (trigsrc, trigver) in sorted(self.pending_tests[src][ver]):
-                        f.write('%s %s %s %s\n' % (src, ver, trigsrc, trigver))
+                    for arch in sorted(self.pending_tests[src][ver]):
+                        for (trigsrc, trigver) in sorted(self.pending_tests[src][ver][arch]):
+                            f.write('%s %s %s %s %s\n' % (src, ver, arch, trigsrc, trigver))
         os.rename(self.pending_tests_file + '.new', self.pending_tests_file)
         self.log_verbose('Updated pending requested tests in %s' %
                          self.pending_tests_file)
 
-    def add_test_request(self, src, ver, trigsrc, trigver):
+    def add_test_request(self, src, ver, arch, trigsrc, trigver):
         '''Add one test request to the local self.requested_tests queue
 
         This will only be done if that test wasn't already requested in a
         previous run, i. e. it is already in self.pending_tests.
         '''
-        if (trigsrc, trigver) in self.pending_tests.get(src, {}).get(ver, set()):
-            self.log_verbose('test %s/%s for %s/%s is already pending, not queueing' %
-                             (src, ver, trigsrc, trigver))
+        if (trigsrc, trigver) in self.pending_tests.get(src, {}).get(
+            ver, {}).get(arch, set()):
+            self.log_verbose('test %s/%s/%s for %s/%s is already pending, not queueing' %
+                             (src, ver, arch, trigsrc, trigver))
             return
         self.requested_tests.setdefault(src, {}).setdefault(
-            ver, set()).add((trigsrc, trigver))
+            ver, {}).setdefault(arch, set()).add((trigsrc, trigver))
 
     #
     # obsolete adt-britney helpers
@@ -281,13 +284,15 @@ class AutoPackageTest(object):
         for src, ver in packages:
             for (testsrc, testver) in self.tests_for_source(src, ver):
                 if testsrc not in excludes:
-                    self.add_test_request(testsrc, testver, src, ver)
+                    for arch in self.britney.options.adt_arches.split():
+                        self.add_test_request(testsrc, testver, arch, src, ver)
 
         if self.britney.options.verbose:
             for src, verinfo in self.requested_tests.items():
-                for ver, triggers in verinfo.items():
-                    self.log_verbose('Requesting %s/%s autopkgtest to verify %s' %
-                                     (src, ver, ', '.join(['%s/%s' % i for i in triggers])))
+                for ver, archinfo in verinfo.items():
+                    for arch, triggers in archinfo.items():
+                        self.log_verbose('Requesting %s/%s/%s autopkgtest to verify %s' %
+                                         (src, ver, arch, ', '.join(['%s/%s' % i for i in triggers])))
 
         # deprecated requests for old Jenkins/lp:auto-package-testing, will go
         # away
@@ -346,8 +351,9 @@ class AutoPackageTest(object):
     def submit(self):
         # send AMQP requests for new test requests
         # TODO: Once we support version constraints in AMQP requests, add them
-        queues = ['debci-%s-%s' % (self.series, arch)
-                  for arch in self.britney.options.adt_arches.split()]
+        arch_queues = {}
+        for arch in self.britney.options.adt_arches.split():
+            arch_queues[arch] = 'debci-%s-%s' % (self.series, arch)
 
         try:
             amqp_url = self.britney.options.adt_amqp
@@ -355,20 +361,27 @@ class AutoPackageTest(object):
             self.log_error('ADT_AMQP not set, cannot submit requests')
             return
 
+        def _arches(verinfo):
+            res = set()
+            for v, archinfo in verinfo.items():
+                res.update(archinfo.keys())
+            return res
+
         if amqp_url.startswith('amqp://'):
             with kombu.Connection(amqp_url) as conn:
-                for q in queues:
+                for arch in arch_queues:
                     # don't use SimpleQueue here as it always declares queues;
                     # ACLs might not allow that
-                    with kombu.Producer(conn, routing_key=q, auto_declare=False) as p:
-                        for pkg in self.requested_tests:
-                            p.publish(pkg)
+                    with kombu.Producer(conn, routing_key=arch_queues[arch], auto_declare=False) as p:
+                        for pkg, verinfo in self.requested_tests.items():
+                            if arch in _arches(verinfo):
+                                p.publish(pkg)
         elif amqp_url.startswith('file://'):
             # in testing mode, adt_amqp will be a file:// URL
             with open(amqp_url[7:], 'a') as f:
-                for pkg in self.requested_tests:
-                    for q in queues:
-                        f.write('%s:%s\n' % (q, pkg))
+                for pkg, verinfo in self.requested_tests.items():
+                    for arch in _arches(verinfo):
+                        f.write('%s:%s\n' % (arch_queues[arch], pkg))
         else:
             self.log_error('Unknown ADT_AMQP schema in %s' %
                            self.britney.options.adt_amqp)

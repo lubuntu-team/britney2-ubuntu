@@ -126,9 +126,12 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         os.unlink(self.fake_amqp)
 
         # ... and that they get recorded as pending
-        expected_pending = '''darkgreen 1 green 2
-green 2 green 2
-lightgreen 1 green 2
+        expected_pending = '''darkgreen 1 amd64 green 2
+darkgreen 1 i386 green 2
+green 2 amd64 green 2
+green 2 i386 green 2
+lightgreen 1 amd64 green 2
+lightgreen 1 i386 green 2
 '''
         self.assertEqual(self.pending_requests, expected_pending)
 
@@ -161,10 +164,14 @@ lightgreen 1 green 2
         os.unlink(self.fake_amqp)
 
         # ... and that they get recorded as pending
-        expected_pending = '''darkgreen 1 green 2
-green 2 green 2
-lightgreen 2 green 2
-lightgreen 2 lightgreen 2
+        expected_pending = '''darkgreen 1 amd64 green 2
+darkgreen 1 i386 green 2
+green 2 amd64 green 2
+green 2 i386 green 2
+lightgreen 2 amd64 green 2
+lightgreen 2 amd64 lightgreen 2
+lightgreen 2 i386 green 2
+lightgreen 2 i386 lightgreen 2
 '''
         self.assertEqual(self.pending_requests, expected_pending)
 
