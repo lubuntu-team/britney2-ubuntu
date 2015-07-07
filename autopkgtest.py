@@ -86,10 +86,13 @@ class AutoPackageTest(object):
         # interested in for reverse dependency checking
         binaries_info = self.britney.binaries['unstable']['amd64'][0]
 
+        reported_pkgs = set()
+
         srcinfo = sources_info[src]
         # we want to test the package itself, if it still has a test in
         # unstable
         if srcinfo[AUTOPKGTEST]:
+            reported_pkgs.add(src)
             yield (src, ver)
 
         # plus all direct reverse dependencies of its binaries which have
@@ -104,8 +107,10 @@ class AutoPackageTest(object):
             for rdep in rdeps:
                 rdep_src = binaries_info[rdep][SOURCE]
                 if sources_info[rdep_src][AUTOPKGTEST]:
-                    # we don't care about the version of rdep
-                    yield (rdep_src, None)
+                    if rdep_src not in reported_pkgs:
+                        # we don't care about the version of rdep
+                        yield (rdep_src, None)
+                        reported_pkgs.add(rdep_src)
 
     #
     # AMQP/cloud interface helpers
