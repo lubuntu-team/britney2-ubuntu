@@ -105,13 +105,13 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         except IOError:
                 self.pending_requests = None
 
-    def test_multi_rdepends_with_tests(self):
-        '''Multiple reverse dependencies with tests'''
+    def test_multi_rdepends_with_tests_all_running(self):
+        '''Multiple reverse dependencies with tests (all running)'''
 
-        # FIXME: while we only submit requests through AMQP, but don't consider
-        # their results, we don't expect this to hold back stuff.
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>2<'])
 
@@ -125,18 +125,48 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
                 ]))
         os.unlink(self.fake_amqp)
 
+        # ... and that they get recorded as pending
         expected_pending = '''darkgreen - green 2
 green 2 green 2
 lightgreen - green 2
 '''
-
-        # ... and that they get recorded as pending
         self.assertEqual(self.pending_requests, expected_pending)
 
         # if we run britney again this should *not* trigger any new tests
         self.do_test([], VALID_CANDIDATE, [r'\bgreen\b.*>1</a> to .*>2<'])
         self.assertEqual(self.amqp_requests, set())
         # but the set of pending tests doesn't change
+        self.assertEqual(self.pending_requests, expected_pending)
+
+    def test_package_pair_running(self):
+        '''Two packages in unstable that need to go in together (running)'''
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 2)'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'\blightgreen\b.*>1</a> to .*>2<'])
+
+        # we expect the package's and its reverse dependencies' tests to get
+        # triggered; lightgreen should be triggered only once
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:green', 'debci-series-amd64:green',
+                 'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen',
+                ]))
+        os.unlink(self.fake_amqp)
+
+        expected_pending = '''darkgreen - green 2
+green 2 green 2
+lightgreen - green 2
+lightgreen 2 lightgreen 2
+'''
+
+        # ... and that they get recorded as pending
         self.assertEqual(self.pending_requests, expected_pending)
 
     def test_no_amqp_config(self):
