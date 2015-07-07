@@ -126,9 +126,9 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         os.unlink(self.fake_amqp)
 
         # ... and that they get recorded as pending
-        expected_pending = '''darkgreen - green 2
+        expected_pending = '''darkgreen 1 green 2
 green 2 green 2
-lightgreen - green 2
+lightgreen 1 green 2
 '''
         self.assertEqual(self.pending_requests, expected_pending)
 
@@ -160,13 +160,12 @@ lightgreen - green 2
                 ]))
         os.unlink(self.fake_amqp)
 
-        expected_pending = '''darkgreen - green 2
+        # ... and that they get recorded as pending
+        expected_pending = '''darkgreen 1 green 2
 green 2 green 2
-lightgreen - green 2
+lightgreen 2 green 2
 lightgreen 2 lightgreen 2
 '''
-
-        # ... and that they get recorded as pending
         self.assertEqual(self.pending_requests, expected_pending)
 
     def test_no_amqp_config(self):

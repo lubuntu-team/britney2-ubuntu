@@ -28,7 +28,7 @@ import apt_pkg
 
 import kombu
 
-from consts import (AUTOPKGTEST, BINARIES, RDEPENDS, SOURCE)
+from consts import (AUTOPKGTEST, BINARIES, RDEPENDS, SOURCE, VERSION)
 
 
 adt_britney = os.path.expanduser("~/auto-package-testing/jenkins/adt-britney")
@@ -109,7 +109,7 @@ class AutoPackageTest(object):
                 if sources_info[rdep_src][AUTOPKGTEST]:
                     if rdep_src not in reported_pkgs:
                         # we don't care about the version of rdep
-                        yield (rdep_src, None)
+                        yield (rdep_src, sources_info[rdep_src][VERSION])
                         reported_pkgs.add(rdep_src)
 
     #
@@ -141,10 +141,6 @@ class AutoPackageTest(object):
                     self.log_error('ignoring malformed line in %s: %s' %
                                    (self.pending_tests_file, l))
                     continue
-                if ver == '-':
-                    ver = None
-                if trigver == '-':
-                    trigver = None
                 self.pending_tests.setdefault(src, {}).setdefault(
                     ver, set()).add((trigsrc, trigver))
         self.log_verbose('Read pending requested tests from %s: %s' %
@@ -168,10 +164,6 @@ class AutoPackageTest(object):
             for src in sorted(self.pending_tests):
                 for ver in sorted(self.pending_tests[src]):
                     for (trigsrc, trigver) in sorted(self.pending_tests[src][ver]):
-                        if ver is None:
-                            ver = '-'
-                        if trigver is None:
-                            trigver = '-'
                         f.write('%s %s %s %s\n' % (src, ver, trigsrc, trigver))
         os.rename(self.pending_tests_file + '.new', self.pending_tests_file)
         self.log_verbose('Updated pending requested tests in %s' %
@@ -182,8 +174,6 @@ class AutoPackageTest(object):
 
         This will only be done if that test wasn't already requested in a
         previous run, i. e. it is already in self.pending_tests.
-
-        versions can be None if you don't care about the particular version.
         '''
         if (trigsrc, trigver) in self.pending_tests.get(src, {}).get(ver, set()):
             self.log_verbose('test %s/%s for %s/%s is already pending, not queueing' %
