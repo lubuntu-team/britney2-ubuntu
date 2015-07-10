@@ -24,8 +24,14 @@ import subprocess
 import tempfile
 from textwrap import dedent
 import time
-import apt_pkg
+import json
+import tarfile
+import io
+import copy
+import itertools
+from urllib import urlencode, urlopen
 
+import apt_pkg
 import kombu
 
 from consts import (AUTOPKGTEST, BINARIES, RDEPENDS, SOURCE, VERSION)
@@ -40,6 +46,28 @@ ADT_EXCUSES_LABELS = {
     "REGRESSION": '<span style="background:#ff6666">Regression</span>',
     "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
 }
+
+
+def srchash(src):
+    '''archive hash prefix for source package'''
+
+    if src.startswith('lib'):
+        return src[:4]
+    else:
+        return src[0]
+
+
+def merge_triggers(trigs1, trigs2):
+    '''Merge two (pkg, ver) trigger iterables
+
+    Return [(pkg, ver), ...] list with only the highest version for each
+    package.
+    '''
+    pkgvers = {}
+    for pkg, ver in itertools.chain(trigs1, trigs2):
+        if apt_pkg.version_compare(ver, pkgvers.setdefault(pkg, '0')) >= 0:
+            pkgvers[pkg] = ver
+    return list(pkgvers.items())
 
 
 class AutoPackageTest(object):
@@ -70,6 +98,28 @@ class AutoPackageTest(object):
         if not os.path.isdir(self.test_state_dir):
             os.mkdir(self.test_state_dir)
         self.read_pending_tests()
+
+        # results map: src -> arch -> [latest_stamp, ver -> (passed, triggers)]
+        # - "passed" is a bool
+        # - It's tempting to just use a global "latest" time stamp, but due to
+        #   swift's "eventual consistency" we might miss results with older time
+        #   stamps from other packages that we don't see in the current run, but
+        #   will in the next one. This doesn't hurt for older results of the same
+        #   package.
+        # - triggers is a list of (source, version) pairs which unstable
+        #   packages triggered this test run. We need to track this to avoid
+        #   unnecessarily re-running tests.
+        self.test_results = {}
+        self.results_cache_file = os.path.join(self.test_state_dir, 'results.cache')
+
+        # read the cached results that we collected so far
+        if os.path.exists(self.results_cache_file):
+            with open(self.results_cache_file) as f:
+                self.test_results = json.load(f)
+            self.log_verbose('Read previous results from %s' % self.results_cache_file)
+        else:
+            self.log_verbose('%s does not exist, re-downloading all results '
+                             'from swift' % self.results_cache_file)
 
     def log_verbose(self, msg):
         if self.britney.options.verbose:
@@ -175,15 +225,123 @@ class AutoPackageTest(object):
         '''Add one test request to the local self.requested_tests queue
 
         This will only be done if that test wasn't already requested in a
-        previous run, i. e. it is already in self.pending_tests.
+        previous run (i. e. not already in self.pending_tests) or there already
+        is a result for it.
         '''
+        try:
+            for (tsrc, tver) in self.test_results[src][arch][1][ver][1]:
+                if tsrc == trigsrc and apt_pkg.version_compare(tver, trigver) >= 0:
+                    self.log_verbose('There already is a result for %s/%s/%s triggered by %s/%s' %
+                                     (src, ver, arch, tsrc, tver))
+                    return
+        except KeyError:
+            pass
+
         if (trigsrc, trigver) in self.pending_tests.get(src, {}).get(
-            ver, {}).get(arch, set()):
+                ver, {}).get(arch, set()):
             self.log_verbose('test %s/%s/%s for %s/%s is already pending, not queueing' %
                              (src, ver, arch, trigsrc, trigver))
             return
         self.requested_tests.setdefault(src, {}).setdefault(
             ver, {}).setdefault(arch, set()).add((trigsrc, trigver))
+
+    def fetch_swift_results(self, swift_url, src, arch):
+        '''Download new results for source package/arch from swift'''
+
+        # prepare query: get all runs with a timestamp later than latest_stamp
+        # for this package/arch; '@' is at the end of each run timestamp, to
+        # mark the end of a test run directory path
+        # example: <autopkgtest-wily>wily/amd64/libp/libpng/20150630_054517@/result.tar
+        query = {'delimiter': '@',
+                 'prefix': '%s/%s/%s/%s/' % (self.series, arch, srchash(src), src)}
+        try:
+            # don't include the last run again, so make the marker
+            # "infinitesimally later" by appending 'zz'
+            query['marker'] = self.test_results[src][arch][0] + 'zz'
+        except KeyError:
+            # no stamp yet, download all results
+            pass
+
+        # request new results from swift
+        url = os.path.join(swift_url, 'autopkgtest-' + self.series)
+        url += '?' + urlencode(query)
+        try:
+            f = urlopen(url)
+            if f.getcode() == 200:
+                result_paths = f.read().strip().splitlines()
+            else:
+                self.log_error('Failure to fetch swift results from %s: %u' %
+                               (url, f.getcode()))
+                f.close()
+                return
+            f.close()
+        except IOError as e:
+            self.log_error('Failure to fetch swift results from %s: %s' % (url, str(e)))
+            return
+
+        for p in result_paths:
+            self.fetch_one_result(os.path.join(
+                swift_url, 'autopkgtest-' + self.series, p, 'result.tar'), src, arch)
+
+    def fetch_one_result(self, url, src, arch):
+        '''Download one result URL for source/arch
+
+        Remove matching pending_tests entries.
+        '''
+        try:
+            f = urlopen(url)
+            if f.getcode() == 200:
+                tar_bytes = io.BytesIO(f.read())
+                f.close()
+            else:
+                self.log_error('Failure to fetch %s: %u' % (url, f.getcode()))
+                return
+        except IOError as e:
+            self.log_error('Failure to fetch %s: %s' % (url, str(e)))
+            return
+
+        try:
+            with tarfile.open(None, 'r', tar_bytes) as tar:
+                exitcode = int(tar.extractfile('exitcode').read().strip())
+                srcver = tar.extractfile('testpkg-version').read().decode().strip()
+                (ressrc, ver) = srcver.split()
+        except (KeyError, ValueError, tarfile.TarError) as e:
+            self.log_error('%s is damaged: %s' % (url, str(e)))
+            return
+
+        if src != ressrc:
+            self.log_error('%s is a result for package %s, but expected package %s' %
+                           (url, ressrc, src))
+            return
+
+        stamp = os.path.basename(os.path.dirname(url))
+        # allow some skipped tests, but nothing else
+        passed = exitcode in [0, 2]
+
+        self.log_verbose('Fetched test result for %s/%s on %s: %s' % (
+            src, ver, arch, passed and 'pass' or 'fail'))
+
+        # remove matching test requests, remember triggers
+        satisfied_triggers = set()
+        for pending_ver, pending_archinfo in self.pending_tests.get(src, {}).copy().items():
+            # don't consider newer requested versions
+            if apt_pkg.version_compare(pending_ver, ver) <= 0:
+                try:
+                    t = pending_archinfo[arch]
+                    self.log_verbose('-> matches pending request for triggers %s' % str(t))
+                    satisfied_triggers.update(t)
+                    del self.pending_tests[src][pending_ver][arch]
+                except KeyError:
+                    self.log_error('-> does not match any pending request!')
+                    pass
+
+        # add this result
+        src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}])
+        src_arch_results[1][ver] = (passed, merge_triggers(
+            src_arch_results[1].get(ver, (None, []))[1], satisfied_triggers))
+        # update latest_stamp
+        if stamp > src_arch_results[0]:
+            src_arch_results[0] = stamp
 
     #
     # obsolete adt-britney helpers
@@ -397,6 +555,38 @@ class AutoPackageTest(object):
             self._adt_britney("submit", request_path)
 
     def collect(self):
+        # fetch results from swift
+        try:
+            swift_url = self.britney.options.adt_swift_url
+        except AttributeError:
+            self.log_error('ADT_SWIFT_URL not set, cannot collect results')
+            swift_url = None
+        try:
+            self.britney.options.adt_amqp
+        except AttributeError:
+            self.log_error('ADT_AMQP not set, not collecting results from swift')
+            swift_url = None
+
+        if swift_url:
+            # update results from swift for all packages that we are waiting
+            # for, and remove pending tests that we have results for on all
+            # arches
+            for pkg, verinfo in copy.deepcopy(self.pending_tests.items()):
+                for archinfo in verinfo.values():
+                    for arch in archinfo:
+                        self.fetch_swift_results(swift_url, pkg, arch)
+
+            # update the results cache
+            with open(self.results_cache_file + '.new', 'w') as f:
+                json.dump(self.test_results, f, indent=2)
+            os.rename(self.results_cache_file + '.new', self.results_cache_file)
+            self.log_verbose('Updated results cache')
+
+            # new results remove pending requests, update the on-disk cache
+            self.update_pending_tests()
+
+        # deprecated results for old Jenkins/lp:auto-package-testing, will go
+        # away
         self._ensure_rc_file()
         result_path = self._result_path
         self._adt_britney("collect", "-O", result_path)
@@ -413,6 +603,13 @@ class AutoPackageTest(object):
                                              (src, ver, trigsrc, trigver, status))
 
     def results(self, trigsrc, trigver):
+        '''Return test results for triggering package
+
+        Return (ALWAYSFAIL|PASS|FAIL, src, ver) iterator for all package tests
+        that got triggered by trigsrc/trigver.
+        '''
+        # deprecated results for old Jenkins/lp:auto-package-testing, will go
+        # away
         for status, src, ver in self.pkgcauses[trigsrc][trigver]:
             # Check for regression
             if status == 'FAIL':
