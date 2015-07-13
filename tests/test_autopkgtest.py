@@ -13,12 +13,13 @@ import sys
 import subprocess
 import fileinput
 import unittest
+import json
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_DIR)
 
 from autopkgtest import ADT_EXCUSES_LABELS
-from tests import TestBase
+from tests import TestBase, mock_swift
 
 NOT_CONSIDERED = False
 VALID_CANDIDATE = True
@@ -34,12 +35,14 @@ class TestAutoPkgTest(TestBase):
         super(TestAutoPkgTest, self).setUp()
         self.fake_amqp = os.path.join(self.data.path, 'amqp')
 
-        # Disable boottests and set fake AMQP server
+        # Disable boottests and set fake AMQP and Swift server
         for line in fileinput.input(self.britney_conf, inplace=True):
             if line.startswith('BOOTTEST_ENABLE'):
                 print('BOOTTEST_ENABLE   = no')
             elif line.startswith('ADT_AMQP'):
                 print('ADT_AMQP = file://%s' % self.fake_amqp)
+            elif line.startswith('ADT_SWIFT_URL'):
+                print('ADT_SWIFT_URL = http://localhost:18085')
             else:
                 sys.stdout.write(line)
 
@@ -70,11 +73,22 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
                       testsuite='specialtest')
         self.data.add('justdata', False, {'Architecture': 'all'})
 
+        # create mock Swift server (but don't start it yet, as tests first need
+        # to poke in results)
+        self.swift = mock_swift.AutoPkgTestSwiftServer(port=18085)
+        self.swift.set_results({})
+
+    def tearDown(self):
+        del self.swift
+
     def do_test(self, unstable_add, considered, excuses_expect=None, excuses_no_expect=None):
         for (pkg, fields, testsuite) in unstable_add:
             self.data.add(pkg, True, fields, True, testsuite)
 
+        self.swift.start()
         (excuses, out) = self.run_britney()
+        self.swift.stop()
+
         #print('-------\nexcuses: %s\n-----' % excuses)
         #print('-------\nout: %s\n-----' % out)
         #print('run:\n%s -c %s\n' % (self.britney, self.britney_conf))
@@ -105,6 +119,8 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         except IOError:
                 self.pending_requests = None
 
+        return out
+
     def test_multi_rdepends_with_tests_all_running(self):
         '''Multiple reverse dependencies with tests (all running)'''
 
@@ -113,7 +129,10 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
             # FIXME: while we only submit requests through AMQP, but don't consider
             # their results, we don't expect this to hold back stuff.
             VALID_CANDIDATE,
-            [r'\bgreen\b.*>1</a> to .*>2<'])
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*in progress'])
 
         # we expect the package's and its reverse dependencies' tests to get
         # triggered
@@ -121,8 +140,7 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
             self.amqp_requests,
             set(['debci-series-i386:green', 'debci-series-amd64:green',
                  'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
-                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen',
-                ]))
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
         os.unlink(self.fake_amqp)
 
         # ... and that they get recorded as pending
@@ -140,6 +158,108 @@ lightgreen 1 i386 green 2
         self.assertEqual(self.amqp_requests, set())
         # but the set of pending tests doesn't change
         self.assertEqual(self.pending_requests, expected_pending)
+
+    def test_multi_rdepends_with_tests_all_pass(self):
+        '''Multiple reverse dependencies with tests (all pass)'''
+
+        # first run requests tests and marks them as pending
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*in progress'])
+
+        # second run collects the results
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
+            # version in testing fails
+            'series/i386/g/green/20150101_020000@': (4, 'green 1'),
+            'series/amd64/g/green/20150101_020000@': (4, 'green 1'),
+            # version in unstable succeeds
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+        }})
+
+        out = self.do_test(
+            [],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass'])
+
+        # all tests ran, there should be no more pending ones
+        self.assertEqual(self.pending_requests, '')
+
+        # not expecting any failures to retrieve from swift
+        self.assertNotIn('Failure', out, out)
+
+        # caches the results and triggers
+        with open(os.path.join(self.data.path, 'data/series-proposed/autopkgtest/results.cache')) as f:
+            res = json.load(f)
+        self.assertEqual(res['green']['i386'],
+                         ['20150101_100200@', {'1': [False, []],
+                                               '2': [True, [['green', '2']]]}])
+        self.assertEqual(res['lightgreen']['amd64'],
+                         ['20150101_100101@', {'1': [True, [['green', '2']]]}])
+
+        # third run should not trigger any new tests, should all be in the
+        # cache
+        os.unlink(self.fake_amqp)
+        self.swift.set_results({})
+        out = self.do_test(
+            [],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass'])
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, '')
+        self.assertNotIn('Failure', out, out)
+
+    def test_multi_rdepends_with_tests_mixed(self):
+        '''Multiple reverse dependencies with tests (mixed results)'''
+
+        # first run requests tests and marks them as pending
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*in progress'])
+
+        # second run collects the results
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
+        }})
+
+        self.do_test(
+            [],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Regression.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Regression.*i386.*in progress',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*Pass'])
+
+        # there should be some pending ones
+        self.assertIn('darkgreen 1 amd64 green 2', self.pending_requests)
+        self.assertIn('lightgreen 1 i386 green 2', self.pending_requests)
 
     def test_package_pair_running(self):
         '''Two packages in unstable that need to go in together (running)'''
@@ -159,8 +279,7 @@ lightgreen 1 i386 green 2
             self.amqp_requests,
             set(['debci-series-i386:green', 'debci-series-amd64:green',
                  'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
-                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen',
-                ]))
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
         os.unlink(self.fake_amqp)
 
         # ... and that they get recorded as pending
@@ -180,7 +299,7 @@ lightgreen 2 i386 lightgreen 2
 
         # Disable AMQP server config
         for line in fileinput.input(self.britney_conf, inplace=True):
-            if not line.startswith('ADT_AMQP'):
+            if not line.startswith('ADT_AMQP') and not line.startswith('ADT_SWIFT_URL'):
                 sys.stdout.write(line)
 
         self.do_test(
