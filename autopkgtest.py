@@ -269,6 +269,8 @@ class AutoPackageTest(object):
             f = urlopen(url)
             if f.getcode() == 200:
                 result_paths = f.read().strip().splitlines()
+            elif f.getcode() == 204:  # No content
+                result_paths = []
             else:
                 self.log_error('Failure to fetch swift results from %s: %u' %
                                (url, f.getcode()))

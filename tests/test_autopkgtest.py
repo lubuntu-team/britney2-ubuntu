@@ -247,7 +247,7 @@ lightgreen 1 i386 green 2
             'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
         }})
 
-        self.do_test(
+        out = self.do_test(
             [],
             # FIXME: while we only submit requests through AMQP, but don't consider
             # their results, we don't expect this to hold back stuff.
@@ -256,6 +256,9 @@ lightgreen 1 i386 green 2
              r'autopkgtest for green 2: .*amd64.*Regression.*i386.*Pass',
              r'autopkgtest for lightgreen 1: .*amd64.*Regression.*i386.*in progress',
              r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*Pass'])
+
+        # not expecting any failures to retrieve from swift
+        self.assertNotIn('Failure', out, out)
 
         # there should be some pending ones
         self.assertIn('darkgreen 1 amd64 green 2', self.pending_requests)

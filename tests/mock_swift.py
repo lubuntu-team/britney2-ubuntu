@@ -85,7 +85,7 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
             find_adapter = lambda i: (i >= 0) and (i + 1) or None
             objs = set([o[:find_adapter(o.find(d))] for o in objs])
 
-        self.send_response(200)
+        self.send_response(objs and 200 or 204)  # 204: "No Content"
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
         self.wfile.write(('\n'.join(sorted(objs)) + '\n').encode('UTF-8'))
