@@ -39,9 +39,9 @@ class TestAutoPkgTest(TestBase):
         for line in fileinput.input(self.britney_conf, inplace=True):
             if line.startswith('BOOTTEST_ENABLE'):
                 print('BOOTTEST_ENABLE   = no')
-            elif line.startswith('ADT_AMQP'):
+            elif line.startswith('#ADT_AMQP'):
                 print('ADT_AMQP = file://%s' % self.fake_amqp)
-            elif line.startswith('ADT_SWIFT_URL'):
+            elif line.startswith('#ADT_SWIFT_URL'):
                 print('ADT_SWIFT_URL = http://localhost:18085')
             else:
                 sys.stdout.write(line)
