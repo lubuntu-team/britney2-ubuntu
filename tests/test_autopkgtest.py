@@ -100,10 +100,10 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
 
         if excuses_expect:
             for re in excuses_expect:
-                self.assertRegexpMatches(excuses, re)
+                self.assertRegexpMatches(excuses, re, excuses)
         if excuses_no_expect:
             for re in excuses_no_expect:
-                self.assertNotRegexpMatches(excuses, re)
+                self.assertNotRegexpMatches(excuses, re, excuses)
 
         self.amqp_requests = set()
         try:
@@ -296,6 +296,26 @@ lightgreen 2 i386 green 2
 lightgreen 2 i386 lightgreen 2
 '''
         self.assertEqual(self.pending_requests, expected_pending)
+
+    def test_tmpfail(self):
+        '''tmpfail result is considered a failure'''
+
+        # one tmpfail result without testpkg-version
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100101@': (16, None),
+            'series/amd64/l/lightgreen/20150101_100101@': (16, 'lightgreen 2'),
+        }})
+
+        self.do_test(
+            [('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 1)'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for lightgreen 2: .*amd64.*Regression.*i386.*Regression'],
+            ['in progress'])
+
+        self.assertEqual(self.pending_requests, '')
 
     def test_no_amqp_config(self):
         '''Run without autopkgtest requests'''

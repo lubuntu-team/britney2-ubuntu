@@ -60,10 +60,11 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
             ti.size = len(contents)
             results.addfile(ti, io.BytesIO(contents))
             # add testpkg-version
-            contents = pkgver.encode()
-            ti = tarfile.TarInfo('testpkg-version')
-            ti.size = len(contents)
-            results.addfile(ti, io.BytesIO(contents))
+            if pkgver is not None:
+                contents = pkgver.encode()
+                ti = tarfile.TarInfo('testpkg-version')
+                ti.size = len(contents)
+                results.addfile(ti, io.BytesIO(contents))
         self.wfile.write(tar.getvalue())
 
     def list_container(self, container, query):
