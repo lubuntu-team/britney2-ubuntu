@@ -37,11 +37,11 @@ class TestAutoPkgTest(TestBase):
 
         # Disable boottests and set fake AMQP and Swift server
         for line in fileinput.input(self.britney_conf, inplace=True):
-            if line.startswith('BOOTTEST_ENABLE'):
+            if 'BOOTTEST_ENABLE' in line:
                 print('BOOTTEST_ENABLE   = no')
-            elif line.startswith('#ADT_AMQP'):
+            elif 'ADT_AMQP' in line:
                 print('ADT_AMQP = file://%s' % self.fake_amqp)
-            elif line.startswith('#ADT_SWIFT_URL'):
+            elif 'ADT_SWIFT_URL' in line:
                 print('ADT_SWIFT_URL = http://localhost:18085')
             else:
                 sys.stdout.write(line)
