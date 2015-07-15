@@ -90,9 +90,8 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         self.swift.stop()
 
         #print('-------\nexcuses: %s\n-----' % excuses)
-        #print('-------\nout: %s\n-----' % out)
-        #print('run:\n%s -c %s\n' % (self.britney, self.britney_conf))
-        #subprocess.call(['bash', '-i'], cwd=self.data.path)
+        if 'SHOW_OUTPUT' in os.environ:
+            print('-------\nout: %s\n-----' % out)
         if considered:
             self.assertIn('Valid candidate', excuses)
         else:
