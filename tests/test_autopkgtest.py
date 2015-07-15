@@ -317,6 +317,37 @@ lightgreen 2 i386 lightgreen 2
 
         self.assertEqual(self.pending_requests, '')
 
+    def test_rerun_failure(self):
+        '''manually re-running a failed test gets picked up'''
+
+        # first run fails
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2'),
+        }})
+
+        self.do_test(
+            [('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 1)'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for lightgreen 2: .*amd64.*Regression.*i386.*Regression'])
+        self.assertEqual(self.pending_requests, '')
+
+        # re-running test manually succeeded
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2'),
+            'series/i386/l/lightgreen/20150101_100201@': (0, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_100201@': (0, 'lightgreen 2'),
+        }})
+        self.do_test(
+            [], VALID_CANDIDATE,
+            [r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for lightgreen 2: .*amd64.*Pass.*i386.*Pass'])
+        self.assertEqual(self.pending_requests, '')
+
     def test_no_amqp_config(self):
         '''Run without autopkgtest requests'''
 

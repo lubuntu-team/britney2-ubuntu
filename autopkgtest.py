@@ -563,7 +563,7 @@ class AutoPackageTest(object):
         if os.path.exists(request_path):
             self._adt_britney("submit", request_path)
 
-    def collect(self):
+    def collect(self, packages):
         # fetch results from swift
         try:
             swift_url = self.britney.options.adt_swift_url
@@ -584,6 +584,17 @@ class AutoPackageTest(object):
                 for archinfo in verinfo.values():
                     for arch in archinfo:
                         self.fetch_swift_results(swift_url, pkg, arch)
+            # also update results for excuses whose tests failed, in case a
+            # manual retry worked
+            for (pkg, ver) in packages:
+                if pkg not in self.pending_tests:
+                    for arch in self.test_results.get(pkg, {}):
+                        try:
+                            if not self.test_results[pkg][arch][1][ver][0]:
+                                self.log_verbose('Checking for new results for failed %s/%s on %s' % (pkg, ver, arch))
+                                self.fetch_swift_results(swift_url, pkg, arch)
+                        except KeyError:
+                            pass
 
             # update the results cache
             with open(self.results_cache_file + '.new', 'w') as f:
