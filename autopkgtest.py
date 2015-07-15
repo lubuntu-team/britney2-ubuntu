@@ -245,7 +245,7 @@ class AutoPackageTest(object):
         self.requested_tests.setdefault(src, {}).setdefault(
             ver, {}).setdefault(arch, set()).add((trigsrc, trigver))
 
-    def fetch_swift_results(self, swift_url, src, arch):
+    def fetch_swift_results(self, swift_url, src, arch, trigger=None):
         '''Download new results for source package/arch from swift'''
 
         # prepare query: get all runs with a timestamp later than latest_stamp
@@ -282,13 +282,15 @@ class AutoPackageTest(object):
             return
 
         for p in result_paths:
-            self.fetch_one_result(os.path.join(
-                swift_url, 'autopkgtest-' + self.series, p, 'result.tar'), src, arch)
+            self.fetch_one_result(
+                os.path.join(swift_url, 'autopkgtest-' + self.series, p, 'result.tar'),
+                src, arch, trigger)
 
-    def fetch_one_result(self, url, src, arch):
+    def fetch_one_result(self, url, src, arch, trigger=None):
         '''Download one result URL for source/arch
 
-        Remove matching pending_tests entries.
+        Remove matching pending_tests entries. If trigger is given (src, ver)
+        it is added to the triggers of that result.
         '''
         try:
             f = urlopen(url)
@@ -343,6 +345,8 @@ class AutoPackageTest(object):
                 except KeyError:
                     self.log_error('-> does not match any pending request!')
                     pass
+        if trigger:
+            satisfied_triggers.add(trigger)
 
         # add this result
         src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}])
@@ -351,6 +355,21 @@ class AutoPackageTest(object):
         # update latest_stamp
         if stamp > src_arch_results[0]:
             src_arch_results[0] = stamp
+
+    def failed_tests_for_trigger(self, trigsrc, trigver):
+        '''Return (src, arch) set for failed tests for given trigger pkg'''
+
+        result = set()
+        for src, srcinfo in self.test_results.iteritems():
+            for arch, (stamp, vermap) in srcinfo.iteritems():
+                for ver, (passed, triggers) in vermap.iteritems():
+                    if not passed:
+                        # triggers might contain tuples or lists (after loading
+                        # from json), so iterate/check manually
+                        for s, v in triggers:
+                            if trigsrc == s and trigver == v:
+                                result.add((src, arch))
+        return result
 
     #
     # obsolete adt-britney helpers
@@ -586,15 +605,12 @@ class AutoPackageTest(object):
                         self.fetch_swift_results(swift_url, pkg, arch)
             # also update results for excuses whose tests failed, in case a
             # manual retry worked
-            for (pkg, ver) in packages:
-                if pkg not in self.pending_tests:
-                    for arch in self.test_results.get(pkg, {}):
-                        try:
-                            if not self.test_results[pkg][arch][1][ver][0]:
-                                self.log_verbose('Checking for new results for failed %s/%s on %s' % (pkg, ver, arch))
-                                self.fetch_swift_results(swift_url, pkg, arch)
-                        except KeyError:
-                            pass
+            for (trigpkg, trigver) in packages:
+                if trigpkg not in self.pending_tests:
+                    for (pkg, arch) in self.failed_tests_for_trigger(trigpkg, trigver):
+                        self.log_verbose('Checking for new results for failed %s on %s for trigger %s/%s' %
+                                         (pkg, arch, trigpkg, trigver))
+                        self.fetch_swift_results(swift_url, pkg, arch, (trigpkg, trigver))
 
             # update the results cache
             with open(self.results_cache_file + '.new', 'w') as f:
