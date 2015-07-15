@@ -126,6 +126,15 @@ Maintainer: Joe <joe@example.com>
                 f.write('%s: %s\n' % (k, v))
             f.write('\n')
 
+    def remove_all(self, unstable):
+        '''Remove all added packages'''
+
+        self.added_binaries[unstable] = set()
+        self.added_sources[unstable] = set()
+        for a in architectures:
+            open(os.path.join(self.dirs[unstable], 'Packages_' + a), 'w').close()
+        open(os.path.join(self.dirs[unstable], 'Sources'), 'w').close()
+
 
 class TestBase(unittest.TestCase):
 

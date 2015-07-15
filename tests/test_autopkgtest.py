@@ -359,6 +359,65 @@ lightgreen 2 i386 lightgreen 2
              r'autopkgtest for lightgreen 1: .*amd64.*Pass.*i386.*Pass'])
         self.assertEqual(self.pending_requests, '')
 
+    def test_remove_from_unstable(self):
+        '''broken package gets removed from unstable'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100101@': (0, 'green 1'),
+            'series/amd64/g/green/20150101_100101@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100201@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100201@': (4, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_100201@': (4, 'lightgreen 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+        }})
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 2)'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 2: .*amd64.*Regression.*i386.*Regression'])
+        self.assertEqual(self.pending_requests, '')
+        os.unlink(self.fake_amqp)
+
+        # remove new lightgreen by resetting archive indexes, and re-adding
+        # green
+        self.data.remove_all(True)
+
+        # next run should re-trigger lightgreen 1 to test against green/2
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Pass.*i386.*Pass'],
+            ['lightgreen 2'])
+
+        # should not trigger new requests
+        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.amqp_requests,
+                         set(['debci-series-amd64:lightgreen', 'debci-series-i386:lightgreen']))
+
+        # but the next run should not trigger anything new
+        os.unlink(self.fake_amqp)
+        self.do_test(
+            [],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Pass.*i386.*Pass'],
+            ['lightgreen 2'])
+        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.amqp_requests, set())
+
     def test_no_amqp_config(self):
         '''Run without autopkgtest requests'''
 
