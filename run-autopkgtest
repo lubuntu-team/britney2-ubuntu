@@ -1,0 +1,55 @@
+#!/usr/bin/python
+# Request re-runs of autopkgtests for packages
+
+import os
+import sys
+import argparse
+
+import kombu
+
+my_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+
+
+def parse_args():
+    '''Parse command line arguments'''
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--config',
+                        default=os.path.join(my_dir, 'britney.conf'),
+                        help='britney config file (default: %(default)s)')
+    parser.add_argument('-s', '--series', required=True,
+                        help='Distro series name (required).')
+    parser.add_argument('-a', '--architecture', action='append', default=[],
+                        help='Only run test(s) on given architecture name(s). '
+                        'Can be specified multiple times (default: all).')
+    parser.add_argument('package', nargs='+',
+                        help='Source package name(s) whose tests to run.')
+    return parser.parse_args()
+
+
+def parse_config(config_file):
+    '''Parse config file (like britney.py)'''
+
+    config = argparse.Namespace()
+    with open(config_file) as f:
+        for k, v in [r.split('=', 1) for r in f if '=' in r and not r.strip().startswith('#')]:
+            k = k.strip()
+            if not getattr(config, k.lower(), None):
+                setattr(config, k.lower(), v.strip())
+    return config
+
+
+if __name__ == '__main__':
+    args = parse_args()
+    config = parse_config(args.config)
+    if not args.architecture:
+        args.architecture = config.adt_arches.split()
+
+    with kombu.Connection(config.adt_amqp) as conn:
+        for arch in args.architecture:
+            # don't use SimpleQueue here as it always declares queues;
+            # ACLs might not allow that
+            with kombu.Producer(conn, routing_key='debci-%s-%s' % (args.series, arch),
+                                auto_declare=False) as p:
+                for pkg in args.package:
+                    p.publish(pkg)
