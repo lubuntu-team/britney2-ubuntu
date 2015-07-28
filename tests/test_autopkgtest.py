@@ -204,10 +204,13 @@ lightgreen 1 i386 green 2
         with open(os.path.join(self.data.path, 'data/series-proposed/autopkgtest/results.cache')) as f:
             res = json.load(f)
         self.assertEqual(res['green']['i386'],
-                         ['20150101_100200@', {'1': [False, []],
-                                               '2': [True, [['green', '2']]]}])
+                         ['20150101_100200@',
+                          {'1': [False, []], '2': [True, [['green', '2']]]},
+                          True])
         self.assertEqual(res['lightgreen']['amd64'],
-                         ['20150101_100101@', {'1': [True, [['green', '2']]]}])
+                         ['20150101_100101@',
+                          {'1': [True, [['green', '2']]]},
+                          True])
 
         # third run should not trigger any new tests, should all be in the
         # cache
@@ -241,6 +244,7 @@ lightgreen 1 i386 green 2
         # second run collects the results
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
             'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
             'series/i386/g/green/20150101_100200@': (0, 'green 2'),
             'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
@@ -301,7 +305,9 @@ lightgreen 2 i386 lightgreen 2
 
         # one tmpfail result without testpkg-version
         self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
             'series/i386/l/lightgreen/20150101_100101@': (16, None),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
             'series/amd64/l/lightgreen/20150101_100101@': (16, 'lightgreen 2'),
         }})
 
@@ -321,9 +327,13 @@ lightgreen 2 i386 lightgreen 2
 
         # first run fails
         self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 2'),
             'series/i386/g/green/20150101_100101@': (4, 'green 2'),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 2'),
             'series/amd64/g/green/20150101_100101@': (4, 'green 2'),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
             'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
             'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
             'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
@@ -342,9 +352,13 @@ lightgreen 2 i386 lightgreen 2
         # re-running test manually succeeded (note: darkgreen result should be
         # cached already)
         self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 2'),
             'series/i386/g/green/20150101_100101@': (4, 'green 2'),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 2'),
             'series/amd64/g/green/20150101_100101@': (4, 'green 2'),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
             'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
             'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
 
             'series/i386/g/green/20150101_100201@': (0, 'green 2'),

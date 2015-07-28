@@ -99,7 +99,7 @@ class AutoPackageTest(object):
             os.mkdir(self.test_state_dir)
         self.read_pending_tests()
 
-        # results map: src -> arch -> [latest_stamp, ver -> (passed, triggers)]
+        # results map: src -> arch -> [latest_stamp, ver -> (passed, triggers), ever_passed]
         # - "passed" is a bool
         # - It's tempting to just use a global "latest" time stamp, but due to
         #   swift's "eventual consistency" we might miss results with older time
@@ -109,6 +109,9 @@ class AutoPackageTest(object):
         # - triggers is a list of (source, version) pairs which unstable
         #   packages triggered this test run. We need to track this to avoid
         #   unnecessarily re-running tests.
+        # - ever_passed is a bool whether there is any successful test of
+        #   src/arch of any version. This is used for detecting "regression"
+        #   vs. "always failed"
         self.test_results = {}
         self.results_cache_file = os.path.join(self.test_state_dir, 'results.cache')
 
@@ -349,7 +352,10 @@ class AutoPackageTest(object):
             satisfied_triggers.add(trigger)
 
         # add this result
-        src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}])
+        src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}, False])
+        if passed:
+            # update ever_passed field
+            src_arch_results[2] = True
         src_arch_results[1][ver] = (passed, merge_triggers(
             src_arch_results[1].get(ver, (None, []))[1], satisfied_triggers))
         # update latest_stamp
@@ -361,7 +367,7 @@ class AutoPackageTest(object):
 
         result = set()
         for src, srcinfo in self.test_results.iteritems():
-            for arch, (stamp, vermap) in srcinfo.iteritems():
+            for arch, (stamp, vermap, ever_passed) in srcinfo.iteritems():
                 for ver, (passed, triggers) in vermap.iteritems():
                     if not passed:
                         # triggers might contain tuples or lists (after loading
