@@ -39,7 +39,6 @@ from consts import (AUTOPKGTEST, BINARIES, RDEPENDS, SOURCE, VERSION)
 
 adt_britney = os.path.expanduser("~/auto-package-testing/jenkins/adt-britney")
 
-ADT_PASS = ["PASS", "ALWAYSFAIL"]
 ADT_EXCUSES_LABELS = {
     "PASS": '<span style="background:#87d96c">Pass</span>',
     "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
@@ -647,23 +646,33 @@ class AutoPackageTest(object):
     def results(self, trigsrc, trigver):
         '''Return test results for triggering package
 
-        Return (ALWAYSFAIL|PASS|FAIL, src, ver) iterator for all package tests
-        that got triggered by trigsrc/trigver.
+        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING)
+        iterator for all package tests that got triggered by trigsrc/trigver.
         '''
-        # deprecated results for old Jenkins/lp:auto-package-testing, will go
-        # away
-        for status, src, ver in self.pkgcauses[trigsrc][trigver]:
-            # Check for regression
-            if status == 'FAIL':
-                passed_once = False
-                for lver in self.pkglist[src]:
-                    for trigsrc in self.pkglist[src][lver]['causes']:
-                        for trigver, status \
-                                in self.pkglist[src][lver]['causes'][trigsrc]:
-                            if status == 'PASS':
-                                passed_once = True
-                if not passed_once:
-                    status = 'ALWAYSFAIL'
-                else:
-                    status = 'REGRESSION'
-            yield status, src, ver
+        for testsrc, testver in self.tests_for_source(trigsrc, trigver):
+            passed = True
+            arch_status = {}
+            for arch in self.britney.options.adt_arches.split():
+                try:
+                    if self.test_results[testsrc][arch][1][testver][0]:
+                        arch_status[arch] = 'PASS'
+                    else:
+                        if self.test_results[testsrc][arch][2]:
+                            arch_status[arch] = 'REGRESSION'
+                            passed = False
+                        else:
+                            arch_status[arch] = 'ALWAYSFAIL'
+                except KeyError:
+                    try:
+                        self.pending_tests[testsrc][testver][arch]
+                        arch_status[arch] = 'RUNNING'
+                        passed = False
+                    except KeyError:
+                        # neither done nor pending -> exclusion, or disabled
+                        continue
+
+            # disabled or ignored?
+            if not arch_status:
+                continue
+
+            yield (passed, testsrc, testver, arch_status)
