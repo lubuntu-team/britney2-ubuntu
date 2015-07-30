@@ -256,7 +256,7 @@ lightgreen 1 i386 green 2
             # their results, we don't expect this to hold back stuff.
             VALID_CANDIDATE,
             [r'\bgreen\b.*>1</a> to .*>2<',
-             r'autopkgtest for green 2: .*amd64.*Regression.*i386.*Pass',
+             r'autopkgtest for green 2: .*amd64.*Always failed.*i386.*Pass',
              r'autopkgtest for lightgreen 1: .*amd64.*Regression.*i386.*in progress',
              r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*Pass'])
 

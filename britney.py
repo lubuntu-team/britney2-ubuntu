@@ -1894,8 +1894,13 @@ class Britney(object):
                         url = cloud_url % {'h': srchash(testsrc), 's': testsrc,
                                            'r': self.options.series, 'a': arch}
                         try:
-                            r = autopkgtest.test_results[testsrc][arch][1][testver][0]
-                            status = r and 'PASS' or 'REGRESSION'
+                            if autopkgtest.test_results[testsrc][arch][1][testver][0]:
+                                status = 'PASS'
+                            else:
+                                if autopkgtest.test_results[testsrc][arch][2]:
+                                    status = 'REGRESSION'
+                                else:
+                                    status = 'ALWAYSFAIL'
                         except KeyError:
                             try:
                                 autopkgtest.pending_tests[testsrc][testver][arch]
