@@ -238,7 +238,8 @@ def register_reverses(packages, provides, check_doubles=True, iterator=None,
         # go through the list
         for p in dependencies:
             for a in p:
-                dep = a[0]
+                # strip off Multi-Arch qualifiers like :any or :native
+                dep = a[0].split(':')[0]
                 # register real packages
                 if dep in packages and (not check_doubles or pkg not in packages[dep][RDEPENDS]):
                     packages[dep][RDEPENDS].append(pkg)

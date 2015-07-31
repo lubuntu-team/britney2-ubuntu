@@ -432,6 +432,21 @@ lightgreen 2 i386 lightgreen 2
         self.assertEqual(self.pending_requests, '')
         self.assertEqual(self.amqp_requests, set())
 
+    def test_multiarch_dep(self):
+        '''multi-arch dependency'''
+
+        self.data.add('rainbow', False, {'Depends': 'lightgreen:any'},
+                      testsuite='autopkgtest')
+
+        self.do_test(
+            [('lightgreen', {'Version': '2'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for lightgreen 2: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for rainbow 1: .*amd64.*in progress.*i386.*in progress'])
+
     def test_no_amqp_config(self):
         '''Run without autopkgtest requests'''
 
