@@ -55,6 +55,7 @@ class TestTouchManifest(unittest.TestCase):
         ]
         self.addCleanup(_p.stop)
         self.fetch_retries_orig = boottest.FETCH_RETRIES
+
         def restore_fetch_retries():
             boottest.FETCH_RETRIES = self.fetch_retries_orig
         boottest.FETCH_RETRIES = 0
@@ -75,7 +76,7 @@ class TestTouchManifest(unittest.TestCase):
         self.assertNotEqual([], manifest._manifest)
 
     def test_fetch_disabled(self):
-        # Manifest auto-fetching can be disabled. 
+        # Manifest auto-fetching can be disabled.
         manifest = boottest.TouchManifest('ubuntu-touch', 'vivid', fetch=False)
         self.mocked_urlopen.assert_not_called()
         self.assertEqual([], manifest._manifest)
@@ -238,7 +239,7 @@ args.func()
             self.data.add(pkg, True, fields)
         self.make_boottest()
         (excuses, out) = self.run_britney()
-        #print('-------\nexcuses: %s\n-----' % excuses)
+        # print('-------\nexcuses: %s\n-----' % excuses)
         if expect:
             for re in expect:
                 self.assertRegexpMatches(excuses, re)
