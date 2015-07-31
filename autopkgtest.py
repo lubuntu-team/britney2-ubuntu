@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 # Copyright (C) 2013 Canonical Ltd.
-# Author: Colin Watson <cjwatson@ubuntu.com>
-# Partly based on code in auto-package-testing by
-# Jean-Baptiste Lallement <jean-baptiste.lallement@canonical.com>
+# Authors:
+#   Colin Watson <cjwatson@ubuntu.com>
+#   Jean-Baptiste Lallement <jean-baptiste.lallement@canonical.com>
+#   Martin Pitt <martin.pitt@ubuntu.com>
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,12 +18,7 @@
 
 from __future__ import print_function
 
-from collections import defaultdict
-from contextlib import closing
 import os
-import subprocess
-import tempfile
-from textwrap import dedent
 import time
 import json
 import tarfile
@@ -36,8 +32,6 @@ import kombu
 
 from consts import (AUTOPKGTEST, BINARIES, RDEPENDS, SOURCE, VERSION)
 
-
-adt_britney = os.path.expanduser("~/auto-package-testing/jenkins/adt-britney")
 
 ADT_EXCUSES_LABELS = {
     "PASS": '<span style="background:#87d96c">Pass</span>',
@@ -83,8 +77,6 @@ class AutoPackageTest(object):
         self.distribution = distribution
         self.series = series
         self.debug = debug
-        self.read()
-        self.rc_path = None  # for adt-britney, obsolete
         self.test_state_dir = os.path.join(britney.options.unstable,
                                            'autopkgtest')
         # map of requested tests from request()
@@ -382,92 +374,6 @@ class AutoPackageTest(object):
         return result
 
     #
-    # obsolete adt-britney helpers
-    #
-
-    def _ensure_rc_file(self):
-        if self.rc_path:
-            return
-        self.rc_path = os.path.expanduser(
-            "~/proposed-migration/autopkgtest/rc.%s" % self.series)
-        with open(self.rc_path, "w") as rc_file:
-            home = os.path.expanduser("~")
-            print(dedent("""\
-                release: %s
-                aptroot: ~/.chdist/%s-proposed-amd64/
-                apturi: file:%s/mirror/%s
-                components: main restricted universe multiverse
-                rsync_host: rsync://tachash.ubuntu-ci/adt/
-                datadir: ~/proposed-migration/autopkgtest/data""" %
-                         (self.series, self.series, home, self.distribution)),
-                         file=rc_file)
-
-    @property
-    def _request_path(self):
-        return os.path.expanduser(
-            "~/proposed-migration/autopkgtest/work/adt.request.%s" %
-            self.series)
-
-    @property
-    def _result_path(self):
-        return os.path.expanduser(
-            "~/proposed-migration/autopkgtest/work/adt.result.%s" %
-            self.series)
-
-    def _parse(self, path):
-        if os.path.exists(path):
-            with open(path) as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("Suite:") or line.startswith("Date:"):
-                        continue
-                    linebits = line.split()
-                    if len(linebits) < 2:
-                        print("W: Invalid line format: '%s', skipped" % line)
-                        continue
-                    yield linebits
-
-    def read(self):
-        '''Loads a list of results
-
-        This function loads a list of results returned by __parse() and builds
-        2 lists:
-            - a list of source package/version with all the causes that
-            triggered a test and the result of the test for this trigger.
-            - a list of packages/version that triggered a test with the source
-            package/version and result triggered by this package.
-        These lists will be used in result() called from britney.py to generate
-        excuses and now which uploads passed, caused regression or which tests
-        have always been failing
-        '''
-        self.pkglist = defaultdict(dict)
-        self.pkgcauses = defaultdict(lambda: defaultdict(list))
-        for linebits in self._parse(self._result_path):
-            (src, ver, status) = linebits[:3]
-
-            if not (src in self.pkglist and ver in self.pkglist[src]):
-                self.pkglist[src][ver] = {
-                    "status": status,
-                    "causes": {}
-                }
-
-            i = iter(linebits[3:])
-            for trigsrc, trigver in zip(i, i):
-                self.pkglist[src][ver]['causes'].setdefault(
-                    trigsrc, []).append((trigver, status))
-                self.pkgcauses[trigsrc][trigver].append((status, src, ver))
-
-    def _adt_britney(self, *args):
-        command = [
-            adt_britney,
-            "-c", self.rc_path, "-r", self.series, "-PU",
-            ]
-        if self.debug:
-            command.append("-d")
-        command.extend(args)
-        subprocess.check_call(command)
-
-    #
     # Public API
     #
 
@@ -489,60 +395,6 @@ class AutoPackageTest(object):
                     for arch, triggers in archinfo.items():
                         self.log_verbose('Requesting %s/%s/%s autopkgtest to verify %s' %
                                          (src, ver, arch, ', '.join(['%s/%s' % i for i in triggers])))
-
-        # deprecated requests for old Jenkins/lp:auto-package-testing, will go
-        # away
-
-        self._ensure_rc_file()
-        request_path = self._request_path
-        if os.path.exists(request_path):
-            os.unlink(request_path)
-        with closing(tempfile.NamedTemporaryFile(mode="w")) as request_file:
-            for src, ver in packages:
-                if src in self.pkglist and ver in self.pkglist[src]:
-                    continue
-                print("%s %s" % (src, ver), file=request_file)
-            request_file.flush()
-            self._adt_britney("request", "-O", request_path, request_file.name)
-
-        # Remove packages that have been identified as invalid candidates for
-        # testing from the request file i.e run_autopkgtest = False
-        with open(request_path, 'r') as request_file:
-            lines = request_file.readlines()
-        with open(request_path, 'w') as request_file:
-            for line in lines:
-                src = line.split()[0]
-                if src not in excludes:
-                    request_file.write(line)
-                else:
-                    if self.britney.options.verbose:
-                        self.log_verbose("Requested autopkgtest for %s but "
-                                         "run_autopkgtest set to False" % src)
-
-        for linebits in self._parse(request_path):
-            # Make sure that there's an entry in pkgcauses for each new
-            # request, so that results() gives useful information without
-            # relying on the submit/collect cycle.  This improves behaviour
-            # in dry-run mode.
-            src = linebits.pop(0)
-            ver = linebits.pop(0)
-            if self.britney.options.verbose:
-                self.log_verbose("Requested autopkgtest for %s_%s (%s)" %
-                                 (src, ver, " ".join(linebits)))
-            try:
-                status = linebits.pop(0).upper()
-                while True:
-                    trigsrc = linebits.pop(0)
-                    trigver = linebits.pop(0)
-                    for status, csrc, cver in self.pkgcauses[trigsrc][trigver]:
-                        if csrc == trigsrc and cver == trigver:
-                            break
-                    else:
-                        self.pkgcauses[trigsrc][trigver].append(
-                            (status, src, ver))
-            except IndexError:
-                # End of the list
-                pass
 
     def submit(self):
         # send AMQP requests for new test requests
@@ -585,68 +437,43 @@ class AutoPackageTest(object):
         # mark them as pending now
         self.update_pending_tests()
 
-        # deprecated requests for old Jenkins/lp:auto-package-testing, will go
-        # away
-        self._ensure_rc_file()
-        request_path = self._request_path
-        if os.path.exists(request_path):
-            self._adt_britney("submit", request_path)
-
     def collect(self, packages):
         # fetch results from swift
         try:
             swift_url = self.britney.options.adt_swift_url
         except AttributeError:
             self.log_error('ADT_SWIFT_URL not set, cannot collect results')
-            swift_url = None
+            return
         try:
             self.britney.options.adt_amqp
         except AttributeError:
             self.log_error('ADT_AMQP not set, not collecting results from swift')
-            swift_url = None
+            return
 
-        if swift_url:
-            # update results from swift for all packages that we are waiting
-            # for, and remove pending tests that we have results for on all
-            # arches
-            for pkg, verinfo in copy.deepcopy(self.pending_tests.items()):
-                for archinfo in verinfo.values():
-                    for arch in archinfo:
-                        self.fetch_swift_results(swift_url, pkg, arch)
-            # also update results for excuses whose tests failed, in case a
-            # manual retry worked
-            for (trigpkg, trigver) in packages:
-                if trigpkg not in self.pending_tests:
-                    for (pkg, arch) in self.failed_tests_for_trigger(trigpkg, trigver):
-                        self.log_verbose('Checking for new results for failed %s on %s for trigger %s/%s' %
-                                         (pkg, arch, trigpkg, trigver))
-                        self.fetch_swift_results(swift_url, pkg, arch, (trigpkg, trigver))
+        # update results from swift for all packages that we are waiting
+        # for, and remove pending tests that we have results for on all
+        # arches
+        for pkg, verinfo in copy.deepcopy(self.pending_tests.items()):
+            for archinfo in verinfo.values():
+                for arch in archinfo:
+                    self.fetch_swift_results(swift_url, pkg, arch)
+        # also update results for excuses whose tests failed, in case a
+        # manual retry worked
+        for (trigpkg, trigver) in packages:
+            if trigpkg not in self.pending_tests:
+                for (pkg, arch) in self.failed_tests_for_trigger(trigpkg, trigver):
+                    self.log_verbose('Checking for new results for failed %s on %s for trigger %s/%s' %
+                                     (pkg, arch, trigpkg, trigver))
+                    self.fetch_swift_results(swift_url, pkg, arch, (trigpkg, trigver))
 
-            # update the results cache
-            with open(self.results_cache_file + '.new', 'w') as f:
-                json.dump(self.test_results, f, indent=2)
-            os.rename(self.results_cache_file + '.new', self.results_cache_file)
-            self.log_verbose('Updated results cache')
+        # update the results cache
+        with open(self.results_cache_file + '.new', 'w') as f:
+            json.dump(self.test_results, f, indent=2)
+        os.rename(self.results_cache_file + '.new', self.results_cache_file)
+        self.log_verbose('Updated results cache')
 
-            # new results remove pending requests, update the on-disk cache
-            self.update_pending_tests()
-
-        # deprecated results for old Jenkins/lp:auto-package-testing, will go
-        # away
-        self._ensure_rc_file()
-        result_path = self._result_path
-        self._adt_britney("collect", "-O", result_path)
-        self.read()
-        if self.britney.options.verbose:
-            for src in sorted(self.pkglist):
-                for ver in sorted(self.pkglist[src],
-                                  cmp=apt_pkg.version_compare):
-                    for trigsrc in sorted(self.pkglist[src][ver]['causes']):
-                        for trigver, status \
-                                in self.pkglist[src][ver]['causes'][trigsrc]:
-                            self.log_verbose("Collected autopkgtest status "
-                                             "for %s_%s/%s_%s: " "%s" %
-                                             (src, ver, trigsrc, trigver, status))
+        # new results remove pending requests, update the on-disk cache
+        self.update_pending_tests()
 
     def results(self, trigsrc, trigver):
         '''Return test results for triggering package
@@ -662,12 +489,14 @@ class AutoPackageTest(object):
                     if self.test_results[testsrc][arch][1][testver][0]:
                         arch_status[arch] = 'PASS'
                     else:
+                        # test failed, check ever_passed flag for that src/arch
                         if self.test_results[testsrc][arch][2]:
                             arch_status[arch] = 'REGRESSION'
                             passed = False
                         else:
                             arch_status[arch] = 'ALWAYSFAIL'
                 except KeyError:
+                    # no result for testsrc/testver/arch; still running?
                     try:
                         self.pending_tests[testsrc][testver][arch]
                         arch_status[arch] = 'RUNNING'

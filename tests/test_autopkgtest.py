@@ -43,16 +43,6 @@ class TestAutoPkgTest(TestBase):
             else:
                 sys.stdout.write(line)
 
-        # fake adt-britney script; necessary until we drop that code
-        self.adt_britney = os.path.join(
-            self.data.home, 'auto-package-testing', 'jenkins', 'adt-britney')
-        os.makedirs(os.path.dirname(self.adt_britney))
-        with open(self.adt_britney, 'w') as f:
-            f.write('''#!/bin/sh -e
-touch $HOME/proposed-migration/autopkgtest/work/adt.request.series
-echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
-        os.chmod(self.adt_britney, 0o755)
-
         # add a bunch of packages to testing to avoid repetition
         self.data.add('libc6', False)
         self.data.add('libgreen1', False, {'Source': 'green',
