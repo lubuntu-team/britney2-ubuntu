@@ -1894,10 +1894,16 @@ class Britney(object):
                         url = cloud_url % {'h': srchash(testsrc), 's': testsrc,
                                            'r': self.options.series, 'a': arch}
                         try:
-                            if autopkgtest.test_results[testsrc][arch][1][testver][0]:
+                            (_, ver_map, ever_passed) = autopkgtest.test_results[testsrc][arch]
+                            (passed, triggers) = ver_map[testver]
+                            # triggers might contain tuples or lists
+                            if (e.name, e.ver[1]) not in triggers and [e.name, e.ver[1]] not in triggers:
+                                raise KeyError('No result for trigger %s/%s yet' % (e.name, e.ver[1]))
+
+                            if passed:
                                 status = 'PASS'
                             else:
-                                if autopkgtest.test_results[testsrc][arch][2]:
+                                if ever_passed:
                                     status = 'REGRESSION'
                                 else:
                                     status = 'ALWAYSFAIL'

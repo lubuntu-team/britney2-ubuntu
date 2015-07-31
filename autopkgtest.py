@@ -263,9 +263,7 @@ class AutoPackageTest(object):
         query = {'delimiter': '@',
                  'prefix': '%s/%s/%s/%s/' % (self.series, arch, srchash(src), src)}
         try:
-            # don't include the last run again, so make the marker
-            # "infinitesimally later" by appending 'zz'
-            query['marker'] = self.test_results[src][arch][0] + 'zz'
+            query['marker'] = query['prefix'] + self.test_results[src][arch][0]
         except KeyError:
             # no stamp yet, download all results
             pass
@@ -334,8 +332,8 @@ class AutoPackageTest(object):
         # allow some skipped tests, but nothing else
         passed = exitcode in [0, 2]
 
-        self.log_verbose('Fetched test result for %s/%s on %s: %s' % (
-            src, ver, arch, passed and 'pass' or 'fail'))
+        self.log_verbose('Fetched test result for %s/%s/%s %s: %s' % (
+            src, ver, arch, stamp, passed and 'pass' or 'fail'))
 
         # remove matching test requests, remember triggers
         satisfied_triggers = set()

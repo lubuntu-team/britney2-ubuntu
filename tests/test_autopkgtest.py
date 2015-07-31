@@ -300,6 +300,153 @@ lightgreen 2 i386 lightgreen 2
 '''
         self.assertEqual(self.pending_requests, expected_pending)
 
+    def test_result_from_older_version(self):
+        '''test result from older version than the uploaded one'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+        }})
+
+        self.do_test(
+            [('darkgreen', {'Version': '2', 'Depends': 'libc6 (>= 0.9), libgreen1'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\bdarkgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for darkgreen 2: .*amd64.*in progress.*i386.*in progress'])
+
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
+        self.assertEqual(self.pending_requests,
+                         'darkgreen 2 amd64 darkgreen 2\ndarkgreen 2 i386 darkgreen 2\n')
+        os.unlink(self.fake_amqp)
+
+        # second run gets the results for darkgreen 2
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 2'),
+            'series/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 2'),
+        }})
+        self.do_test(
+            [],
+            VALID_CANDIDATE,
+            [r'\bdarkgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for darkgreen 2: .*amd64.*Pass.*i386.*Pass'])
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, '')
+
+        # next run sees a newer darkgreen, should re-run tests
+        self.data.remove_all(True)
+        self.do_test(
+            [('darkgreen', {'Version': '3', 'Depends': 'libc6 (>= 0.9), libgreen1'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\bdarkgreen\b.*>1</a> to .*>3<',
+             r'autopkgtest for darkgreen 3: .*amd64.*in progress.*i386.*in progress'])
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
+        self.assertEqual(self.pending_requests,
+                         'darkgreen 3 amd64 darkgreen 3\ndarkgreen 3 i386 darkgreen 3\n')
+
+    def test_old_result_from_rdep_version(self):
+        '''re-runs reverse dependency test on new versions'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100010@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100010@': (0, 'green 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+        }})
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            VALID_CANDIDATE,
+            [r'\green\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass'])
+
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:green', 'debci-series-amd64:green',
+                 'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
+        self.assertEqual(self.pending_requests, '')
+        os.unlink(self.fake_amqp)
+        self.data.remove_all(True)
+
+        # second run: new version re-triggers all tests
+        self.do_test(
+            [('libgreen1', {'Version': '3', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\green\b.*>1</a> to .*>3<',
+             r'autopkgtest for green 3: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*in progress'])
+
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:green', 'debci-series-amd64:green',
+                 'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
+
+        expected_pending = '''darkgreen 1 amd64 green 3
+darkgreen 1 i386 green 3
+green 3 amd64 green 3
+green 3 i386 green 3
+lightgreen 1 amd64 green 3
+lightgreen 1 i386 green 3
+'''
+        self.assertEqual(self.pending_requests, expected_pending)
+        os.unlink(self.fake_amqp)
+
+        # third run gets the results for green and lightgreen, darkgreen is
+        # still running
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100020@': (0, 'green 3'),
+            'series/amd64/g/green/20150101_100020@': (0, 'green 3'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100010@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100010@': (0, 'lightgreen 1'),
+        }})
+        self.do_test(
+            [],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\green\b.*>1</a> to .*>3<',
+             r'autopkgtest for green 3: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*in progress'])
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests,
+                         'darkgreen 1 amd64 green 3\ndarkgreen 1 i386 green 3\n')
+
+        # fourth run finally gets the new darkgreen result
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 1'),
+        }})
+        self.do_test(
+            [], VALID_CANDIDATE,
+            [r'\green\b.*>1</a> to .*>3<',
+             r'autopkgtest for green 3: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass'])
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, '')
+
     def test_tmpfail(self):
         '''tmpfail result is considered a failure'''
 
@@ -405,6 +552,22 @@ lightgreen 2 i386 lightgreen 2
         # remove new lightgreen by resetting archive indexes, and re-adding
         # green
         self.data.remove_all(True)
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100101@': (0, 'green 1'),
+            'series/amd64/g/green/20150101_100101@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100201@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100201@': (4, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_100201@': (4, 'lightgreen 2'),
+            # add new result for lightgreen 1
+            'series/i386/l/lightgreen/20150101_100301@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100301@': (0, 'lightgreen 1'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+        }})
 
         # next run should re-trigger lightgreen 1 to test against green/2
         self.do_test(
