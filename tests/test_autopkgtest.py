@@ -345,6 +345,84 @@ lightgreen 1 i386 green 2
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
 
+    def test_hint_force_badtest(self):
+        '''force-badtest hint'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
+        }})
+
+        self.create_hint('pitti', 'force-badtest lightgreen/1')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Regression.*i386.*Regression',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'Should wait for lightgreen 1 test, but forced by pitti'])
+
+    def test_hint_force_badtest_different_version(self):
+        '''force-badtest hint with non-matching version'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
+        }})
+
+        self.create_hint('pitti', 'force-badtest lightgreen/0.1')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Regression.*i386.*Regression',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass'],
+            ['Should wait'])
+
+    def test_hint_force_skiptest(self):
+        '''force-skiptest hint'''
+
+        self.create_hint('pitti', 'force-skiptest green/2')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*in progress',
+             r'Should wait for.*tests.*green 2.*forced by pitti'])
+
+    def test_hint_force_skiptest_different_version(self):
+        '''force-skiptest hint with non-matching version'''
+
+        self.create_hint('pitti', 'force-skiptest green/1')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*in progress'],
+            ['Should wait'])
+
     def test_package_pair_running(self):
         '''Two packages in unstable that need to go in together (running)'''
 

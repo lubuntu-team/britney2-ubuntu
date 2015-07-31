@@ -331,14 +331,6 @@ args.func()
              r'<li>Boottest result: UNKNOWN STATUS \(Jenkins: .*\)',
              '<li>Not considered'])
 
-    def create_hint(self, username, content):
-        """Populates a hint file for the given 'username' with 'content'."""
-        hints_path = os.path.join(
-            self.data.path,
-            'data/{}-proposed/Hints/{}'.format(self.data.series, username))
-        with open(hints_path, 'w') as fd:
-            fd.write(content)
-
     def test_skipped_by_hints(self):
         # `Britney` allows boottests to be skipped by hinting the
         # corresponding source with 'force-skiptest'. The boottest
