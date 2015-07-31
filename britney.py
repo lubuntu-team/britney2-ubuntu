@@ -225,7 +225,7 @@ from britney_util import (old_libraries_format, same_source, undo_changes,
 from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
                    SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
                    PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH, ESSENTIAL)
-from autopkgtest import AutoPackageTest, ADT_PASS, ADT_EXCUSES_LABELS, srchash
+from autopkgtest import AutoPackageTest, ADT_EXCUSES_LABELS, srchash
 from boottest import BootTest
 
 
@@ -1849,28 +1849,21 @@ class Britney(object):
             if not self.options.dry_run:
                 autopkgtest.submit()
                 autopkgtest.collect(autopkgtest_packages)
-            jenkins_public = "https://jenkins.qa.ubuntu.com/job"
-            jenkins_private = (
-                "http://d-jenkins.ubuntu-ci:8080/view/%s/view/AutoPkgTest/job" %
-                self.options.series.title())
             cloud_url = "http://autopkgtest.ubuntu.com/packages/%(h)s/%(s)s/%(r)s/%(a)s"
             for e in autopkgtest_excuses:
                 adtpass = True
-                for status, adtsrc, adtver in autopkgtest.results(
+                for passed, adtsrc, adtver, arch_status in autopkgtest.results(
                         e.name, e.ver[1]):
-                    public_url = "%s/%s-adt-%s/lastBuild" % (
-                        jenkins_public, self.options.series,
-                        adtsrc.replace("+", "-"))
-                    private_url = "%s/%s-adt-%s/lastBuild" % (
-                        jenkins_private, self.options.series,
-                        adtsrc.replace("+", "-"))
-                    adt_label = ADT_EXCUSES_LABELS.get(status, status)
-                    e.addhtml(
-                        "autopkgtest for %s %s: %s (Jenkins: "
-                        "<a href=\"%s\">public</a>, "
-                        "<a href=\"%s\">private</a>)" %
-                        (adtsrc, adtver, adt_label, public_url, private_url))
-                    if status not in ADT_PASS:
+                    archmsg = []
+                    for arch in sorted(arch_status):
+                        url = cloud_url % {'h': srchash(adtsrc), 's': adtsrc,
+                                           'r': self.options.series, 'a': arch}
+                        archmsg.append('<a href="%s">%s: %s</a>' %
+                                       (url, arch, ADT_EXCUSES_LABELS[arch_status[arch]]))
+                    e.addhtml('autopkgtest for %s %s: %s' % (adtsrc, adtver, ', '.join(archmsg)))
+
+                    # hints can override failures
+                    if not passed:
                         hints = self.hints.search(
                             'force-badtest', package=adtsrc)
                         hints.extend(
@@ -1882,39 +1875,10 @@ class Britney(object):
                             e.addhtml(
                                 "Should wait for %s %s test, but forced by "
                                 "%s" % (adtsrc, adtver, forces[0].user))
-                        else:
-                            adtpass = False
+                            passed = True
 
-                # temporary: also show results from cloud based tests,
-                # until that becomes the primary mechanism
-                for testsrc, testver in autopkgtest.tests_for_source(e.name, e.ver[1]):
-                    msg = '(informational) cloud autopkgtest for %s %s: ' % (testsrc, testver)
-                    archmsg = []
-                    for arch in self.options.adt_arches.split():
-                        url = cloud_url % {'h': srchash(testsrc), 's': testsrc,
-                                           'r': self.options.series, 'a': arch}
-                        try:
-                            if autopkgtest.test_results[testsrc][arch][1][testver][0]:
-                                status = 'PASS'
-                            else:
-                                if autopkgtest.test_results[testsrc][arch][2]:
-                                    status = 'REGRESSION'
-                                else:
-                                    status = 'ALWAYSFAIL'
-                        except KeyError:
-                            try:
-                                autopkgtest.pending_tests[testsrc][testver][arch]
-                                status = 'RUNNING'
-                            except KeyError:
-                                # neither done nor pending -> exclusion, or disabled
-                                continue
-
-                        archmsg.append('<a href="%s">%s: %s</a>' %
-                                       (url, arch, ADT_EXCUSES_LABELS[status]))
-
-                    if archmsg:
-                        e.addhtml(msg + ', '.join(archmsg))
-                # end of temporary code
+                    if not passed:
+                        adtpass = False
 
                 if not adtpass and e.is_valid:
                     hints = self.hints.search('force-skiptest', package=e.name)

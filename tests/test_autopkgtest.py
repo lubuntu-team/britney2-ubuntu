@@ -89,7 +89,8 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
         (excuses, out) = self.run_britney()
         self.swift.stop()
 
-        #print('-------\nexcuses: %s\n-----' % excuses)
+        if 'SHOW_EXCUSES' in os.environ:
+            print('-------\nexcuses: %s\n-----' % excuses)
         if 'SHOW_OUTPUT' in os.environ:
             print('-------\nout: %s\n-----' % out)
         if considered:
@@ -125,9 +126,7 @@ echo "$@" >> /%s/adt-britney.log ''' % self.data.path)
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
              r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
@@ -153,7 +152,7 @@ lightgreen 1 i386 green 2
         self.assertEqual(self.pending_requests, expected_pending)
 
         # if we run britney again this should *not* trigger any new tests
-        self.do_test([], VALID_CANDIDATE, [r'\bgreen\b.*>1</a> to .*>2<'])
+        self.do_test([], NOT_CONSIDERED, [r'\bgreen\b.*>1</a> to .*>2<'])
         self.assertEqual(self.amqp_requests, set())
         # but the set of pending tests doesn't change
         self.assertEqual(self.pending_requests, expected_pending)
@@ -164,9 +163,7 @@ lightgreen 1 i386 green 2
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
              r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
@@ -233,9 +230,7 @@ lightgreen 1 i386 green 2
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
              r'autopkgtest for lightgreen 1: .*amd64.*in progress.*i386.*in progress',
@@ -252,9 +247,7 @@ lightgreen 1 i386 green 2
 
         out = self.do_test(
             [],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for green 2: .*amd64.*Always failed.*i386.*Pass',
              r'autopkgtest for lightgreen 1: .*amd64.*Regression.*i386.*in progress',
@@ -267,15 +260,96 @@ lightgreen 1 i386 green 2
         self.assertIn('darkgreen 1 amd64 green 2', self.pending_requests)
         self.assertIn('lightgreen 1 i386 green 2', self.pending_requests)
 
+    def test_multi_rdepends_with_tests_regression(self):
+        '''Multiple reverse dependencies with tests (regression)'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
+        }})
+
+        out = self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Regression.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Regression.*i386.*Regression',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass'])
+
+        self.assertEqual(self.pending_requests, '')
+        # not expecting any failures to retrieve from swift
+        self.assertNotIn('Failure', out, out)
+
+    def test_multi_rdepends_with_tests_regression_last_pass(self):
+        '''Multiple reverse dependencies with tests (regression), last one passes
+
+        This ensures that we don't just evaluate the test result of the last
+        test, but all of them.
+        '''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
+        }})
+
+        out = self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Regression.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass'])
+
+        self.assertEqual(self.pending_requests, '')
+        # not expecting any failures to retrieve from swift
+        self.assertNotIn('Failure', out, out)
+
+    def test_multi_rdepends_with_tests_always_failed(self):
+        '''Multiple reverse dependencies with tests (always failed)'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100200@': (4, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
+        }})
+
+        out = self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Always failed.*i386.*Pass',
+             r'autopkgtest for lightgreen 1: .*amd64.*Always failed.*i386.*Always failed',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass'])
+
+        self.assertEqual(self.pending_requests, '')
+        # not expecting any failures to retrieve from swift
+        self.assertNotIn('Failure', out, out)
+
     def test_package_pair_running(self):
         '''Two packages in unstable that need to go in together (running)'''
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
              ('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 2)'}, 'autopkgtest')],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              r'\blightgreen\b.*>1</a> to .*>2<'])
 
@@ -313,9 +387,7 @@ lightgreen 2 i386 lightgreen 2
 
         self.do_test(
             [('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 1)'}, 'autopkgtest')],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\blightgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for lightgreen 2: .*amd64.*Regression.*i386.*Regression'],
             ['in progress'])
@@ -341,9 +413,7 @@ lightgreen 2 i386 lightgreen 2
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for green 2: .*amd64.*Regression.*i386.*Regression',
              r'autopkgtest for lightgreen 1: .*amd64.*Regression.*i386.*Regression'])
@@ -392,9 +462,7 @@ lightgreen 2 i386 lightgreen 2
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
              ('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 2)'}, 'autopkgtest')],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              r'\blightgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
@@ -440,9 +508,7 @@ lightgreen 2 i386 lightgreen 2
 
         self.do_test(
             [('lightgreen', {'Version': '2'}, 'autopkgtest')],
-            # FIXME: while we only submit requests through AMQP, but don't consider
-            # their results, we don't expect this to hold back stuff.
-            VALID_CANDIDATE,
+            NOT_CONSIDERED,
             [r'\blightgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for lightgreen 2: .*amd64.*in progress.*i386.*in progress',
              r'autopkgtest for rainbow 1: .*amd64.*in progress.*i386.*in progress'])
