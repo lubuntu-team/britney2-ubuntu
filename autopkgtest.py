@@ -141,12 +141,14 @@ class AutoPackageTest(object):
 
         reported_pkgs = set()
 
+        tests = []
+
         srcinfo = sources_info[src]
         # we want to test the package itself, if it still has a test in
         # unstable
         if srcinfo[AUTOPKGTEST]:
             reported_pkgs.add(src)
-            yield (src, ver)
+            tests.append((src, ver))
 
         # plus all direct reverse dependencies of its binaries which have
         # an autopkgtest
@@ -162,8 +164,11 @@ class AutoPackageTest(object):
                 if sources_info[rdep_src][AUTOPKGTEST]:
                     if rdep_src not in reported_pkgs:
                         # we don't care about the version of rdep
-                        yield (rdep_src, sources_info[rdep_src][VERSION])
+                        tests.append((rdep_src, sources_info[rdep_src][VERSION]))
                         reported_pkgs.add(rdep_src)
+
+        tests.sort(key=lambda (s, v): s)
+        return tests
 
     #
     # AMQP/cloud interface helpers
