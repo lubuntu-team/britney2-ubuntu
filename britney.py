@@ -1856,8 +1856,10 @@ class Britney(object):
             cloud_url = "http://autopkgtest.ubuntu.com/packages/%(h)s/%(s)s/%(r)s/%(a)s"
             for e in autopkgtest_excuses:
                 adtpass = True
+                adt_jenkins_sources = set()  # temporary: drop when switching to cloud based tests
                 for status, adtsrc, adtver in autopkgtest.results(
                         e.name, e.ver[1]):
+                    adt_jenkins_sources.add(adtsrc)
                     public_url = "%s/%s-adt-%s/lastBuild" % (
                         jenkins_public, self.options.series,
                         adtsrc.replace("+", "-"))
@@ -1887,7 +1889,9 @@ class Britney(object):
 
                 # temporary: also show results from cloud based tests,
                 # until that becomes the primary mechanism
+                adt_cloud_sources = set()
                 for testsrc, testver in autopkgtest.tests_for_source(e.name, e.ver[1]):
+                    adt_cloud_sources.add(testsrc)
                     msg = '(informational) cloud autopkgtest for %s %s: ' % (testsrc, testver)
                     archmsg = []
                     for arch in self.options.adt_arches.split():
@@ -1920,6 +1924,13 @@ class Britney(object):
 
                     if archmsg:
                         e.addhtml(msg + ', '.join(archmsg))
+
+                extra_sources = adt_cloud_sources - adt_jenkins_sources
+                missing_sources = adt_jenkins_sources - adt_cloud_sources
+                if missing_sources:
+                    e.addhtml('(informational) Missing sources in cloud tests: %s' % ' '.join(missing_sources))
+                if extra_sources:
+                    e.addhtml('(informational) Extra sources in cloud tests: %s' % ' '.join(extra_sources))
                 # end of temporary code
 
                 if not adtpass and e.is_valid:
