@@ -610,6 +610,20 @@ lightgreen 1 i386 green 3
              r'autopkgtest for lightgreen 2: .*amd64.*in progress.*i386.*in progress',
              r'autopkgtest for rainbow 1: .*amd64.*in progress.*i386.*in progress'])
 
+    def test_dkms(self):
+        '''DKMS packages are autopkgtested (via autodep8)'''
+
+        self.data.add('dkms', False, {})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+
+        self.do_test(
+            [('dkms', {'Version': '2'}, None)],
+            # FIXME: while we only submit requests through AMQP, but don't consider
+            # their results, we don't expect this to hold back stuff.
+            VALID_CANDIDATE,
+            [r'\bdkms\b.*>1</a> to .*>2<',
+             r'autopkgtest for fancy 1: .*amd64.*in progress.*i386.*in progress'])
+
     def test_no_amqp_config(self):
         '''Run without autopkgtest requests'''
 

@@ -34,7 +34,7 @@ from urllib import urlencode, urlopen
 import apt_pkg
 import kombu
 
-from consts import (AUTOPKGTEST, BINARIES, RDEPENDS, SOURCE, VERSION)
+from consts import (AUTOPKGTEST, BINARIES, DEPENDS, RDEPENDS, SOURCE, VERSION)
 
 
 adt_britney = os.path.expanduser("~/auto-package-testing/jenkins/adt-britney")
@@ -131,6 +131,22 @@ class AutoPackageTest(object):
     def log_error(self, msg):
         print('E: [%s] - %s' % (time.asctime(), msg))
 
+    def has_autodep8(self, srcinfo):
+        '''Check if package  is covered by autodep8
+
+        srcinfo is an item from self.britney.sources
+        '''
+        # DKMS: some binary depends on "dkms"
+        for bin_arch in srcinfo[BINARIES]:
+            binpkg = bin_arch.split('/')[0]  # chop off arch
+            try:
+                bininfo = self.britney.binaries['unstable']['amd64'][0][binpkg]
+            except KeyError:
+                continue
+            if 'dkms' in (bininfo[DEPENDS] or ''):
+                return True
+        return False
+
     def tests_for_source(self, src, ver):
         '''Iterate over all tests that should be run for given source'''
 
@@ -146,7 +162,7 @@ class AutoPackageTest(object):
         srcinfo = sources_info[src]
         # we want to test the package itself, if it still has a test in
         # unstable
-        if srcinfo[AUTOPKGTEST]:
+        if srcinfo[AUTOPKGTEST] or self.has_autodep8(srcinfo):
             reported_pkgs.add(src)
             tests.append((src, ver))
 
@@ -161,7 +177,8 @@ class AutoPackageTest(object):
                 continue
             for rdep in rdeps:
                 rdep_src = binaries_info[rdep][SOURCE]
-                if sources_info[rdep_src][AUTOPKGTEST]:
+                rdep_src_info = sources_info[rdep_src]
+                if rdep_src_info[AUTOPKGTEST] or self.has_autodep8(rdep_src_info):
                     if rdep_src not in reported_pkgs:
                         # we don't care about the version of rdep
                         tests.append((rdep_src, sources_info[rdep_src][VERSION]))
