@@ -30,7 +30,7 @@ from urllib import urlencode, urlopen
 import apt_pkg
 import kombu
 
-from consts import (AUTOPKGTEST, BINARIES, RDEPENDS, SOURCE, VERSION)
+from consts import (AUTOPKGTEST, BINARIES, DEPENDS, RDEPENDS, SOURCE, VERSION)
 
 
 ADT_EXCUSES_LABELS = {
@@ -122,6 +122,22 @@ class AutoPackageTest(object):
     def log_error(self, msg):
         print('E: [%s] - %s' % (time.asctime(), msg))
 
+    def has_autodep8(self, srcinfo):
+        '''Check if package  is covered by autodep8
+
+        srcinfo is an item from self.britney.sources
+        '''
+        # DKMS: some binary depends on "dkms"
+        for bin_arch in srcinfo[BINARIES]:
+            binpkg = bin_arch.split('/')[0]  # chop off arch
+            try:
+                bininfo = self.britney.binaries['unstable']['amd64'][0][binpkg]
+            except KeyError:
+                continue
+            if 'dkms' in (bininfo[DEPENDS] or ''):
+                return True
+        return False
+
     def tests_for_source(self, src, ver):
         '''Iterate over all tests that should be run for given source'''
 
@@ -137,7 +153,7 @@ class AutoPackageTest(object):
         srcinfo = sources_info[src]
         # we want to test the package itself, if it still has a test in
         # unstable
-        if srcinfo[AUTOPKGTEST]:
+        if srcinfo[AUTOPKGTEST] or self.has_autodep8(srcinfo):
             reported_pkgs.add(src)
             tests.append((src, ver))
 
@@ -152,7 +168,8 @@ class AutoPackageTest(object):
                 continue
             for rdep in rdeps:
                 rdep_src = binaries_info[rdep][SOURCE]
-                if sources_info[rdep_src][AUTOPKGTEST]:
+                rdep_src_info = sources_info[rdep_src]
+                if rdep_src_info[AUTOPKGTEST] or self.has_autodep8(rdep_src_info):
                     if rdep_src not in reported_pkgs:
                         # we don't care about the version of rdep
                         tests.append((rdep_src, sources_info[rdep_src][VERSION]))
@@ -254,9 +271,7 @@ class AutoPackageTest(object):
         query = {'delimiter': '@',
                  'prefix': '%s/%s/%s/%s/' % (self.series, arch, srchash(src), src)}
         try:
-            # don't include the last run again, so make the marker
-            # "infinitesimally later" by appending 'zz'
-            query['marker'] = self.test_results[src][arch][0] + 'zz'
+            query['marker'] = query['prefix'] + self.test_results[src][arch][0]
         except KeyError:
             # no stamp yet, download all results
             pass
@@ -325,8 +340,8 @@ class AutoPackageTest(object):
         # allow some skipped tests, but nothing else
         passed = exitcode in [0, 2]
 
-        self.log_verbose('Fetched test result for %s/%s on %s: %s' % (
-            src, ver, arch, passed and 'pass' or 'fail'))
+        self.log_verbose('Fetched test result for %s/%s/%s %s: %s' % (
+            src, ver, arch, stamp, passed and 'pass' or 'fail'))
 
         # remove matching test requests, remember triggers
         satisfied_triggers = set()
@@ -486,11 +501,16 @@ class AutoPackageTest(object):
             arch_status = {}
             for arch in self.britney.options.adt_arches.split():
                 try:
-                    if self.test_results[testsrc][arch][1][testver][0]:
+                    (_, ver_map, ever_passed) = self.test_results[testsrc][arch]
+                    (status, triggers) = ver_map[testver]
+                    # triggers might contain tuples or lists
+                    if (trigsrc, trigver) not in triggers and [trigsrc, trigver] not in triggers:
+                        raise KeyError('No result for trigger %s/%s yet' % (trigsrc, trigver))
+                    if status:
                         arch_status[arch] = 'PASS'
                     else:
                         # test failed, check ever_passed flag for that src/arch
-                        if self.test_results[testsrc][arch][2]:
+                        if ever_passed:
                             arch_status[arch] = 'REGRESSION'
                             passed = False
                         else:

@@ -76,15 +76,15 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
         if 'prefix' in query:
             p = query['prefix'][-1]
             objs = set([o for o in objs if o.startswith(p)])
-        if 'marker' in query:
-            m = query['marker'][-1]
-            objs = set([o for o in objs if o >= m])
         if 'delimiter' in query:
             d = query['delimiter'][-1]
             # if find() returns a value, we want to include the delimiter, thus
             # bump its result; for "not found" return None
             find_adapter = lambda i: (i >= 0) and (i + 1) or None
             objs = set([o[:find_adapter(o.find(d))] for o in objs])
+        if 'marker' in query:
+            m = query['marker'][-1]
+            objs = set([o for o in objs if o > m])
 
         self.send_response(objs and 200 or 204)  # 204: "No Content"
         self.send_header('Content-type', 'text/plain')
@@ -138,3 +138,18 @@ class AutoPkgTestSwiftServer:
         os.kill(self.server_pid, 15)
         os.waitpid(self.server_pid, 0)
         self.server_pid = None
+
+if __name__ == '__main__':
+    srv = AutoPkgTestSwiftServer()
+    srv.set_results({'autopkgtest-series': {
+        'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+        'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+        'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 2'),
+        'series/i386/l/lightgreen/20150101_100102@': (0, 'lightgreen 3'),
+    }})
+    srv.start()
+    print('Running on http://localhost:8080/autopkgtest-series')
+    print('Press Enter to quit.')
+    sys.stdin.readline()
+    srv.stop()
