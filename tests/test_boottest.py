@@ -11,6 +11,7 @@ import os
 import shutil
 import sys
 import tempfile
+import fileinput
 import unittest
 
 
@@ -236,10 +237,11 @@ args.func()
     def do_test(self, context, expect=None, no_expect=None):
         """Process the given package context and assert britney results."""
         for (pkg, fields) in context:
-            self.data.add(pkg, True, fields)
+            self.data.add(pkg, True, fields, testsuite='autopkgtest')
         self.make_boottest()
         (excuses, out) = self.run_britney()
         # print('-------\nexcuses: %s\n-----' % excuses)
+        # print('-------\nout: %s\n-----' % out)
         if expect:
             for re in expect:
                 self.assertRegexpMatches(excuses, re)
@@ -329,14 +331,6 @@ args.func()
              r'<li>Boottest result: UNKNOWN STATUS \(Jenkins: .*\)',
              '<li>Not considered'])
 
-    def create_hint(self, username, content):
-        """Populates a hint file for the given 'username' with 'content'."""
-        hints_path = os.path.join(
-            self.data.path,
-            'data/{}-proposed/Hints/{}'.format(self.data.series, username))
-        with open(hints_path, 'w') as fd:
-            fd.write(content)
-
     def test_skipped_by_hints(self):
         # `Britney` allows boottests to be skipped by hinting the
         # corresponding source with 'force-skiptest'. The boottest
@@ -420,37 +414,27 @@ args.func()
     def test_with_adt(self):
         # Boottest can run simultaneously with autopkgtest (adt).
 
-        # Enable ADT in britney configuration.
-        with open(self.britney_conf, 'r') as fp:
-            original_config = fp.read()
-        new_config = original_config.replace(
-            'ADT_ENABLE        = no', 'ADT_ENABLE        = yes')
-        with open(self.britney_conf, 'w') as fp:
-            fp.write(new_config)
+        fake_amqp = os.path.join(self.data.path, 'amqp')
 
-        # Create a fake 'adt-britney' that reports a RUNNING job for
-        # the testing source ('purple_1.1').
-        script_path = os.path.expanduser(
-            "~/auto-package-testing/jenkins/adt-britney")
-        os.makedirs(os.path.dirname(script_path))
-        with open(script_path, 'w') as f:
-            f.write('''#!/bin/sh -e
-mkdir -p ~/proposed-migration/autopkgtest/work
-touch ~/proposed-migration/autopkgtest/work/adt.request.series
-echo "purple 1.1 RUNNING purple 1.1" >> ~/proposed-migration/autopkgtest/work/adt.result.series''')
-        os.chmod(script_path, 0o755)
+        # Enable ADT in britney configuration.
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if 'ADT_ENABLE' in line:
+                print('ADT_ENABLE   = yes')
+            elif 'ADT_AMQP' in line:
+                print('ADT_AMQP = file://%s' % fake_amqp)
+            else:
+                sys.stdout.write(line)
 
         # Britney blocks testing source promotion while ADT and boottest
         # are running.
-        self.data.add('purple', False, {'Version': '1.0'})
+        self.data.add('purple', False, {'Version': '1.0'}, testsuite='autopkgtest')
         context = [
             ('purple', {'Version': '1.1'}),
         ]
         self.do_test(
             context,
             [r'\bpurple\b.*>1.0<.* to .*>1.1<',
-             '<li>autopkgtest for purple 1.1: {}'.format(
-                 boottest.BootTest.EXCUSE_LABELS['RUNNING']),
+             '<li>autopkgtest for purple 1.1: .*amd64.*in progress.*i386.*in progress',
              '<li>Boottest result: {}'.format(
                  boottest.BootTest.EXCUSE_LABELS['RUNNING']),
              '<li>Not considered'])

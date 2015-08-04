@@ -172,3 +172,11 @@ class TestBase(unittest.TestCase):
             excuses = f.read()
 
         return (excuses, out)
+
+    def create_hint(self, username, content):
+        '''Create a hint file for the given username and content'''
+
+        hints_path = os.path.join(
+            self.data.path, 'data', self.data.series + '-proposed', 'Hints', username)
+        with open(hints_path, 'w') as fd:
+            fd.write(content)
