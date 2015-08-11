@@ -530,10 +530,8 @@ class AutoPackageTest(object):
                             passed = False
                             continue
 
-                        # ignore if Swift results are disabled
-                        if not hasattr(self.britney.options, 'adt_swift_url'):
-                            continue
-                        raise
+                        # ignore if adt or swift results are disabled
+                        continue
 
             # disabled or ignored?
             if not arch_status:
