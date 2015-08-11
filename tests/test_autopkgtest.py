@@ -345,6 +345,74 @@ lightgreen 1 i386 green 2
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
 
+    def test_unbuilt(self):
+        '''Unbuilt package should not trigger tests or get considered'''
+
+        self.data.add_src('green', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
+        self.do_test(
+            [],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'missing build on.*amd64.*green, libgreen1'],
+            ['autopkgtest'])
+
+    def test_rdepends_unbuilt(self):
+        '''Unbuilt reverse dependency'''
+
+        # old lightgreen fails, thus new green should be held back
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_020000@': (0, 'green 1'),
+            'series/amd64/g/green/20150101_020000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+        }})
+        # run britney once to pick up previous results
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            NOT_CONSIDERED)
+        os.unlink(self.fake_amqp)
+
+        # add unbuilt lightgreen
+        self.data.add_src('lightgreen', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
+        self.do_test(
+            [],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 2: .*amd64.*in progress.*i386.*in progress',
+             r'lightgreen has no up-to-date binaries on any arch'],
+            ['Valid candidate'])
+
+        # lightgreen's tests should not be triggered yet while it is unbuilt
+        self.assertEqual(self.amqp_requests, set())
+
+        # now lightgreen gets built and a test result
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2'),
+        }})
+        self.data.remove_all(True)
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '2'}, 'autopkgtest')],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 2: .*amd64.*Pass.*i386.*Pass'],
+            ['Not considered'])
+        self.assertEqual(self.amqp_requests,
+                         set(['debci-series-amd64:lightgreen', 'debci-series-i386:lightgreen']))
+
     def test_hint_force_badtest(self):
         '''force-badtest hint'''
 

@@ -77,6 +77,7 @@ class AutoPackageTest(object):
         self.distribution = distribution
         self.series = series
         self.debug = debug
+        self.excludes = set()
         self.test_state_dir = os.path.join(britney.options.unstable,
                                            'autopkgtest')
         # map of requested tests from request()
@@ -395,12 +396,13 @@ class AutoPackageTest(object):
     def request(self, packages, excludes=None):
         if excludes is None:
             excludes = []
+        self.excludes.update(excludes)
 
         self.log_verbose('Requested autopkgtests for %s, exclusions: %s' %
                          (['%s/%s' % i for i in packages], str(excludes)))
         for src, ver in packages:
             for (testsrc, testver) in self.tests_for_source(src, ver):
-                if testsrc not in excludes:
+                if testsrc not in self.excludes:
                     for arch in self.britney.options.adt_arches.split():
                         self.add_test_request(testsrc, testver, arch, src, ver)
 
@@ -522,8 +524,16 @@ class AutoPackageTest(object):
                         arch_status[arch] = 'RUNNING'
                         passed = False
                     except KeyError:
-                        # neither done nor pending -> exclusion, or disabled
-                        continue
+                        # neither done nor pending; excluded?
+                        if testsrc in self.excludes:
+                            arch_status[arch] = 'RUNNING'
+                            passed = False
+                            continue
+
+                        # ignore if Swift results are disabled
+                        if not hasattr(self.britney.options, 'adt_swift_url'):
+                            continue
+                        raise
 
             # disabled or ignored?
             if not arch_status:
