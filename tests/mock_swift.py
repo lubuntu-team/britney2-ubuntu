@@ -120,11 +120,9 @@ class AutoPkgTestSwiftServer:
             self.server_pid = p
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             while True:
-                try:
-                    s.connect_ex(('127.0.0.1', self.port))
+                if s.connect_ex(('127.0.0.1', self.port)) == 0:
                     break
-                except OSError:
-                    time.sleep(0.1)
+                time.sleep(0.1)
             return
 
         # child; quiesce logging on stderr
