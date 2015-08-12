@@ -387,7 +387,7 @@ lightgreen 1 i386 green 2
              r'\blightgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
              r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass',
-             r'autopkgtest for lightgreen 2: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for lightgreen 2: .*amd64.*Unbuilt/uninstallable.*i386.*Unbuilt/uninstallable',
              r'lightgreen has no up-to-date binaries on any arch'],
             ['Valid candidate'])
 

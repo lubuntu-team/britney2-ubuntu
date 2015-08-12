@@ -38,6 +38,7 @@ ADT_EXCUSES_LABELS = {
     "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
     "REGRESSION": '<span style="background:#ff6666">Regression</span>',
     "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
+    "UNINST": '<span style="background:#99ddff">Unbuilt/uninstallable</span>',
 }
 
 
@@ -495,7 +496,7 @@ class AutoPackageTest(object):
     def results(self, trigsrc, trigver):
         '''Return test results for triggering package
 
-        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING)
+        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING|UNINST)
         iterator for all package tests that got triggered by trigsrc/trigver.
         '''
         for testsrc, testver in self.tests_for_source(trigsrc, trigver):
@@ -526,7 +527,7 @@ class AutoPackageTest(object):
                     except KeyError:
                         # neither done nor pending; excluded?
                         if testsrc in self.excludes:
-                            arch_status[arch] = 'RUNNING'
+                            arch_status[arch] = 'UNINST'
                             passed = False
                             continue
 
