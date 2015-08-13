@@ -38,7 +38,6 @@ ADT_EXCUSES_LABELS = {
     "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
     "REGRESSION": '<span style="background:#ff6666">Regression</span>',
     "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
-    "UNINST": '<span style="background:#99ddff">Unbuilt/uninstallable</span>',
 }
 
 
@@ -170,11 +169,19 @@ class AutoPackageTest(object):
                 continue
             for rdep in rdeps:
                 rdep_src = binaries_info[rdep][SOURCE]
-                rdep_src_info = sources_info[rdep_src]
+                # if rdep_src/unstable is known to be not built yet or
+                # uninstallable, try to run tests against testing; if that
+                # works, then the unstable src does not break the testing
+                # rdep_src and is fine
+                if rdep_src in self.excludes:
+                    rdep_src_info = self.britney.sources['testing'][rdep_src]
+                    self.log_verbose('Reverse dependency %s of %s/%s is unbuilt or uninstallable, running test against testing version %s' %
+                                     (rdep_src, src, ver, rdep_src_info[VERSION]))
+                else:
+                    rdep_src_info = sources_info[rdep_src]
                 if rdep_src_info[AUTOPKGTEST] or self.has_autodep8(rdep_src_info):
                     if rdep_src not in reported_pkgs:
-                        # we don't care about the version of rdep
-                        tests.append((rdep_src, sources_info[rdep_src][VERSION]))
+                        tests.append((rdep_src, rdep_src_info[VERSION]))
                         reported_pkgs.add(rdep_src)
 
         tests.sort(key=lambda (s, v): s)
@@ -395,12 +402,11 @@ class AutoPackageTest(object):
     #
 
     def request(self, packages, excludes=None):
-        if excludes is None:
-            excludes = []
-        self.excludes.update(excludes)
+        if excludes:
+            self.excludes.update(excludes)
 
         self.log_verbose('Requested autopkgtests for %s, exclusions: %s' %
-                         (['%s/%s' % i for i in packages], str(excludes)))
+                         (['%s/%s' % i for i in packages], str(self.excludes)))
         for src, ver in packages:
             for (testsrc, testver) in self.tests_for_source(src, ver):
                 if testsrc not in self.excludes:
@@ -496,7 +502,7 @@ class AutoPackageTest(object):
     def results(self, trigsrc, trigver):
         '''Return test results for triggering package
 
-        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING|UNINST)
+        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING)
         iterator for all package tests that got triggered by trigsrc/trigver.
         '''
         for testsrc, testver in self.tests_for_source(trigsrc, trigver):
@@ -525,13 +531,13 @@ class AutoPackageTest(object):
                         arch_status[arch] = 'RUNNING'
                         passed = False
                     except KeyError:
-                        # neither done nor pending; excluded?
-                        if testsrc in self.excludes:
-                            arch_status[arch] = 'UNINST'
-                            passed = False
+                        # ignore if adt or swift results are disabled,
+                        # otherwise this is unexpected
+                        if not hasattr(self.britney.options, 'adt_swift_url'):
                             continue
-
-                        # ignore if adt or swift results are disabled
+                        # FIXME: Ignore this error for now as it crashes britney, but investigate!
+                        self.log_error('FIXME: Result for %s/%s/%s (triggered by %s/%s) is neither known nor pending!' %
+                                       (testsrc, testver, arch, trigsrc, trigver))
                         continue
 
             # disabled or ignored?

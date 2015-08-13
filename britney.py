@@ -1860,7 +1860,11 @@ class Britney(object):
                                            'r': self.options.series, 'a': arch}
                         archmsg.append('<a href="%s">%s: %s</a>' %
                                        (url, arch, ADT_EXCUSES_LABELS[arch_status[arch]]))
-                    e.addhtml('autopkgtest for %s %s: %s' % (adtsrc, adtver, ', '.join(archmsg)))
+                    if adtsrc in autopkgtest_excludes:
+                        note = ' (%s is unbuilt/uninstallable)' % self.sources['unstable'][adtsrc][VERSION]
+                    else:
+                        note = ''
+                    e.addhtml('autopkgtest for %s %s%s: %s' % (adtsrc, adtver, note, ', '.join(archmsg)))
 
                     # hints can override failures
                     if not passed:

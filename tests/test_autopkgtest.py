@@ -106,6 +106,8 @@ class TestAutoPkgTest(TestBase):
         except IOError:
                 self.pending_requests = None
 
+        self.assertNotIn('FIXME', out)
+
         return out
 
     def test_no_request_for_uninstallable(self):
@@ -378,7 +380,7 @@ lightgreen 1 i386 green 2
             NOT_CONSIDERED)
         os.unlink(self.fake_amqp)
 
-        # add unbuilt lightgreen
+        # add unbuilt lightgreen; should run tests against the old version
         self.data.add_src('lightgreen', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
         self.do_test(
             [],
@@ -387,14 +389,14 @@ lightgreen 1 i386 green 2
              r'\blightgreen\b.*>1</a> to .*>2<',
              r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
              r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass',
-             r'autopkgtest for lightgreen 2: .*amd64.*Unbuilt/uninstallable.*i386.*Unbuilt/uninstallable',
+             r'autopkgtest for lightgreen 1 \(2 is unbuilt/uninstallable\): .*amd64.*Regression.*i386.*Regression',
              r'lightgreen has no up-to-date binaries on any arch'],
             ['Valid candidate'])
 
         # lightgreen's tests should not be triggered yet while it is unbuilt
         self.assertEqual(self.amqp_requests, set())
 
-        # now lightgreen gets built and a test result
+        # now lightgreen 2 gets built, should trigger a new test run
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2'),
             'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2'),
