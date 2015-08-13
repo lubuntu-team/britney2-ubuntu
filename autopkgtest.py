@@ -174,9 +174,14 @@ class AutoPackageTest(object):
                 # works, then the unstable src does not break the testing
                 # rdep_src and is fine
                 if rdep_src in self.excludes:
-                    rdep_src_info = self.britney.sources['testing'][rdep_src]
-                    self.log_verbose('Reverse dependency %s of %s/%s is unbuilt or uninstallable, running test against testing version %s' %
-                                     (rdep_src, src, ver, rdep_src_info[VERSION]))
+                    try:
+                        rdep_src_info = self.britney.sources['testing'][rdep_src]
+                        self.log_verbose('Reverse dependency %s of %s/%s is unbuilt or uninstallable, running test against testing version %s' %
+                                         (rdep_src, src, ver, rdep_src_info[VERSION]))
+                    except KeyError:
+                        self.log_verbose('Reverse dependency %s of %s/%s is unbuilt or uninstallable and not present in testing, ignoring' %
+                                         (rdep_src, src, ver))
+                        continue
                 else:
                     rdep_src_info = sources_info[rdep_src]
                 if rdep_src_info[AUTOPKGTEST] or self.has_autodep8(rdep_src_info):
