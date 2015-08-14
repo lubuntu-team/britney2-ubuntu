@@ -912,12 +912,15 @@ lightgreen 1 i386 green 3
             [r'\bdkms\b.*>1</a> to .*>2<',
              r'autopkgtest for fancy 1: .*amd64.*in progress.*i386.*in progress'])
 
-    def test_no_amqp_config(self):
+    def test_disable_adt(self):
         '''Run without autopkgtest requests'''
 
-        # Disable AMQP server config
+        # Disable AMQP server config, to ensure we don't touch them with ADT
+        # disabled
         for line in fileinput.input(self.britney_conf, inplace=True):
-            if not line.startswith('ADT_AMQP') and not line.startswith('ADT_SWIFT_URL'):
+            if line.startswith('ADT_ENABLE'):
+                print('ADT_ENABLE = no')
+            elif not line.startswith('ADT_AMQP') and not line.startswith('ADT_SWIFT_URL'):
                 sys.stdout.write(line)
 
         self.do_test(

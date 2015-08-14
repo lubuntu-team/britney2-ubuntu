@@ -431,11 +431,7 @@ class AutoPackageTest(object):
         for arch in self.britney.options.adt_arches.split():
             arch_queues[arch] = 'debci-%s-%s' % (self.series, arch)
 
-        try:
-            amqp_url = self.britney.options.adt_amqp
-        except AttributeError:
-            self.log_error('ADT_AMQP not set, cannot submit requests')
-            return
+        amqp_url = self.britney.options.adt_amqp
 
         def _arches(verinfo):
             res = set()
@@ -466,25 +462,13 @@ class AutoPackageTest(object):
         self.update_pending_tests()
 
     def collect(self, packages):
-        # fetch results from swift
-        try:
-            swift_url = self.britney.options.adt_swift_url
-        except AttributeError:
-            self.log_error('ADT_SWIFT_URL not set, cannot collect results')
-            return
-        try:
-            self.britney.options.adt_amqp
-        except AttributeError:
-            self.log_error('ADT_AMQP not set, not collecting results from swift')
-            return
-
         # update results from swift for all packages that we are waiting
         # for, and remove pending tests that we have results for on all
         # arches
         for pkg, verinfo in copy.deepcopy(self.pending_tests.items()):
             for archinfo in verinfo.values():
                 for arch in archinfo:
-                    self.fetch_swift_results(swift_url, pkg, arch)
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch)
         # also update results for excuses whose tests failed, in case a
         # manual retry worked
         for (trigpkg, trigver) in packages:
@@ -492,7 +476,7 @@ class AutoPackageTest(object):
                 for (pkg, arch) in self.failed_tests_for_trigger(trigpkg, trigver):
                     self.log_verbose('Checking for new results for failed %s on %s for trigger %s/%s' %
                                      (pkg, arch, trigpkg, trigver))
-                    self.fetch_swift_results(swift_url, pkg, arch, (trigpkg, trigver))
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, (trigpkg, trigver))
 
         # update the results cache
         with open(self.results_cache_file + '.new', 'w') as f:
