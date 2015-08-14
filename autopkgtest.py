@@ -414,9 +414,8 @@ class AutoPackageTest(object):
                          (['%s/%s' % i for i in packages], str(self.excludes)))
         for src, ver in packages:
             for (testsrc, testver) in self.tests_for_source(src, ver):
-                if testsrc not in self.excludes:
-                    for arch in self.britney.options.adt_arches.split():
-                        self.add_test_request(testsrc, testver, arch, src, ver)
+                for arch in self.britney.options.adt_arches.split():
+                    self.add_test_request(testsrc, testver, arch, src, ver)
 
         if self.britney.options.verbose:
             for src, verinfo in self.requested_tests.items():

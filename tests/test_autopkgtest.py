@@ -374,16 +374,11 @@ lightgreen 1 i386 green 2
             'series/i386/g/green/20150101_100200@': (0, 'green 2'),
             'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
         }})
-        # run britney once to pick up previous results
-        self.do_test(
-            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            NOT_CONSIDERED)
-        os.unlink(self.fake_amqp)
 
         # add unbuilt lightgreen; should run tests against the old version
         self.data.add_src('lightgreen', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
         self.do_test(
-            [],
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             NOT_CONSIDERED,
             [r'\bgreen\b.*>1</a> to .*>2<',
              r'\blightgreen\b.*>1</a> to .*>2<',
@@ -393,8 +388,12 @@ lightgreen 1 i386 green 2
              r'lightgreen has no up-to-date binaries on any arch'],
             ['Valid candidate'])
 
-        # lightgreen's tests should not be triggered yet while it is unbuilt
-        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:green', 'debci-series-amd64:green',
+                 'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
+        os.unlink(self.fake_amqp)
 
         # now lightgreen 2 gets built, should trigger a new test run
         self.swift.set_results({'autopkgtest-series': {
