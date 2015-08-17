@@ -63,6 +63,26 @@ def merge_triggers(trigs1, trigs2):
     return list(pkgvers.items())
 
 
+def latest_item(ver_map, min_version=None):
+    '''Return (ver, value) from version -> value map with latest version number
+
+    If min_version is given, version has to be >= that, otherwise a KeyError is
+    raised.
+    '''
+    latest = None
+    for ver in ver_map:
+        if latest is None or apt_pkg.version_compare(ver, latest) > 0:
+            latest = ver
+    if min_version is not None and latest is not None and \
+       apt_pkg.version_compare(latest, min_version) < 0:
+        latest = None
+
+    if latest is not None:
+        return (latest, ver_map[latest])
+    else:
+        raise KeyError('no version >= %s' % min_version)
+
+
 class AutoPackageTest(object):
     """autopkgtest integration
 
@@ -499,7 +519,18 @@ class AutoPackageTest(object):
             for arch in self.britney.options.adt_arches.split():
                 try:
                     (_, ver_map, ever_passed) = self.test_results[testsrc][arch]
-                    (status, triggers) = ver_map[testver]
+
+                    # we prefer passing tests for the specified testver; but if
+                    # they fail, we also check for a result > testver, as test
+                    # runs might see built versions which we didn't see in
+                    # britney yet
+                    try:
+                        (status, triggers) = ver_map[testver]
+                        if not status:
+                            raise KeyError
+                    except KeyError:
+                        (testver, (status, triggers)) = latest_item(ver_map, testver)
+
                     # triggers might contain tuples or lists
                     if (trigsrc, trigver) not in triggers and [trigsrc, trigver] not in triggers:
                         raise KeyError('No result for trigger %s/%s yet' % (trigsrc, trigver))

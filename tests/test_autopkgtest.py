@@ -446,6 +446,59 @@ lightgreen 1 i386 green 2
             ['autopkgtest for brokengreen'])
         self.assertEqual(self.amqp_requests, set())
 
+    def test_rdepends_unbuilt_new_version_result(self):
+        '''Unbuilt reverse dependency gets test result for newer version
+
+        This might happen if the autopkgtest infrastructure runs the unstable
+        source tests against the testing binaries. Even if that gets done
+        properly it might still happen that at the time of the britney run the
+        package isn't built yet, but it is once the test gets run.
+        '''
+        # old lightgreen fails, thus new green should be held back
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_020000@': (0, 'green 1'),
+            'series/amd64/g/green/20150101_020000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+        }})
+
+        # add unbuilt lightgreen; should run tests against the old version
+        self.data.add_src('lightgreen', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 1 \(2 is unbuilt/uninstallable\): .*amd64.*Regression.*i386.*Regression',
+             r'lightgreen has no up-to-date binaries on any arch'],
+            ['Valid candidate'])
+        self.assertEqual(self.pending_requests, '')
+
+        # lightgreen 2 stays unbuilt in britney, but we get a test result for it
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2'),
+        }})
+        self.do_test(
+            [],
+            VALID_CANDIDATE,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 2.*: .*amd64.*Pass.*i386.*Pass',
+             r'lightgreen has no up-to-date binaries on any arch'])
+
+        self.assertEqual(self.pending_requests, '')
+
     def test_hint_force_badtest(self):
         '''force-badtest hint'''
 
