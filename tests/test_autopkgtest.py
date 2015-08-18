@@ -818,6 +818,21 @@ lightgreen 1 i386 green 3
 
         self.assertEqual(self.pending_requests, '')
 
+        # one more tmpfail result, should not confuse britney with None version
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100201@': (16, None),
+        }})
+        self.do_test(
+            [],
+            NOT_CONSIDERED,
+            [r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for lightgreen 2: .*amd64.*Regression.*i386.*Regression'],
+            ['in progress'])
+        with open(os.path.join(self.data.path, 'data/series-proposed/autopkgtest/results.cache')) as f:
+            contents = f.read()
+        self.assertNotIn('null', contents)
+        self.assertNotIn('None', contents)
+
     def test_rerun_failure(self):
         '''manually re-running failed tests gets picked up'''
 

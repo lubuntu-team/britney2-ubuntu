@@ -398,11 +398,12 @@ class AutoPackageTest(object):
 
         # add this result
         src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}, False])
-        if passed:
-            # update ever_passed field
-            src_arch_results[2] = True
-        src_arch_results[1][ver] = (passed, merge_triggers(
-            src_arch_results[1].get(ver, (None, []))[1], satisfied_triggers))
+        if ver is not None:
+            if passed:
+                # update ever_passed field
+                src_arch_results[2] = True
+            src_arch_results[1][ver] = (passed, merge_triggers(
+                src_arch_results[1].get(ver, (None, []))[1], satisfied_triggers))
         # update latest_stamp
         if stamp > src_arch_results[0]:
             src_arch_results[0] = stamp
