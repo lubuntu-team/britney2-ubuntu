@@ -671,7 +671,7 @@ class Britney(object):
                     sources[distribution][dpkg[SOURCE]][BINARIES].append(pkgarch)
             # if the source package doesn't exist, create a fake one
             else:
-                sources[distribution][dpkg[SOURCE]] = [dpkg[SOURCEVER], 'faux', [pkgarch], None, True]
+                sources[distribution][dpkg[SOURCE]] = [dpkg[SOURCEVER], 'faux', [pkgarch], None, True, False]
 
             # register virtual packages and real packages that provide them
             if dpkg[PROVIDES]:
