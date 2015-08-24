@@ -278,14 +278,19 @@ class AutoPackageTest(object):
         previous run (i. e. not already in self.pending_tests) or there already
         is a result for it.
         '''
-        try:
-            for (tsrc, tver) in self.test_results[src][arch][1][ver][1]:
+        # check for existing results for both the requested and the current
+        # unstable version: test runs might see newly built versions which we
+        # didn't see in britney yet
+        pkg_arch_results = self.test_results.get(src, {}).get(arch, [None, {}, None])[1]
+        unstable_ver = self.britney.sources['unstable'][src][VERSION]
+        for result_ver in [ver, unstable_ver]:
+            if result_ver not in pkg_arch_results or apt_pkg.version_compare(result_ver, ver) < 0:
+                continue
+            for (tsrc, tver) in pkg_arch_results[result_ver][1]:
                 if tsrc == trigsrc and apt_pkg.version_compare(tver, trigver) >= 0:
                     self.log_verbose('There already is a result for %s/%s/%s triggered by %s/%s' %
-                                     (src, ver, arch, tsrc, tver))
+                                     (src, result_ver, arch, tsrc, tver))
                     return
-        except KeyError:
-            pass
 
         if (trigsrc, trigver) in self.pending_tests.get(src, {}).get(
                 ver, {}).get(arch, set()):

@@ -509,6 +509,62 @@ lightgreen 1 i386 green 2
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
 
+        # next run should not trigger any new requests
+        self.do_test([], NOT_CONSIDERED, [])
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, '')
+
+    def test_rdepends_unbuilt_new_version_fail(self):
+        '''Unbuilt reverse dependency gets failure for newer version'''
+
+        # add unbuilt lightgreen; should request tests against the old version
+        self.data.add_src('lightgreen', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for darkgreen 1: .*amd64.*in progress.*i386.*in progress',
+             r'autopkgtest for lightgreen 1 \(2 is unbuilt/uninstallable\): .*amd64.*in progress.*i386.*in progress',
+             r'lightgreen has no up-to-date binaries on any arch'],
+            ['Valid candidate'])
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:green', 'debci-series-amd64:green',
+                 'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
+
+        # we only get a result for lightgreen 2, not for the requested 1
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5'),
+            'series/i386/l/lightgreen/20150101_100200@': (4, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_100200@': (4, 'lightgreen 2'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+        }})
+        self.do_test(
+            [],
+            NOT_CONSIDERED,
+            [r'\bgreen\b.*>1</a> to .*>2<',
+             r'\blightgreen\b.*>1</a> to .*>2<',
+             r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for darkgreen 1: .*amd64.*Pass.*i386.*Pass',
+             r'autopkgtest for lightgreen 2 \(2 is unbuilt/uninstallable\): .*amd64.*Regression.*i386.*Regression',
+             r'lightgreen has no up-to-date binaries on any arch'],
+            ['Valid candidate'])
+
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, '')
+
+        # next run should not trigger any new requests
+        self.do_test([], NOT_CONSIDERED, [], ['Valid candidate'])
+        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.amqp_requests, set())
+
     def test_hint_force_badtest(self):
         '''force-badtest hint'''
 
