@@ -392,6 +392,12 @@ lightgreen 1 i386 green 2
             set(['debci-series-i386:green', 'debci-series-amd64:green',
                  'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
                  'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
+        self.assertEqual(self.pending_requests, '')
+
+        # next run should not trigger any new requests
+        self.do_test([], NOT_CONSIDERED, [], ['Valid candidate'])
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, '')
 
         # now lightgreen 2 gets built, should trigger a new test run
         self.swift.set_results({'autopkgtest-series': {
@@ -411,6 +417,7 @@ lightgreen 1 i386 green 2
             ['Not considered'])
         self.assertEqual(self.amqp_requests,
                          set(['debci-series-amd64:lightgreen', 'debci-series-i386:lightgreen']))
+        self.assertEqual(self.pending_requests, '')
 
     def test_rdepends_unbuilt_unstable_only(self):
         '''Unbuilt reverse dependency which is not in testing'''
@@ -477,6 +484,11 @@ lightgreen 1 i386 green 2
              r'autopkgtest for lightgreen 1 \(2 is unbuilt/uninstallable\): .*amd64.*Regression.*i386.*Regression',
              r'lightgreen has no up-to-date binaries on any arch'],
             ['Valid candidate'])
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:green', 'debci-series-amd64:green',
+                 'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
+                 'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
         self.assertEqual(self.pending_requests, '')
 
         # lightgreen 2 stays unbuilt in britney, but we get a test result for it
@@ -494,6 +506,7 @@ lightgreen 1 i386 green 2
              r'autopkgtest for lightgreen 2.*: .*amd64.*Pass.*i386.*Pass',
              r'lightgreen has no up-to-date binaries on any arch'])
 
+        self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
 
     def test_hint_force_badtest(self):
