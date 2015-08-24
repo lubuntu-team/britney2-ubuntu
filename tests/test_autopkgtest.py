@@ -97,6 +97,7 @@ class TestAutoPkgTest(TestBase):
             with open(self.fake_amqp) as f:
                 for line in f:
                     self.amqp_requests.add(line.strip())
+            os.unlink(self.fake_amqp)
         except IOError:
             pass
 
@@ -143,7 +144,6 @@ class TestAutoPkgTest(TestBase):
             set(['debci-series-i386:green', 'debci-series-amd64:green',
                  'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
                  'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
-        os.unlink(self.fake_amqp)
 
         # ... and that they get recorded as pending
         expected_pending = '''darkgreen 1 amd64 green 2
@@ -215,7 +215,6 @@ lightgreen 1 i386 green 2
 
         # third run should not trigger any new tests, should all be in the
         # cache
-        os.unlink(self.fake_amqp)
         self.swift.set_results({})
         out = self.do_test(
             [],
@@ -393,7 +392,6 @@ lightgreen 1 i386 green 2
             set(['debci-series-i386:green', 'debci-series-amd64:green',
                  'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
                  'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
-        os.unlink(self.fake_amqp)
 
         # now lightgreen 2 gets built, should trigger a new test run
         self.swift.set_results({'autopkgtest-series': {
@@ -431,7 +429,6 @@ lightgreen 1 i386 green 2
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             VALID_CANDIDATE)
-        os.unlink(self.fake_amqp)
 
         # add new uninstallable brokengreen; should not run test at all
         self.do_test(
@@ -594,7 +591,6 @@ lightgreen 1 i386 green 2
             set(['debci-series-i386:green', 'debci-series-amd64:green',
                  'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
                  'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
-        os.unlink(self.fake_amqp)
 
         # ... and that they get recorded as pending
         expected_pending = '''darkgreen 1 amd64 green 2
@@ -679,7 +675,6 @@ newgreen 2 i386 newgreen 2
             set(['debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
         self.assertEqual(self.pending_requests,
                          'darkgreen 2 amd64 darkgreen 2\ndarkgreen 2 i386 darkgreen 2\n')
-        os.unlink(self.fake_amqp)
 
         # second run gets the results for darkgreen 2
         self.swift.set_results({'autopkgtest-series': {
@@ -736,7 +731,6 @@ newgreen 2 i386 newgreen 2
                  'debci-series-i386:lightgreen', 'debci-series-amd64:lightgreen',
                  'debci-series-i386:darkgreen', 'debci-series-amd64:darkgreen']))
         self.assertEqual(self.pending_requests, '')
-        os.unlink(self.fake_amqp)
         self.data.remove_all(True)
 
         # second run: new version re-triggers all tests
@@ -762,7 +756,6 @@ lightgreen 1 amd64 green 3
 lightgreen 1 i386 green 3
 '''
         self.assertEqual(self.pending_requests, expected_pending)
-        os.unlink(self.fake_amqp)
 
         # third run gets the results for green and lightgreen, darkgreen is
         # still running
@@ -907,7 +900,6 @@ lightgreen 1 i386 green 3
              r'autopkgtest for green 2: .*amd64.*Pass.*i386.*Pass',
              r'autopkgtest for lightgreen 2: .*amd64.*Regression.*i386.*Regression'])
         self.assertEqual(self.pending_requests, '')
-        os.unlink(self.fake_amqp)
 
         # remove new lightgreen by resetting archive indexes, and re-adding
         # green
@@ -944,7 +936,6 @@ lightgreen 1 i386 green 3
                          set(['debci-series-amd64:lightgreen', 'debci-series-i386:lightgreen']))
 
         # but the next run should not trigger anything new
-        os.unlink(self.fake_amqp)
         self.do_test(
             [],
             VALID_CANDIDATE,
