@@ -590,8 +590,8 @@ class Britney(object):
         filename = os.path.join(basedir, "Sources")
         self.__log("Loading source packages from %s" % filename)
 
-        with open(filename, encoding='utf-8') as f:
-            Packages = apt_pkg.TagFile(f)
+        f = open(filename, encoding='utf-8')
+        Packages = apt_pkg.TagFile(f)
         get_field = Packages.section.get
         step = Packages.step
 
@@ -614,6 +614,7 @@ class Britney(object):
                             False,
                             get_field('Testsuite', '').startswith('autopkgtest'),
                            ]
+        f.close()
         return sources
 
     def read_binaries(self, basedir, distribution, arch, intern=sys.intern):
@@ -647,8 +648,8 @@ class Britney(object):
         filename = os.path.join(basedir, "Packages_%s" % arch)
         self.__log("Loading binary packages from %s" % filename)
 
-        with open(filename, encoding='utf-8') as f:
-            Packages = apt_pkg.TagFile(f)
+        f = open(filename, encoding='utf-8')
+        Packages = apt_pkg.TagFile(f)
         get_field = Packages.section.get
         step = Packages.step
 
@@ -734,6 +735,8 @@ class Britney(object):
 
             # add the resulting dictionary to the package list
             packages[pkg] = dpkg
+
+        f.close()
 
         # loop again on the list of packages to register reverse dependencies and conflicts
         register_reverses(packages, provides, check_doubles=False)
