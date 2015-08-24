@@ -113,6 +113,8 @@ class AutoPkgTestSwiftServer:
 
     def start(self):
         assert self.server_pid is None, 'already started'
+        if self.log:
+            self.log.close()
         self.log = tempfile.TemporaryFile()
         p = os.fork()
         if p:
@@ -123,6 +125,7 @@ class AutoPkgTestSwiftServer:
                 if s.connect_ex(('127.0.0.1', self.port)) == 0:
                     break
                 time.sleep(0.1)
+            s.close()
             return
 
         # child; quiesce logging on stderr

@@ -24,7 +24,7 @@
 import apt_pkg
 from functools import partial
 from datetime import datetime
-from itertools import chain, ifilter, ifilterfalse, izip, repeat
+from itertools import chain, repeat, filterfalse
 import os
 import re
 import time
@@ -76,8 +76,8 @@ def ifilter_except(container, iterable=None):
     iterators that are not known on beforehand.
     """
     if iterable is not None:
-        return ifilterfalse(container.__contains__, iterable)
-    return partial(ifilterfalse, container.__contains__)
+        return filterfalse(container.__contains__, iterable)
+    return partial(filterfalse, container.__contains__)
 
 
 def ifilter_only(container, iterable=None):
@@ -89,8 +89,8 @@ def ifilter_only(container, iterable=None):
     iterators that are not known on beforehand.
     """
     if iterable is not None:
-        return ifilter(container.__contains__, iterable)
-    return partial(ifilter, container.__contains__)
+        return filter(container.__contains__, iterable)
+    return partial(filter, container.__contains__)
 
 
 # iter_except is from the "itertools" recipe
@@ -120,7 +120,7 @@ def iter_except(func, exception, first=None):
 
 
 def undo_changes(lundo, inst_tester, sources, binaries,
-                 BINARIES=BINARIES, PROVIDES=PROVIDES):
+                 BINARIES=BINARIES):
     """Undoes one or more changes to testing
 
     * lundo is a list of (undo, item)-tuples
@@ -225,7 +225,7 @@ def register_reverses(packages, provides, check_doubles=True, iterator=None,
     the loops.
     """
     if iterator is None:
-        iterator = packages.iterkeys()
+        iterator = packages.keys()
     else:
         iterator = ifilter_only(packages, iterator)
 
@@ -303,7 +303,7 @@ def compute_reverse_tree(packages_s, pkg, arch,
         # generate the next iteration, which is the reverse-dependencies of
         # the current iteration
         rev_deps = set(revfilt(flatten( binaries[x][RDEPENDS] for x in binfilt(rev_deps) )))
-    return izip(seen, repeat(arch))
+    return zip(seen, repeat(arch))
 
 
 def write_nuninst(filename, nuninst):
@@ -312,7 +312,7 @@ def write_nuninst(filename, nuninst):
     Write the non-installable report derived from "nuninst" to the
     file denoted by "filename".
     """
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         # Having two fields with (almost) identical dates seems a bit
         # redundant.
         f.write("Built on: " + time.strftime("%Y.%m.%d %H:%M:%S %z", time.gmtime(time.time())) + "\n")
@@ -329,7 +329,7 @@ def read_nuninst(filename, architectures):
     will be included in the report.
     """
     nuninst = {}
-    with open(filename) as f:
+    with open(filename, encoding='ascii') as f:
         for r in f:
             if ":" not in r: continue
             arch, packages = r.strip().split(":", 1)
@@ -387,7 +387,7 @@ def write_heidi(filename, sources_t, packages_t,
     The "X=X" parameters are optimizations to avoid "load global" in
     the loops.
     """
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='ascii') as f:
 
         # write binary packages
         for arch in sorted(packages_t):
@@ -426,7 +426,7 @@ def write_heidi_delta(filename, all_selected):
 
     The order corresponds to that shown in update_output.
     """
-    with open(filename, "w") as fd:
+    with open(filename, "w", encoding='ascii') as fd:
 
         fd.write("#HeidiDelta\n")
 
@@ -463,7 +463,7 @@ def write_excuses(excuses, dest_file, output_format="yaml"):
     """
     if output_format == "yaml":
         ensuredir(os.path.dirname(dest_file))
-        with open(dest_file, 'w') as f:
+        with open(dest_file, 'w', encoding='utf-8') as f:
             excuselist = []
             for e in excuses:
                 excuselist.append(e.excusedata())
@@ -473,7 +473,7 @@ def write_excuses(excuses, dest_file, output_format="yaml"):
             f.write(yaml.dump(excusesdata, default_flow_style=False, allow_unicode=True))
     elif output_format == "legacy-html":
         ensuredir(os.path.dirname(dest_file))
-        with open(dest_file, 'w') as f:
+        with open(dest_file, 'w', encoding='utf-8') as f:
             f.write("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n")
             f.write("<html><head><title>excuses...</title>")
             f.write("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\"></head><body>\n")
@@ -491,13 +491,13 @@ def write_sources(sources_s, filename):
     """Write a sources file from Britney's state for a given suite
 
     Britney discards fields she does not care about, so the resulting
-    file omitts a lot of regular fields.
+    file omits a lot of regular fields.
     """
 
     key_pairs = ((VERSION, 'Version'), (SECTION, 'Section'),
                  (MAINTAINER, 'Maintainer'))
 
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         for src in sources_s:
            src_data = sources_s[src]
            output = "Package: %s\n" % src
@@ -528,7 +528,7 @@ def write_controlfiles(sources, packages, suite, basedir):
     for arch in packages_s:
         filename = os.path.join(basedir, 'Packages_%s' % arch)
         binaries = packages_s[arch][0]
-        with open(filename, 'w') as f:
+        with open(filename, 'w', encoding='utf-8') as f:
             for pkg in binaries:
                 output = "Package: %s\n" % pkg
                 bin_data = binaries[pkg]
@@ -605,3 +605,18 @@ def is_nuninst_asgood_generous(architectures, old, new, break_arches=frozenset()
             continue
         diff = diff + (len(new[arch]) - len(old[arch]))
     return diff <= 0
+
+
+def clone_nuninst(nuninst, packages_s, architectures):
+    """Selectively deep clone nuninst
+
+    Given nuninst table, the package table for a given suite and
+    a list of architectures, this function will clone the nuninst
+    table.  Only the listed architectures will be deep cloned -
+    the rest will only be shallow cloned.
+    """
+    clone = nuninst.copy()
+    for arch in architectures:
+        clone[arch] = set(x for x in nuninst[arch] if x in packages_s[arch][0])
+        clone[arch + "+all"] = set(x for x in nuninst[arch + "+all"] if x in packages_s[arch][0])
+    return clone

@@ -15,8 +15,6 @@
 # GNU General Public License for more details.
 
 import re
-import string
-
 
 class Excuse(object):
     """Excuse class
@@ -64,6 +62,11 @@ class Excuse(object):
         self.oldbugs = set()
         self.reason = {}
         self.htmlline = []
+
+    def sortkey(self):
+        if self.daysold == None:
+            return (-1, self.name)
+        return (self.daysold, self.name)
 
     @property
     def is_valid(self):
@@ -151,7 +154,7 @@ class Excuse(object):
             (self.name, self.name, lp_pkg, self.name, lp_old, lp_new))
         if self.maint:
             res = res + "<li>Maintainer: %s\n" % (self.maint)
-        if self.section and string.find(self.section, "/") > -1:
+        if self.section and self.section.find("/") > -1:
             res = res + "<li>Section: %s\n" % (self.section)
         if self.daysold != None:
             if self.mindays == 0:
@@ -165,7 +168,7 @@ class Excuse(object):
         for x in self.htmlline:
             res = res + "<li>" + x + "\n"
         lastdep = ""
-        for x in sorted(self.deps, lambda x,y: cmp(x.split('/')[0], y.split('/')[0])):
+        for x in sorted(self.deps, key=lambda x: x.split('/')[0]):
             dep = x.split('/')[0]
             if dep == lastdep: continue
             lastdep = dep
@@ -198,14 +201,8 @@ class Excuse(object):
             (self.name, self.ver[0], self.ver[1]))
         if self.maint:
             maint = self.maint
-            # ugly hack to work around strange encoding in pyyaml
-            # should go away with pyyaml in python 3
-            try:
-                maint.decode('ascii')
-            except UnicodeDecodeError:
-                maint = unicode(self.maint,'utf-8')
             res.append("Maintainer: %s" % maint)
-        if self.section and string.find(self.section, "/") > -1:
+        if self.section and self.section.find("/") > -1:
             res.append("Section: %s" % (self.section))
         if self.daysold != None:
             if self.mindays == 0:
@@ -219,7 +216,7 @@ class Excuse(object):
         for x in self.htmlline:
             res.append("" + x + "")
         lastdep = ""
-        for x in sorted(self.deps, lambda x,y: cmp(x.split('/')[0], y.split('/')[0])):
+        for x in sorted(self.deps, key=lambda x: x.split('/')[0]):
             dep = x.split('/')[0]
             if dep == lastdep: continue
             lastdep = dep
@@ -246,10 +243,10 @@ class Excuse(object):
         excusedata["new-bugs"] = sorted(self.newbugs)
         excusedata["old-bugs"] = sorted(self.oldbugs)
         if self.forced:
-            excusedata["forced-reason"] = self.reason.keys()
+            excusedata["forced-reason"] = list(self.reason.keys())
             excusedata["reason"] = []
         else:
-            excusedata["reason"] = self.reason.keys()
+            excusedata["reason"] = list(self.reason.keys())
         excusedata["is-candidate"] = self.is_valid
         return excusedata
 

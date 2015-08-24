@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # (C) 2014 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -87,10 +87,10 @@ class TestAutoPkgTest(TestBase):
 
         if excuses_expect:
             for re in excuses_expect:
-                self.assertRegexpMatches(excuses, re, excuses)
+                self.assertRegex(excuses, re, excuses)
         if excuses_no_expect:
             for re in excuses_no_expect:
-                self.assertNotRegexpMatches(excuses, re, excuses)
+                self.assertNotRegex(excuses, re, excuses)
 
         self.amqp_requests = set()
         try:

@@ -11,7 +11,7 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-from __future__ import print_function
+
 
 from collections import defaultdict
 from contextlib import closing
@@ -20,7 +20,7 @@ import subprocess
 import tempfile
 from textwrap import dedent
 import time
-import urllib
+import urllib.request
 
 import apt_pkg
 
@@ -90,7 +90,7 @@ class TouchManifest(object):
                 print("I: [%s] - saving it to %s" %
                       (time.asctime(), self.path))
             try:
-                response = urllib.urlopen(url)
+                response = urllib.request.urlopen(url)
                 if response.code == 200:
                     # Only [re]create the manifest file if one was successfully
                     # downloaded. This allows for an existing image to be used
@@ -98,7 +98,7 @@ class TouchManifest(object):
                     path_dir = os.path.dirname(self.path)
                     if not os.path.exists(path_dir):
                         os.makedirs(path_dir)
-                    with open(self.path, 'w') as fp:
+                    with open(self.path, 'wb') as fp:
                         fp.write(response.read())
                     success = True
                     break
@@ -266,7 +266,7 @@ class BootTest(object):
         if not self.britney.options.verbose:
             return
         for src in sorted(self.pkglist):
-            for ver in sorted(self.pkglist[src], cmp=apt_pkg.version_compare):
+            for ver in sorted(self.pkglist[src]):
                 status = self.pkglist[src][ver]
                 print("I: [%s] - Collected boottest status for %s_%s: "
                       "%s" % (time.asctime(), src, ver, status))

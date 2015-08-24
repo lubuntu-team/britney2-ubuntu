@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # (C) 2014 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -48,7 +48,7 @@ class TestTouchManifest(unittest.TestCase):
         self.imagesdir = os.path.join(self.path, 'boottest/images')
         os.makedirs(self.imagesdir)
         self.addCleanup(shutil.rmtree, self.path)
-        _p = mock.patch('urllib.urlopen')
+        _p = mock.patch('urllib.request.urlopen')
         self.mocked_urlopen = _p.start()
         self.mocked_urlopen.side_effect = [
             FakeResponse(code=404),
@@ -71,7 +71,7 @@ class TestTouchManifest(unittest.TestCase):
     def test_fetch(self):
         # Missing manifest file is fetched dynamically
         self.mocked_urlopen.side_effect = [
-            FakeResponse(code=200, content='foo 1.0'),
+            FakeResponse(code=200, content=b'foo 1.0'),
         ]
         manifest = boottest.TouchManifest('ubuntu-touch', 'vivid')
         self.assertNotEqual([], manifest._manifest)
@@ -244,10 +244,10 @@ args.func()
         # print('-------\nout: %s\n-----' % out)
         if expect:
             for re in expect:
-                self.assertRegexpMatches(excuses, re)
+                self.assertRegex(excuses, re)
         if no_expect:
             for re in no_expect:
-                self.assertNotRegexpMatches(excuses, re)
+                self.assertNotRegex(excuses, re)
 
     def test_runs(self):
         # `Britney` runs and considers binary packages for boottesting
@@ -283,8 +283,9 @@ args.func()
         # '<source> <version>\n'
         test_input_path = os.path.join(
             self.data.path, 'boottest/work/test_input')
-        self.assertEqual(
-            ['green 1.1~beta\n'], open(test_input_path).readlines())
+        with open(test_input_path) as f:
+            self.assertEqual(
+                ['green 1.1~beta\n'], f.readlines())
 
     def test_pass(self):
         # `Britney` updates boottesting information in excuses when the

@@ -16,8 +16,6 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
-from __future__ import print_function
-
 import os
 import time
 import json
@@ -25,7 +23,8 @@ import tarfile
 import io
 import copy
 import itertools
-from urllib import urlencode, urlopen
+from urllib.parse import urlencode
+from urllib.request import urlopen
 
 import apt_pkg
 import kombu
@@ -209,7 +208,7 @@ class AutoPackageTest(object):
                         tests.append((rdep_src, rdep_src_info[VERSION]))
                         reported_pkgs.add(rdep_src)
 
-        tests.sort(key=lambda (s, v): s)
+        tests.sort(key=lambda s_v: s_v[0])
         return tests
 
     #
@@ -321,7 +320,7 @@ class AutoPackageTest(object):
         try:
             f = urlopen(url)
             if f.getcode() == 200:
-                result_paths = f.read().strip().splitlines()
+                result_paths = f.read().decode().strip().splitlines()
             elif f.getcode() == 204:  # No content
                 result_paths = []
             else:
@@ -417,9 +416,9 @@ class AutoPackageTest(object):
         '''Return (src, arch) set for failed tests for given trigger pkg'''
 
         result = set()
-        for src, srcinfo in self.test_results.iteritems():
-            for arch, (stamp, vermap, ever_passed) in srcinfo.iteritems():
-                for ver, (passed, triggers) in vermap.iteritems():
+        for src, srcinfo in self.test_results.items():
+            for arch, (stamp, vermap, ever_passed) in srcinfo.items():
+                for ver, (passed, triggers) in vermap.items():
                     if not passed:
                         # triggers might contain tuples or lists (after loading
                         # from json), so iterate/check manually
@@ -491,7 +490,7 @@ class AutoPackageTest(object):
         # update results from swift for all packages that we are waiting
         # for, and remove pending tests that we have results for on all
         # arches
-        for pkg, verinfo in copy.deepcopy(self.pending_tests.items()):
+        for pkg, verinfo in copy.deepcopy(self.pending_tests).items():
             for archinfo in verinfo.values():
                 for arch in archinfo:
                     self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch)
