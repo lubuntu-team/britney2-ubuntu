@@ -40,6 +40,8 @@ class TestAutoPkgTest(TestBase):
                 print('ADT_AMQP = file://%s' % self.fake_amqp)
             elif 'ADT_SWIFT_URL' in line:
                 print('ADT_SWIFT_URL = http://localhost:18085')
+            elif 'ADT_ARCHES' in line:
+                print('ADT_ARCHES = amd64 i386')
             else:
                 sys.stdout.write(line)
 
