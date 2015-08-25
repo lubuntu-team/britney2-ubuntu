@@ -11,7 +11,6 @@ import subprocess
 import tempfile
 import unittest
 
-
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 architectures = ['amd64', 'arm64', 'armhf', 'i386', 'powerpc', 'ppc64el']
@@ -154,7 +153,7 @@ class TestBase(unittest.TestCase):
         '''Run britney.
 
         Assert that it succeeds and does not produce anything on stderr.
-        Return (excuses.html, britney_out).
+        Return (excuses.yaml, excuses.html, britney_out).
         '''
         britney = subprocess.Popen([self.britney, '-v', '-c', self.britney_conf,
                                     '--distribution=ubuntu',
@@ -168,10 +167,13 @@ class TestBase(unittest.TestCase):
         self.assertEqual(err, '')
 
         with open(os.path.join(self.data.path, 'output', self.data.series,
+                               'excuses.yaml')) as f:
+            yaml = f.read()
+        with open(os.path.join(self.data.path, 'output', self.data.series,
                                'excuses.html')) as f:
-            excuses = f.read()
+            html = f.read()
 
-        return (excuses, out)
+        return (yaml, html, out)
 
     def create_hint(self, username, content):
         '''Create a hint file for the given username and content'''

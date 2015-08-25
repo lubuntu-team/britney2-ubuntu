@@ -239,7 +239,7 @@ args.func()
         for (pkg, fields) in context:
             self.data.add(pkg, True, fields, testsuite='autopkgtest')
         self.make_boottest()
-        (excuses, out) = self.run_britney()
+        (excuses_yaml, excuses, out) = self.run_britney()
         # print('-------\nexcuses: %s\n-----' % excuses)
         # print('-------\nout: %s\n-----' % out)
         if expect:
