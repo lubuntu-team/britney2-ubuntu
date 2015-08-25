@@ -212,7 +212,7 @@ from britney_util import (old_libraries_format, same_source, undo_changes,
 from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
                    SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
                    PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH, ESSENTIAL)
-from autopkgtest import AutoPackageTest, ADT_EXCUSES_LABELS, srchash
+from autopkgtest import AutoPackageTest, srchash
 from boottest import BootTest
 
 
@@ -1909,17 +1909,11 @@ class Britney(object):
                 adtpass = True
                 for passed, adtsrc, adtver, arch_status in autopkgtest.results(
                         e.name, e.ver[1]):
-                    archmsg = []
-                    for arch in sorted(arch_status):
+                    for arch in arch_status:
                         url = cloud_url % {'h': srchash(adtsrc), 's': adtsrc,
                                            'r': self.options.series, 'a': arch}
-                        archmsg.append('<a href="%s">%s: %s</a>' %
-                                       (url, arch, ADT_EXCUSES_LABELS[arch_status[arch]]))
-                    if adtsrc in autopkgtest_excludes:
-                        note = ' (%s is unbuilt/uninstallable)' % self.sources['unstable'][adtsrc][VERSION]
-                    else:
-                        note = ''
-                    e.addhtml('autopkgtest for %s %s%s: %s' % (adtsrc, adtver, note, ', '.join(archmsg)))
+                        e.addtest('autopkgtest', '%s %s' % (adtsrc, adtver),
+                                  arch, arch_status[arch], url)
 
                     # hints can override failures
                     if not passed:

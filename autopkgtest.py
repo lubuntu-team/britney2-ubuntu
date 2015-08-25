@@ -32,14 +32,6 @@ import kombu
 from consts import (AUTOPKGTEST, BINARIES, DEPENDS, RDEPENDS, SOURCE, VERSION)
 
 
-ADT_EXCUSES_LABELS = {
-    "PASS": '<span style="background:#87d96c">Pass</span>',
-    "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
-    "REGRESSION": '<span style="background:#ff6666">Regression</span>',
-    "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
-}
-
-
 def srchash(src):
     '''archive hash prefix for source package'''
 

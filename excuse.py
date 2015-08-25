@@ -16,6 +16,15 @@
 
 import re
 
+EXCUSES_LABELS = {
+    "PASS": '<span style="background:#87d96c">Pass</span>',
+    "FAIL": '<span style="background:#ff6666">Failed</span>',
+    "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
+    "REGRESSION": '<span style="background:#ff6666">Regression</span>',
+    "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
+}
+
+
 class Excuse(object):
     """Excuse class
     
@@ -62,6 +71,9 @@ class Excuse(object):
         self.oldbugs = set()
         self.reason = {}
         self.htmlline = []
+        # type (e. g. "autopkgtest") -> package (e. g. "foo 2-1") -> arch ->
+        #   ['PASS'|'ALWAYSFAIL'|'REGRESSION'|'RUNNING', url]
+        self.tests = {}
 
     def sortkey(self):
         if self.daysold == None:
@@ -165,6 +177,15 @@ class Excuse(object):
             else:
                 res = res + ("<li>%d days old (needed %d days)\n" %
                 (self.daysold, self.mindays))
+        for testtype in sorted(self.tests):
+            for pkg in sorted(self.tests[testtype]):
+                archmsg = []
+                for arch in sorted(self.tests[testtype][pkg]):
+                    status, url = self.tests[testtype][pkg][arch]
+                    archmsg.append('<a href="%s">%s: %s</a>' %
+                                   (url, arch, EXCUSES_LABELS[status]))
+                res = res + ("<li>%s for %s: %s</li>\n" % (testtype, pkg, ', '.join(archmsg)))
+
         for x in self.htmlline:
             res = res + "<li>" + x + "\n"
         lastdep = ""
@@ -192,6 +213,10 @@ class Excuse(object):
     def addreason(self, reason):
         """"adding reason"""
         self.reason[reason] = 1
+
+    def addtest(self, type_, package, arch, state, url):
+        """Add test result"""
+        self.tests.setdefault(type_, {}).setdefault(package, {})[arch] = [state, url]
 
     # TODO merge with html()
     def text(self):
@@ -248,5 +273,6 @@ class Excuse(object):
         else:
             excusedata["reason"] = list(self.reason.keys())
         excusedata["is-candidate"] = self.is_valid
+        excusedata["tests"] = self.tests
         return excusedata
 
