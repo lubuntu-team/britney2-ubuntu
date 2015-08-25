@@ -1925,6 +1925,8 @@ class Britney(object):
                             x for x in hints
                             if same_source(adtver, x.version) ]
                         if forces:
+                            e.force()
+                            e.addreason('badtest %s %s' % (adtsrc, adtver))
                             e.addhtml(
                                 "Should wait for %s %s test, but forced by "
                                 "%s" % (adtsrc, adtver, forces[0].user))
@@ -1940,6 +1942,8 @@ class Britney(object):
                         x for x in hints
                         if same_source(e.ver[1], x.version) ]
                     if forces:
+                        e.force()
+                        e.addreason('skiptest')
                         e.addhtml(
                             "Should wait for tests relating to %s %s, but "
                             "forced by %s" %
