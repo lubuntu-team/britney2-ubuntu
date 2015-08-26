@@ -1104,7 +1104,7 @@ lightgreen 1 i386 green 3
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
         )
 
-    def test_dkms(self):
+    def test_detect_dkms_autodep8(self):
         '''DKMS packages are autopkgtested (via autodep8)'''
 
         self.data.add('dkms', False, {})
@@ -1114,6 +1114,16 @@ lightgreen 1 i386 green 3
             [('dkms', {'Version': '2'}, None)],
             {'dkms': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})},
             {'dkms': [('old-version', '1'), ('new-version', '2')]})
+
+    def test_kernel_triggers_dkms(self):
+        '''DKMS packages get triggered by kernel uploads'''
+
+        self.data.add('dkms', False, {})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+
+        self.do_test(
+            [('linux-image-generic', {'Source': 'linux-meta'}, None)],
+            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
 
     def test_disable_adt(self):
         '''Run without autopkgtest requests'''
