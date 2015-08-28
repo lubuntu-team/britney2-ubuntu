@@ -1122,8 +1122,12 @@ lightgreen 1 i386 green 3
         self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
 
         self.do_test(
-            [('linux-image-generic', {'Source': 'linux-meta'}, None)],
-            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
+            [('linux-image-generic', {'Source': 'linux-meta'}, None),
+             ('linux-image-grumpy-generic', {'Source': 'linux-meta-lts-grumpy'}, None)
+            ],
+            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
+             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})
+            })
 
     def test_disable_adt(self):
         '''Run without autopkgtest requests'''

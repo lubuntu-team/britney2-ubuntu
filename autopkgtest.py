@@ -171,9 +171,9 @@ class AutoPackageTest(object):
 
         extra_bins = []
         # Hack: For new kernels trigger all DKMS packages by pretending that
-        # linux-meta builds a "dkms" binary as well. With that we ensure that we
+        # linux-meta* builds a "dkms" binary as well. With that we ensure that we
         # don't regress DKMS drivers with new kernel versions.
-        if src == 'linux-meta':
+        if src.startswith('linux-meta'):
             extra_bins.append('dkms')
 
         # plus all direct reverse dependencies of its binaries which have
