@@ -207,6 +207,11 @@ class AutoPackageTest(object):
                         tests.append((rdep_src, rdep_src_info[VERSION]))
                         reported_pkgs.add(rdep_src)
 
+        # Hardcode linux → lxc trigger until we get a more flexible
+        # implementation: https://bugs.debian.org/779559
+        if src == 'linux' and 'lxc' not in reported_pkgs:
+            tests.append(('lxc', self.britney.sources['testing']['lxc'][VERSION]))
+
         tests.sort(key=lambda s_v: s_v[0])
         return tests
 

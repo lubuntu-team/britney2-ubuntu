@@ -1129,6 +1129,16 @@ lightgreen 1 i386 green 3
              'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})
             })
 
+    def test_kernel_triggers_lxc(self):
+        '''LXC test gets triggered by kernel uploads'''
+
+        self.data.add('lxc', False, {'Testsuite-Triggers': 'linux-libc-dev'},
+                      testsuite='autopkgtest')
+
+        self.do_test(
+            [('linux-libc-dev', {'Source': 'linux'}, None)],
+            {'linux': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
+
     def test_disable_adt(self):
         '''Run without autopkgtest requests'''
 
