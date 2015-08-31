@@ -464,8 +464,16 @@ class AutoPackageTest(object):
 
         def _arches(verinfo):
             res = set()
-            for v, archinfo in verinfo.items():
+            for archinfo in verinfo.values():
                 res.update(archinfo.keys())
+            return res
+
+        def _trigsources(verinfo):
+            res = set()
+            for archinfo in verinfo.values():
+                for triggers in archinfo.values():
+                    for (t, v) in triggers:
+                        res.add(t)
             return res
 
         if amqp_url.startswith('amqp://'):
@@ -476,13 +484,15 @@ class AutoPackageTest(object):
                     with kombu.Producer(conn, routing_key=arch_queues[arch], auto_declare=False) as p:
                         for pkg, verinfo in self.requested_tests.items():
                             if arch in _arches(verinfo):
-                                p.publish(pkg)
+                                params = {'triggers': sorted(_trigsources(verinfo))}
+                                p.publish(pkg + '\n' + json.dumps(params))
         elif amqp_url.startswith('file://'):
             # in testing mode, adt_amqp will be a file:// URL
             with open(amqp_url[7:], 'a') as f:
                 for pkg, verinfo in self.requested_tests.items():
                     for arch in _arches(verinfo):
-                        f.write('%s:%s\n' % (arch_queues[arch], pkg))
+                        params = {'triggers': sorted(_trigsources(verinfo))}
+                        f.write('%s:%s %s\n' % (arch_queues[arch], pkg, json.dumps(params)))
         else:
             self.log_error('Unknown ADT_AMQP schema in %s' %
                            self.britney.options.adt_amqp)
