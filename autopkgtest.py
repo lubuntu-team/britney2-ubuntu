@@ -462,12 +462,23 @@ class AutoPackageTest(object):
             return res
 
         def _trigsources(verinfo):
-            res = set()
+            '''Calculate the triggers for a given verinfo map
+
+            verinfo is ver -> arch -> {(triggering-src1, ver1), ...}, i. e. an
+            entry of self.requested_tests[arch]
+
+            Return pair of ({kernel_trigger1, ...}, {nonkernel_trigger1, ...}) sets.
+            '''
+            kernel_triggers = set()
+            nonkernel_triggers = set()
             for archinfo in verinfo.values():
                 for triggers in archinfo.values():
                     for (t, v) in triggers:
-                        res.add(t)
-            return res
+                        if t.startswith('linux-meta'):
+                            kernel_triggers.add(t)
+                        else:
+                            nonkernel_triggers.add(t)
+            return (kernel_triggers, nonkernel_triggers)
 
         # build per-queue request strings for new test requests
         # TODO: Once we support version constraints in AMQP requests, add them
@@ -477,8 +488,17 @@ class AutoPackageTest(object):
             requests = []
             for pkg, verinfo in self.requested_tests.items():
                 if arch in _arches(verinfo):
-                    params = {'triggers': sorted(_trigsources(verinfo))}
-                    requests.append((pkg, json.dumps(params)))
+                    # if a package gets triggered by several sources, we can
+                    # run just one test for all triggers; but for proposed
+                    # kernels we want to run a separate test for each, so that
+                    # the test runs under that particular kernel
+                    kernel_triggers, other_triggers = _trigsources(verinfo)
+                    for kt in sorted(kernel_triggers):
+                        params = {'triggers': [kt]}
+                        requests.append((pkg, json.dumps(params)))
+                    if other_triggers:
+                        params = {'triggers': sorted(other_triggers)}
+                        requests.append((pkg, json.dumps(params)))
             arch_queues[arch] = ('debci-%s-%s' % (self.series, arch), requests)
 
         amqp_url = self.britney.options.adt_amqp

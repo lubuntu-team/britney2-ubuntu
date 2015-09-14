@@ -1111,6 +1111,22 @@ lightgreen 1 i386 green 3
              'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})
             })
 
+        # one separate test should be triggered for each kernel
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:fancy {"triggers": ["linux-meta"]}',
+                 'debci-series-amd64:fancy {"triggers": ["linux-meta"]}',
+                 'debci-series-i386:fancy {"triggers": ["linux-meta-lts-grumpy"]}',
+                 'debci-series-amd64:fancy {"triggers": ["linux-meta-lts-grumpy"]}']))
+
+        # ... and that they get recorded as pending
+        expected_pending = '''fancy 1 amd64 linux-meta 1
+fancy 1 amd64 linux-meta-lts-grumpy 1
+fancy 1 i386 linux-meta 1
+fancy 1 i386 linux-meta-lts-grumpy 1
+'''
+        self.assertEqual(self.pending_requests, expected_pending)
+
     def test_kernel_triggers_lxc(self):
         '''LXC test gets triggered by kernel uploads'''
 
