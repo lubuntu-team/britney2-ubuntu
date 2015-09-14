@@ -139,6 +139,7 @@ class AutoPkgTestSwiftServer:
         os.kill(self.server_pid, 15)
         os.waitpid(self.server_pid, 0)
         self.server_pid = None
+        self.log.close()
 
 if __name__ == '__main__':
     srv = AutoPkgTestSwiftServer()
