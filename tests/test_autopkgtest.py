@@ -1130,12 +1130,12 @@ fancy 1 i386 linux-meta-lts-grumpy 1
     def test_kernel_triggers_lxc(self):
         '''LXC test gets triggered by kernel uploads'''
 
-        self.data.add('lxc', False, {'Testsuite-Triggers': 'linux-libc-dev'},
+        self.data.add('lxc', False, {'Testsuite-Triggers': 'linux-generic'},
                       testsuite='autopkgtest')
 
         self.do_test(
-            [('linux-libc-dev', {'Source': 'linux'}, None)],
-            {'linux': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
+            [('linux-generic', {'Source': 'linux-meta'}, None)],
+            {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
 
     def test_disable_adt(self):
         '''Run without autopkgtest requests'''

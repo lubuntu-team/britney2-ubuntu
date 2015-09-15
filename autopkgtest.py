@@ -209,8 +209,12 @@ class AutoPackageTest(object):
 
         # Hardcode linux → lxc trigger until we get a more flexible
         # implementation: https://bugs.debian.org/779559
-        if src == 'linux' and 'lxc' not in reported_pkgs:
-            tests.append(('lxc', self.britney.sources['testing']['lxc'][VERSION]))
+        if src.startswith('linux-meta') and 'lxc' not in reported_pkgs:
+            try:
+                tests.append(('lxc', self.britney.sources['testing']['lxc'][VERSION]))
+            except KeyError:
+                # no lxc package in that series? *shrug*, then not
+                pass
 
         tests.sort(key=lambda s_v: s_v[0])
         return tests
