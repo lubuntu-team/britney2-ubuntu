@@ -4,6 +4,7 @@
 import os
 import sys
 import argparse
+import json
 
 import kombu
 
@@ -22,6 +23,9 @@ def parse_args():
     parser.add_argument('-a', '--architecture', action='append', default=[],
                         help='Only run test(s) on given architecture name(s). '
                         'Can be specified multiple times (default: all).')
+    parser.add_argument('--trigger', action='append', default=[],
+                        help='Add triggering package to request. '
+                        'Can be specified multiple times.')
     parser.add_argument('package', nargs='+',
                         help='Source package name(s) whose tests to run.')
     return parser.parse_args()
@@ -45,6 +49,11 @@ if __name__ == '__main__':
     if not args.architecture:
         args.architecture = config.adt_arches.split()
 
+    if args.trigger:
+        params = '\n' + json.dumps({'triggers': args.trigger})
+    else:
+        params = ''
+
     with kombu.Connection(config.adt_amqp) as conn:
         for arch in args.architecture:
             # don't use SimpleQueue here as it always declares queues;
@@ -52,4 +61,4 @@ if __name__ == '__main__':
             with kombu.Producer(conn, routing_key='debci-%s-%s' % (args.series, arch),
                                 auto_declare=False) as p:
                 for pkg in args.package:
-                    p.publish(pkg)
+                    p.publish(pkg + params)
