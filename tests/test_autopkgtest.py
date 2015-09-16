@@ -59,7 +59,6 @@ class TestAutoPkgTest(TestBase):
         self.data.add('blue', False, {'Depends': 'libc6 (>= 0.9)',
                                       'Conflicts': 'green'},
                       testsuite='specialtest')
-        self.data.add('justdata', False, {'Architecture': 'all'})
 
         # create mock Swift server (but don't start it yet, as tests first need
         # to poke in results)

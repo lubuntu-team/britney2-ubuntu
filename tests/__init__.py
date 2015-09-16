@@ -78,7 +78,7 @@ class TestData:
         assert (name not in self.added_binaries[unstable])
         self.added_binaries[unstable].add(name)
 
-        fields.setdefault('Architecture', architectures[0])
+        fields.setdefault('Architecture', 'all')
         fields.setdefault('Version', '1')
         fields.setdefault('Priority', 'optional')
         fields.setdefault('Section', 'devel')
