@@ -162,6 +162,20 @@ class AutoPackageTest(object):
 
         tests = []
 
+        # gcc-* triggers tons of tests via libgcc1, but this is mostly in vain:
+        # gcc already tests itself during build, and it is being used from
+        # -proposed, so holding it back on a dozen unrelated test failures
+        # serves no purpose. Just check some key packages which actually use
+        # gcc during the test, and libreoffice as an example for a libgcc user.
+        if src.startswith('gcc-'):
+            for test in ['binutils', 'fglrx-installer', 'libreoffice', 'linux']:
+                try:
+                    tests.append((test, self.britney.sources['testing'][test][VERSION]))
+                except KeyError:
+                    # no package in that series? *shrug*, then not (mostly for testing)
+                    pass
+            return tests
+
         srcinfo = sources_info[src]
         # we want to test the package itself, if it still has a test in
         # unstable

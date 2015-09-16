@@ -1137,6 +1137,19 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             [('linux-generic', {'Source': 'linux-meta'}, None)],
             {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
 
+    def test_gcc(self):
+        '''gcc only triggers some key packages'''
+
+        self.data.add('binutils', False, {}, testsuite='autopkgtest')
+        self.data.add('linux', False, {}, testsuite='autopkgtest')
+        self.data.add('notme', False, {'Depends': 'libgcc1'}, testsuite='autopkgtest')
+
+        exc = self.do_test(
+            [('libgcc1', {'Source': 'gcc-5', 'Version': '2'}, None)],
+            {'gcc-5': (False, {'binutils 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'linux 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})[1]
+        self.assertNotIn('notme 1', exc['gcc-5']['tests']['autopkgtest'])
+
     def test_disable_adt(self):
         '''Run without autopkgtest requests'''
 
