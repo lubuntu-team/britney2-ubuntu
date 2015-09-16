@@ -388,6 +388,59 @@ lightgreen 1 i386 green 2
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
 
+    def test_multi_rdepends_arch_specific(self):
+        '''Multiple reverse dependencies with arch specific tests'''
+
+        self.data.add('green64', False, {'Depends': 'libc6 (>= 0.9), libgreen1',
+                                         'Architecture': 'amd64'},
+                      testsuite='autopkgtest')
+
+        # first run requests tests and marks them as pending
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'green64 1': {'amd64': 'RUNNING'},
+                              })
+            })
+
+        self.assertIn('green64 1 amd64', self.pending_requests)
+        self.assertNotIn('green64 1 i386', self.pending_requests)
+
+        # second run collects the results
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
+            # version in testing fails
+            'series/i386/g/green/20150101_020000@': (4, 'green 1'),
+            'series/amd64/g/green/20150101_020000@': (4, 'green 1'),
+            # version in unstable succeeds
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+            # only amd64 result for green64
+            'series/amd64/g/green64/20150101_100200@': (0, 'green64 1'),
+        }})
+
+        out = self.do_test(
+            [],
+            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'lightgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'green64 1': {'amd64': 'PASS'},
+                             })
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]}
+        )[0]
+
+        # all tests ran, there should be no more pending ones
+        self.assertEqual(self.pending_requests, '')
+
+        # not expecting any failures to retrieve from swift
+        self.assertNotIn('Failure', out, out)
+
     def test_unbuilt(self):
         '''Unbuilt package should not trigger tests or get considered'''
 

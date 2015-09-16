@@ -150,13 +150,11 @@ class AutoPackageTest(object):
                 return True
         return False
 
-    def tests_for_source(self, src, ver):
-        '''Iterate over all tests that should be run for given source'''
+    def tests_for_source(self, src, ver, arch):
+        '''Iterate over all tests that should be run for given source and arch'''
 
         sources_info = self.britney.sources['unstable']
-        # FIXME: For now assume that amd64 has all binaries that we are
-        # interested in for reverse dependency checking
-        binaries_info = self.britney.binaries['unstable']['amd64'][0]
+        binaries_info = self.britney.binaries['unstable'][arch][0]
 
         reported_pkgs = set()
 
@@ -460,8 +458,8 @@ class AutoPackageTest(object):
         self.log_verbose('Requested autopkgtests for %s, exclusions: %s' %
                          (['%s/%s' % i for i in packages], str(self.excludes)))
         for src, ver in packages:
-            for (testsrc, testver) in self.tests_for_source(src, ver):
-                for arch in self.britney.options.adt_arches.split():
+            for arch in self.britney.options.adt_arches.split():
+                for (testsrc, testver) in self.tests_for_source(src, ver, arch):
                     self.add_test_request(testsrc, testver, arch, src, ver)
 
         if self.britney.options.verbose:
@@ -573,12 +571,13 @@ class AutoPackageTest(object):
         '''Return test results for triggering package
 
         Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING)
-        iterator for all package tests that got triggered by trigsrc/trigver.
+        iterable for all package tests that got triggered by trigsrc/trigver.
         '''
-        for testsrc, testver in self.tests_for_source(trigsrc, trigver):
-            passed = True
-            arch_status = {}
-            for arch in self.britney.options.adt_arches.split():
+        # (src, ver) -> arch -> ALWAYSFAIL|PASS|FAIL|RUNNING
+        pkg_arch_result = {}
+
+        for arch in self.britney.options.adt_arches.split():
+            for testsrc, testver in self.tests_for_source(trigsrc, trigver, arch):
                 try:
                     (_, ver_map, ever_passed) = self.test_results[testsrc][arch]
 
@@ -597,20 +596,18 @@ class AutoPackageTest(object):
                     if (trigsrc, trigver) not in triggers and [trigsrc, trigver] not in triggers:
                         raise KeyError('No result for trigger %s/%s yet' % (trigsrc, trigver))
                     if status:
-                        arch_status[arch] = 'PASS'
+                        result = 'PASS'
                     else:
                         # test failed, check ever_passed flag for that src/arch
                         if ever_passed:
-                            arch_status[arch] = 'REGRESSION'
-                            passed = False
+                            result = 'REGRESSION'
                         else:
-                            arch_status[arch] = 'ALWAYSFAIL'
+                            result = 'ALWAYSFAIL'
                 except KeyError:
                     # no result for testsrc/testver/arch; still running?
                     try:
                         self.pending_tests[testsrc][testver][arch]
-                        arch_status[arch] = 'RUNNING'
-                        passed = False
+                        result = 'RUNNING'
                     except KeyError:
                         # ignore if adt or swift results are disabled,
                         # otherwise this is unexpected
@@ -621,8 +618,9 @@ class AutoPackageTest(object):
                                        (testsrc, testver, arch, trigsrc, trigver))
                         continue
 
-            # disabled or ignored?
-            if not arch_status:
-                continue
+                pkg_arch_result.setdefault((testsrc, testver), {})[arch] = result
 
-            yield (passed, testsrc, testver, arch_status)
+        for ((testsrc, testver), arch_results) in pkg_arch_result.items():
+            r = arch_results.values()
+            passed = 'REGRESSION' not in r and 'RUNNING' not in r
+            yield (passed, testsrc, testver, arch_results)
