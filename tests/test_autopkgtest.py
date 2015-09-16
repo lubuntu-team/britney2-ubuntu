@@ -405,6 +405,16 @@ lightgreen 1 i386 green 2
                               })
             })
 
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:green {"triggers": ["green"]}',
+                 'debci-series-amd64:green {"triggers": ["green"]}',
+                 'debci-series-i386:lightgreen {"triggers": ["green"]}',
+                 'debci-series-amd64:lightgreen {"triggers": ["green"]}',
+                 'debci-series-i386:darkgreen {"triggers": ["green"]}',
+                 'debci-series-amd64:darkgreen {"triggers": ["green"]}',
+                 'debci-series-amd64:green64 {"triggers": ["green"]}']))
+
         self.assertIn('green64 1 amd64', self.pending_requests)
         self.assertNotIn('green64 1 i386', self.pending_requests)
 
@@ -436,6 +446,7 @@ lightgreen 1 i386 green 2
         )[0]
 
         # all tests ran, there should be no more pending ones
+        self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
 
         # not expecting any failures to retrieve from swift
@@ -1157,10 +1168,12 @@ lightgreen 1 i386 green 3
 
         self.do_test(
             [('linux-image-generic', {'Source': 'linux-meta'}, None),
-             ('linux-image-grumpy-generic', {'Source': 'linux-meta-lts-grumpy'}, None)
+             ('linux-image-grumpy-generic', {'Source': 'linux-meta-lts-grumpy'}, None),
+             ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
             ],
             {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
-             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})
+             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
+             'linux-meta-64only': (False, {'fancy 1': {'amd64': 'RUNNING'}}),
             })
 
         # one separate test should be triggered for each kernel
@@ -1169,10 +1182,12 @@ lightgreen 1 i386 green 3
             set(['debci-series-i386:fancy {"triggers": ["linux-meta"]}',
                  'debci-series-amd64:fancy {"triggers": ["linux-meta"]}',
                  'debci-series-i386:fancy {"triggers": ["linux-meta-lts-grumpy"]}',
-                 'debci-series-amd64:fancy {"triggers": ["linux-meta-lts-grumpy"]}']))
+                 'debci-series-amd64:fancy {"triggers": ["linux-meta-lts-grumpy"]}',
+                 'debci-series-amd64:fancy {"triggers": ["linux-meta-64only"]}']))
 
         # ... and that they get recorded as pending
         expected_pending = '''fancy 1 amd64 linux-meta 1
+fancy 1 amd64 linux-meta-64only 1
 fancy 1 amd64 linux-meta-lts-grumpy 1
 fancy 1 i386 linux-meta 1
 fancy 1 i386 linux-meta-lts-grumpy 1

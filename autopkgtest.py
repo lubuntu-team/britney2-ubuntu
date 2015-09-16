@@ -186,7 +186,11 @@ class AutoPackageTest(object):
         # linux-meta* builds a "dkms" binary as well. With that we ensure that we
         # don't regress DKMS drivers with new kernel versions.
         if src.startswith('linux-meta'):
-            extra_bins.append('dkms')
+            # does this have any image on this arch?
+            for b in srcinfo[BINARIES]:
+                p, a = b.split('/', 1)
+                if a == arch and '-image' in p:
+                    extra_bins.append('dkms')
 
         # plus all direct reverse dependencies of its binaries which have
         # an autopkgtest
@@ -195,7 +199,7 @@ class AutoPackageTest(object):
             try:
                 rdeps = binaries_info[binary][RDEPENDS]
             except KeyError:
-                self.log_verbose('Ignoring nonexistant binary %s (FTBFS/NBS)?' % binary)
+                self.log_verbose('Ignoring nonexistant binary %s on %s (FTBFS/NBS)?' % (binary, arch))
                 continue
             for rdep in rdeps:
                 rdep_src = binaries_info[rdep][SOURCE]
@@ -477,7 +481,7 @@ class AutoPackageTest(object):
                 res.update(archinfo.keys())
             return res
 
-        def _trigsources(verinfo):
+        def _trigsources(verinfo, arch):
             '''Calculate the triggers for a given verinfo map
 
             verinfo is ver -> arch -> {(triggering-src1, ver1), ...}, i. e. an
@@ -488,12 +492,11 @@ class AutoPackageTest(object):
             kernel_triggers = set()
             nonkernel_triggers = set()
             for archinfo in verinfo.values():
-                for triggers in archinfo.values():
-                    for (t, v) in triggers:
-                        if t.startswith('linux-meta'):
-                            kernel_triggers.add(t)
-                        else:
-                            nonkernel_triggers.add(t)
+                for (t, v) in archinfo[arch]:
+                    if t.startswith('linux-meta'):
+                        kernel_triggers.add(t)
+                    else:
+                        nonkernel_triggers.add(t)
             return (kernel_triggers, nonkernel_triggers)
 
         # build per-queue request strings for new test requests
@@ -508,7 +511,7 @@ class AutoPackageTest(object):
                     # run just one test for all triggers; but for proposed
                     # kernels we want to run a separate test for each, so that
                     # the test runs under that particular kernel
-                    kernel_triggers, other_triggers = _trigsources(verinfo)
+                    kernel_triggers, other_triggers = _trigsources(verinfo, arch)
                     for kt in sorted(kernel_triggers):
                         params = {'triggers': [kt]}
                         requests.append((pkg, json.dumps(params)))
