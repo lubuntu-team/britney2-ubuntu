@@ -386,12 +386,11 @@ class AutoPackageTest(object):
                 srcver = tar.extractfile('testpkg-version').read().decode().strip()
                 (ressrc, ver) = srcver.split()
         except (KeyError, ValueError, tarfile.TarError) as e:
-            self.log_error('%s is damaged: %s' % (url, str(e)))
-            # we can't just ignore this, as it would leave an orphaned request
-            # in pending.txt; consider it tmpfail
-            exitcode = 16
-            ressrc = src
-            ver = None
+            self.log_error('%s is damaged, ignoring: %s' % (url, str(e)))
+            # ignore this; this will leave an orphaned request in pending.txt
+            # and thus require manual retries after fixing the tmpfail, but we
+            # can't just blindly attribute it to some pending test.
+            return
 
         if src != ressrc:
             self.log_error('%s is a result for package %s, but expected package %s' %
@@ -408,9 +407,6 @@ class AutoPackageTest(object):
         # remove matching test requests, remember triggers
         satisfied_triggers = set()
         for pending_ver, pending_archinfo in self.pending_tests.get(src, {}).copy().items():
-            # if we encounter a tmpfail above, attribute it to the pending test
-            if ver is None:
-                ver = pending_ver
             # don't consider newer requested versions
             if apt_pkg.version_compare(pending_ver, ver) <= 0:
                 try:

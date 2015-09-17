@@ -985,9 +985,9 @@ lightgreen 1 i386 green 3
         self.assertEqual(self.pending_requests, '')
 
     def test_tmpfail(self):
-        '''tmpfail result is considered a failure'''
+        '''tmpfail results'''
 
-        # one tmpfail result without testpkg-version
+        # one tmpfail result without testpkg-version, should be ignored
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
             'series/i386/l/lightgreen/20150101_100101@': (16, None),
@@ -997,8 +997,8 @@ lightgreen 1 i386 green 3
 
         self.do_test(
             [('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 1)'}, 'autopkgtest')],
-            {'lightgreen': (False, {'lightgreen 2': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'}})})
-        self.assertEqual(self.pending_requests, '')
+            {'lightgreen': (False, {'lightgreen 2': {'amd64': 'REGRESSION', 'i386': 'RUNNING'}})})
+        self.assertEqual(self.pending_requests, 'lightgreen 2 i386 lightgreen 2\n')
 
         # one more tmpfail result, should not confuse britney with None version
         self.swift.set_results({'autopkgtest-series': {
@@ -1006,7 +1006,7 @@ lightgreen 1 i386 green 3
         }})
         self.do_test(
             [],
-            {'lightgreen': (False, {'lightgreen 2': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'}})})
+            {'lightgreen': (False, {'lightgreen 2': {'amd64': 'REGRESSION', 'i386': 'RUNNING'}})})
         with open(os.path.join(self.data.path, 'data/series-proposed/autopkgtest/results.cache')) as f:
             contents = f.read()
         self.assertNotIn('null', contents)
