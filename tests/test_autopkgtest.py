@@ -170,12 +170,12 @@ class TestAutoPkgTest(TestBase):
         # triggered
         self.assertEqual(
             self.amqp_requests,
-            set(['debci-series-i386:green {"triggers": ["green"]}',
-                 'debci-series-amd64:green {"triggers": ["green"]}',
-                 'debci-series-i386:lightgreen {"triggers": ["green"]}',
-                 'debci-series-amd64:lightgreen {"triggers": ["green"]}',
-                 'debci-series-i386:darkgreen {"triggers": ["green"]}',
-                 'debci-series-amd64:darkgreen {"triggers": ["green"]}']))
+            set(['debci-series-i386:green {"triggers": ["green/2"]}',
+                 'debci-series-amd64:green {"triggers": ["green/2"]}',
+                 'debci-series-i386:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-i386:darkgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:darkgreen {"triggers": ["green/2"]}']))
 
         # ... and that they get recorded as pending
         expected_pending = '''darkgreen 1 amd64 green 2
@@ -407,13 +407,13 @@ lightgreen 1 i386 green 2
 
         self.assertEqual(
             self.amqp_requests,
-            set(['debci-series-i386:green {"triggers": ["green"]}',
-                 'debci-series-amd64:green {"triggers": ["green"]}',
-                 'debci-series-i386:lightgreen {"triggers": ["green"]}',
-                 'debci-series-amd64:lightgreen {"triggers": ["green"]}',
-                 'debci-series-i386:darkgreen {"triggers": ["green"]}',
-                 'debci-series-amd64:darkgreen {"triggers": ["green"]}',
-                 'debci-series-amd64:green64 {"triggers": ["green"]}']))
+            set(['debci-series-i386:green {"triggers": ["green/2"]}',
+                 'debci-series-amd64:green {"triggers": ["green/2"]}',
+                 'debci-series-i386:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-i386:darkgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:darkgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:green64 {"triggers": ["green/2"]}']))
 
         self.assertIn('green64 1 amd64', self.pending_requests)
         self.assertNotIn('green64 1 i386', self.pending_requests)
@@ -530,8 +530,8 @@ lightgreen 1 i386 green 2
             }
         )
         self.assertEqual(self.amqp_requests,
-                         set(['debci-series-amd64:lightgreen {"triggers": ["lightgreen"]}',
-                              'debci-series-i386:lightgreen {"triggers": ["lightgreen"]}']))
+                         set(['debci-series-amd64:lightgreen {"triggers": ["lightgreen/2"]}',
+                              'debci-series-i386:lightgreen {"triggers": ["lightgreen/2"]}']))
         self.assertEqual(self.pending_requests, '')
 
     def test_rdepends_unbuilt_unstable_only(self):
@@ -793,12 +793,12 @@ lightgreen 1 i386 green 2
         # triggered; lightgreen should be triggered only once
         self.assertEqual(
             self.amqp_requests,
-            set(['debci-series-i386:green {"triggers": ["green"]}',
-                 'debci-series-amd64:green {"triggers": ["green"]}',
-                 'debci-series-i386:lightgreen {"triggers": ["green", "lightgreen"]}',
-                 'debci-series-amd64:lightgreen {"triggers": ["green", "lightgreen"]}',
-                 'debci-series-i386:darkgreen {"triggers": ["green"]}',
-                 'debci-series-amd64:darkgreen {"triggers": ["green"]}']))
+            set(['debci-series-i386:green {"triggers": ["green/2"]}',
+                 'debci-series-amd64:green {"triggers": ["green/2"]}',
+                 'debci-series-i386:lightgreen {"triggers": ["green/2", "lightgreen/2"]}',
+                 'debci-series-amd64:lightgreen {"triggers": ["green/2", "lightgreen/2"]}',
+                 'debci-series-i386:darkgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:darkgreen {"triggers": ["green/2"]}']))
 
         # ... and that they get recorded as pending
         expected_pending = '''darkgreen 1 amd64 green 2
@@ -872,8 +872,8 @@ newgreen 2 i386 newgreen 2
 
         self.assertEqual(
             self.amqp_requests,
-            set(['debci-series-i386:darkgreen {"triggers": ["darkgreen"]}',
-                 'debci-series-amd64:darkgreen {"triggers": ["darkgreen"]}']))
+            set(['debci-series-i386:darkgreen {"triggers": ["darkgreen/2"]}',
+                 'debci-series-amd64:darkgreen {"triggers": ["darkgreen/2"]}']))
         self.assertEqual(self.pending_requests,
                          'darkgreen 2 amd64 darkgreen 2\ndarkgreen 2 i386 darkgreen 2\n')
 
@@ -897,8 +897,8 @@ newgreen 2 i386 newgreen 2
             {'darkgreen': (False, {'darkgreen 3': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
         self.assertEqual(
             self.amqp_requests,
-            set(['debci-series-i386:darkgreen {"triggers": ["darkgreen"]}',
-                 'debci-series-amd64:darkgreen {"triggers": ["darkgreen"]}']))
+            set(['debci-series-i386:darkgreen {"triggers": ["darkgreen/3"]}',
+                 'debci-series-amd64:darkgreen {"triggers": ["darkgreen/3"]}']))
         self.assertEqual(self.pending_requests,
                          'darkgreen 3 amd64 darkgreen 3\ndarkgreen 3 i386 darkgreen 3\n')
 
@@ -1121,8 +1121,8 @@ lightgreen 1 i386 green 3
         # should not trigger new requests
         self.assertEqual(self.pending_requests, '')
         self.assertEqual(self.amqp_requests,
-                         set(['debci-series-amd64:lightgreen {"triggers": ["green"]}',
-                              'debci-series-i386:lightgreen {"triggers": ["green"]}']))
+                         set(['debci-series-amd64:lightgreen {"triggers": ["green/2"]}',
+                              'debci-series-i386:lightgreen {"triggers": ["green/2"]}']))
 
         # but the next run should not trigger anything new
         self.do_test(
@@ -1179,11 +1179,11 @@ lightgreen 1 i386 green 3
         # one separate test should be triggered for each kernel
         self.assertEqual(
             self.amqp_requests,
-            set(['debci-series-i386:fancy {"triggers": ["linux-meta"]}',
-                 'debci-series-amd64:fancy {"triggers": ["linux-meta"]}',
-                 'debci-series-i386:fancy {"triggers": ["linux-meta-lts-grumpy"]}',
-                 'debci-series-amd64:fancy {"triggers": ["linux-meta-lts-grumpy"]}',
-                 'debci-series-amd64:fancy {"triggers": ["linux-meta-64only"]}']))
+            set(['debci-series-i386:fancy {"triggers": ["linux-meta/1"]}',
+                 'debci-series-amd64:fancy {"triggers": ["linux-meta/1"]}',
+                 'debci-series-i386:fancy {"triggers": ["linux-meta-lts-grumpy/1"]}',
+                 'debci-series-amd64:fancy {"triggers": ["linux-meta-lts-grumpy/1"]}',
+                 'debci-series-amd64:fancy {"triggers": ["linux-meta-64only/1"]}']))
 
         # ... and that they get recorded as pending
         expected_pending = '''fancy 1 amd64 linux-meta 1

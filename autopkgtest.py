@@ -494,9 +494,9 @@ class AutoPackageTest(object):
             for archinfo in verinfo.values():
                 for (t, v) in archinfo[arch]:
                     if t.startswith('linux-meta'):
-                        kernel_triggers.add(t)
+                        kernel_triggers.add(t + '/' + v)
                     else:
-                        nonkernel_triggers.add(t)
+                        nonkernel_triggers.add(t + '/' + v)
             return (kernel_triggers, nonkernel_triggers)
 
         # build per-queue request strings for new test requests
