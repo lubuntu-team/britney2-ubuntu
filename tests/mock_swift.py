@@ -8,6 +8,7 @@ import sys
 import socket
 import time
 import tempfile
+import json
 
 try:
     from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -25,7 +26,7 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
     /container/path/result.tar) or listing the container contents
     (/container/?prefix=foo&delimiter=@&marker=foo/bar).
     '''
-    # map container -> result.tar path -> (exitcode, testpkg-version)
+    # map container -> result.tar path -> (exitcode, testpkg-version[, testinfo])
     results = {}
 
     def do_GET(self):
@@ -43,7 +44,12 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
             self.send_error(404, 'File not found (only result.tar supported)')
             return
         try:
-            (exitcode, pkgver) = self.results[container][os.path.dirname(path)]
+            fields = self.results[container][os.path.dirname(path)]
+            try:
+                (exitcode, pkgver, testinfo) = fields
+            except ValueError:
+                (exitcode, pkgver) = fields
+                testinfo = None
         except KeyError:
             self.send_error(404, 'File not found')
             return
@@ -65,6 +71,13 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
                 ti = tarfile.TarInfo('testpkg-version')
                 ti.size = len(contents)
                 results.addfile(ti, io.BytesIO(contents))
+            # add testinfo.json
+            if testinfo:
+                contents = json.dumps(testinfo).encode()
+                ti = tarfile.TarInfo('testinfo.json')
+                ti.size = len(contents)
+                results.addfile(ti, io.BytesIO(contents))
+
         self.wfile.write(tar.getvalue())
 
     def list_container(self, container, query):
@@ -107,7 +120,7 @@ class AutoPkgTestSwiftServer:
         '''Set served results.
 
         results is a map: container -> result.tar path ->
-           (exitcode, testpkg-version)
+           (exitcode, testpkg-version, testinfo)
         '''
         SwiftHTTPRequestHandler.results = results
 
@@ -145,7 +158,7 @@ if __name__ == '__main__':
     srv = AutoPkgTestSwiftServer()
     srv.set_results({'autopkgtest-series': {
         'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-        'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        'series/i386/g/green/20150101_100000@': (0, 'green 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green']}),
         'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
         'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 2'),
         'series/i386/l/lightgreen/20150101_100102@': (0, 'lightgreen 3'),
