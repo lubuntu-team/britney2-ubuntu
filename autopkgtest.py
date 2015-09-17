@@ -555,8 +555,8 @@ class AutoPackageTest(object):
         # also update results for excuses whose tests failed, in case a
         # manual retry worked
         for (trigpkg, trigver) in packages:
-            if trigpkg not in self.pending_tests:
-                for (pkg, arch) in self.failed_tests_for_trigger(trigpkg, trigver):
+            for (pkg, arch) in self.failed_tests_for_trigger(trigpkg, trigver):
+                if arch not in self.pending_tests.get(trigpkg, {}).get(trigver, {}):
                     self.log_verbose('Checking for new results for failed %s on %s for trigger %s/%s' %
                                      (pkg, arch, trigpkg, trigver))
                     self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, (trigpkg, trigver))
