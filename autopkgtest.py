@@ -418,38 +418,39 @@ class AutoPackageTest(object):
 
         # remove matching test requests, remember triggers
         satisfied_triggers = set()
-        for pending_ver, pending_archinfo in self.pending_tests.get(src, {}).copy().items():
-            # don't consider newer requested versions
-            if apt_pkg.version_compare(pending_ver, ver) > 0:
-                continue
+        for request_map in [self.requested_tests, self.pending_tests]:
+            for pending_ver, pending_archinfo in request_map.get(src, {}).copy().items():
+                # don't consider newer requested versions
+                if apt_pkg.version_compare(pending_ver, ver) > 0:
+                    continue
 
-            if result_triggers:
-                # explicitly recording/retrieving test triggers is the
-                # preferred (and robust) way of matching results to pending
-                # requests
-                for result_trigger in result_triggers:
+                if result_triggers:
+                    # explicitly recording/retrieving test triggers is the
+                    # preferred (and robust) way of matching results to pending
+                    # requests
+                    for result_trigger in result_triggers:
+                        try:
+                            request_map[src][pending_ver][arch].remove(result_trigger)
+                            self.log_verbose('-> matches pending request %s/%s/%s for trigger %s' %
+                                             (src, pending_ver, arch, str(result_trigger)))
+                            satisfied_triggers.add(result_trigger)
+                        except (KeyError, ValueError):
+                            self.log_verbose('-> does not match any pending request for %s/%s/%s' %
+                                             (src, pending_ver, arch))
+                else:
+                    # ... but we still need to support results without
+                    # testinfo.json and recorded triggers until we stop caring about
+                    # existing wily and trusty results; match the latest result to all
+                    # triggers for src that have at least the requested version
                     try:
-                        self.pending_tests[src][pending_ver][arch].remove(result_trigger)
-                        self.log_verbose('-> matches pending request %s/%s/%s for trigger %s' %
-                                         (src, pending_ver, arch, str(result_trigger)))
-                        satisfied_triggers.add(result_trigger)
-                    except (KeyError, ValueError):
-                        self.log_verbose('-> does not match any pending request for %s/%s/%s' %
-                                         (src, pending_ver, arch))
-            else:
-                # ... but we still need to support results without
-                # testinfo.json and recorded triggers until we stop caring about
-                # existing wily and trusty results; match the latest result to all
-                # triggers for src that have at least the requested version
-                try:
-                    t = pending_archinfo[arch]
-                    self.log_verbose('-> matches pending request %s/%s for triggers %s' %
-                                     (src, pending_ver, str(t)))
-                    satisfied_triggers.update(t)
-                    del self.pending_tests[src][pending_ver][arch]
-                except KeyError:
-                    self.log_verbose('-> does not match any pending request for %s/%s' %
-                                     (src, pending_ver))
+                        t = pending_archinfo[arch]
+                        self.log_verbose('-> matches pending request %s/%s for triggers %s' %
+                                         (src, pending_ver, str(t)))
+                        satisfied_triggers.update(t)
+                        del request_map[src][pending_ver][arch]
+                    except KeyError:
+                        self.log_verbose('-> does not match any pending request for %s/%s' %
+                                         (src, pending_ver))
 
         # FIXME: this is a hack that mostly applies to re-running tests
         # manually without giving a trigger. Tests which don't get
@@ -581,10 +582,24 @@ class AutoPackageTest(object):
         # mark them as pending now
         self.update_pending_tests()
 
+    def collect_requested(self):
+        '''Update results from swift for all requested packages
+
+        This is normally redundant with collect(), but avoids actually
+        sending test requests if results are already available. This mostly
+        happens when you have to blow away results.cache and let it rebuild
+        from scratch.
+        '''
+        for pkg, verinfo in copy.deepcopy(self.requested_tests).items():
+            for archinfo in verinfo.values():
+                for arch in archinfo:
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch)
+
     def collect(self, packages):
-        # update results from swift for all packages that we are waiting
-        # for, and remove pending tests that we have results for on all
-        # arches
+        '''Update results from swift for all pending packages
+
+        Remove pending tests for which we have results.
+        '''
         for pkg, verinfo in copy.deepcopy(self.pending_tests).items():
             for archinfo in verinfo.values():
                 for arch in archinfo:

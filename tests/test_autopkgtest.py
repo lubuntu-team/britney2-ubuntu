@@ -365,7 +365,11 @@ lightgreen 1 i386 green 2
             {'green': [('old-version', '1'), ('new-version', '2')]}
         )[0]
 
+        # we already had all results before the run, so this should not trigger
+        # any new requests
+        self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
+
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
 
@@ -542,7 +546,7 @@ lightgreen 1 i386 green 2
             }
         )
 
-        self.assertEqual(len(self.amqp_requests), 6)
+        self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
 
         # next run should not trigger any new requests
@@ -551,14 +555,22 @@ lightgreen 1 i386 green 2
         self.assertEqual(self.pending_requests, '')
 
         # now lightgreen 2 gets built, should trigger a new test run
-        self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2'),
-            'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2'),
-        }})
         self.data.remove_all(True)
         self.do_test(
             [('libgreen1', {'Version': '1.1', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
              ('lightgreen', {'Version': '2'}, 'autopkgtest')],
+            {})
+        self.assertEqual(self.amqp_requests,
+                         set(['debci-series-amd64:lightgreen {"triggers": ["lightgreen/2"]}',
+                              'debci-series-i386:lightgreen {"triggers": ["lightgreen/2"]}']))
+
+        # next run collects the results
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2'),
+        }})
+        self.do_test(
+            [],
             {'green': (True, {'green 1.1': {'amd64': 'PASS', 'i386': 'PASS'},
                               # FIXME: expecting a lightgreen test here
                               # 'lightgreen 2': {'amd64': 'PASS', 'i386': 'PASS'},
@@ -570,9 +582,7 @@ lightgreen 1 i386 green 2
              'lightgreen': [('old-version', '1'), ('new-version', '2')],
             }
         )
-        self.assertEqual(self.amqp_requests,
-                         set(['debci-series-amd64:lightgreen {"triggers": ["lightgreen/2"]}',
-                              'debci-series-i386:lightgreen {"triggers": ["lightgreen/2"]}']))
+        self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
 
     def test_rdepends_unbuilt_unstable_only(self):
@@ -646,7 +656,7 @@ lightgreen 1 i386 green 2
                             ('excuses', 'lightgreen has no up-to-date binaries on any arch')]
             }
         )
-        self.assertEqual(len(self.amqp_requests), 6)
+        self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
 
         # lightgreen 2 stays unbuilt in britney, but we get a test result for it
@@ -896,7 +906,7 @@ newgreen 2 i386 newgreen 2
             },
             {'newgreen': [('old-version', '-'), ('new-version', '2')]})
 
-        self.assertEqual(len(self.amqp_requests), 6)
+        self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
 
     def test_result_from_older_version(self):
@@ -965,7 +975,7 @@ newgreen 2 i386 newgreen 2
                              }),
             })
 
-        self.assertEqual(len(self.amqp_requests), 6)
+        self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, '')
         self.data.remove_all(True)
 
@@ -1129,6 +1139,7 @@ lightgreen 1 i386 green 3
                               }),
             })
         self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.amqp_requests, set())
 
         # remove new lightgreen by resetting archive indexes, and re-adding
         # green
@@ -1161,9 +1172,7 @@ lightgreen 1 i386 green 3
 
         # should not trigger new requests
         self.assertEqual(self.pending_requests, '')
-        self.assertEqual(self.amqp_requests,
-                         set(['debci-series-amd64:lightgreen {"triggers": ["green/2"]}',
-                              'debci-series-i386:lightgreen {"triggers": ["green/2"]}']))
+        self.assertEqual(self.amqp_requests, set())
 
         # but the next run should not trigger anything new
         self.do_test(
