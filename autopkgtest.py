@@ -160,6 +160,16 @@ class AutoPackageTest(object):
 
         tests = []
 
+        # hack for vivid's gccgo-5
+        if src == 'gccgo-5':
+            for test in ['juju', 'juju-core', 'juju-mongodb', 'mongodb']:
+                try:
+                    tests.append((test, self.britney.sources['testing'][test][VERSION]))
+                except KeyError:
+                    # no package in that series? *shrug*, then not (mostly for testing)
+                    pass
+            return tests
+
         # gcc-* triggers tons of tests via libgcc1, but this is mostly in vain:
         # gcc already tests itself during build, and it is being used from
         # -proposed, so holding it back on a dozen unrelated test failures
