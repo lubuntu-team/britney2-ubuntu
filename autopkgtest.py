@@ -41,19 +41,6 @@ def srchash(src):
         return src[0]
 
 
-def merge_triggers(trigs1, trigs2):
-    '''Merge two (pkg, ver) trigger iterables
-
-    Return [(pkg, ver), ...] list with only the highest version for each
-    package.
-    '''
-    pkgvers = {}
-    for pkg, ver in itertools.chain(trigs1, trigs2):
-        if apt_pkg.version_compare(ver, pkgvers.setdefault(pkg, '0')) >= 0:
-            pkgvers[pkg] = ver
-    return list(pkgvers.items())
-
-
 def latest_item(ver_map, min_version=None):
     '''Return (ver, value) from version -> value map with latest version number
 
@@ -102,16 +89,16 @@ class AutoPackageTest(object):
             os.mkdir(self.test_state_dir)
         self.read_pending_tests()
 
-        # results map: src -> arch -> [latest_stamp, ver -> (passed, triggers), ever_passed]
-        # - "passed" is a bool
+        # results map: src -> arch -> [latest_stamp, ver -> trigger -> passed, ever_passed]
         # - It's tempting to just use a global "latest" time stamp, but due to
         #   swift's "eventual consistency" we might miss results with older time
         #   stamps from other packages that we don't see in the current run, but
         #   will in the next one. This doesn't hurt for older results of the same
         #   package.
-        # - triggers is a list of (source, version) pairs which unstable
-        #   packages triggered this test run. We need to track this to avoid
-        #   unnecessarily re-running tests.
+        # - trigger is "source/version" of an unstable package that triggered
+        #   this test run. We need to track this to avoid unnecessarily
+        #   re-running tests.
+        # - "passed" is a bool
         # - ever_passed is a bool whether there is any successful test of
         #   src/arch of any version. This is used for detecting "regression"
         #   vs. "always failed"
@@ -314,12 +301,13 @@ class AutoPackageTest(object):
         # check for existing results for both the requested and the current
         # unstable version: test runs might see newly built versions which we
         # didn't see in britney yet
-        pkg_arch_results = self.test_results.get(src, {}).get(arch, [None, {}, None])[1]
+        ver_trig_results = self.test_results.get(src, {}).get(arch, [None, {}, None])[1]
         unstable_ver = self.britney.sources['unstable'][src][VERSION]
         for result_ver in [ver, unstable_ver]:
-            if result_ver not in pkg_arch_results or apt_pkg.version_compare(result_ver, ver) < 0:
+            if result_ver not in ver_trig_results or apt_pkg.version_compare(result_ver, ver) < 0:
                 continue
-            for (tsrc, tver) in pkg_arch_results[result_ver][1]:
+            for trigger in ver_trig_results[result_ver]:
+                (tsrc, tver) = trigger.split('/', 1)
                 if tsrc == trigsrc and apt_pkg.version_compare(tver, trigver) >= 0:
                     self.log_verbose('There already is a result for %s/%s/%s triggered by %s/%s' %
                                      (src, result_ver, arch, tsrc, tver))
@@ -395,6 +383,11 @@ class AutoPackageTest(object):
                 exitcode = int(tar.extractfile('exitcode').read().strip())
                 srcver = tar.extractfile('testpkg-version').read().decode().strip()
                 (ressrc, ver) = srcver.split()
+                try:
+                    testinfo = json.loads(tar.extractfile('testinfo.json').read().decode())
+                except KeyError:
+                    self.log_error('warning: %s does not have a testinfo.json' % url)
+                    testinfo = {}
         except (KeyError, ValueError, tarfile.TarError) as e:
             self.log_error('%s is damaged, ignoring: %s' % (url, str(e)))
             # ignore this; this will leave an orphaned request in pending.txt
@@ -407,37 +400,78 @@ class AutoPackageTest(object):
                            (url, ressrc, src))
             return
 
+        # parse recorded triggers in test result
+        if 'custom_environment' in testinfo:
+            for e in testinfo['custom_environment']:
+                if e.startswith('ADT_TEST_TRIGGERS='):
+                    result_triggers = [tuple(i.split('/', 1)) for i in e.split('=', 1)[1].split() if '/' in i]
+                    break
+        else:
+            result_triggers = None
+
         stamp = os.path.basename(os.path.dirname(url))
         # allow some skipped tests, but nothing else
         passed = exitcode in [0, 2]
 
-        self.log_verbose('Fetched test result for %s/%s/%s %s: %s' % (
-            src, ver, arch, stamp, passed and 'pass' or 'fail'))
+        self.log_verbose('Fetched test result for %s/%s/%s %s (triggers: %s): %s' % (
+            src, ver, arch, stamp, result_triggers, passed and 'pass' or 'fail'))
 
         # remove matching test requests, remember triggers
         satisfied_triggers = set()
         for pending_ver, pending_archinfo in self.pending_tests.get(src, {}).copy().items():
             # don't consider newer requested versions
-            if apt_pkg.version_compare(pending_ver, ver) <= 0:
+            if apt_pkg.version_compare(pending_ver, ver) > 0:
+                continue
+
+            if result_triggers:
+                # explicitly recording/retrieving test triggers is the
+                # preferred (and robust) way of matching results to pending
+                # requests
+                for result_trigger in result_triggers:
+                    try:
+                        self.pending_tests[src][pending_ver][arch].remove(result_trigger)
+                        self.log_verbose('-> matches pending request %s/%s/%s for trigger %s' %
+                                         (src, pending_ver, arch, str(result_trigger)))
+                        satisfied_triggers.add(result_trigger)
+                    except (KeyError, ValueError):
+                        self.log_verbose('-> does not match any pending request for %s/%s/%s' %
+                                         (src, pending_ver, arch))
+            else:
+                # ... but we still need to support results without
+                # testinfo.json and recorded triggers until we stop caring about
+                # existing wily and trusty results; match the latest result to all
+                # triggers for src that have at least the requested version
                 try:
                     t = pending_archinfo[arch]
-                    self.log_verbose('-> matches pending request for triggers %s' % str(t))
+                    self.log_verbose('-> matches pending request %s/%s for triggers %s' %
+                                     (src, pending_ver, str(t)))
                     satisfied_triggers.update(t)
                     del self.pending_tests[src][pending_ver][arch]
                 except KeyError:
-                    self.log_error('-> does not match any pending request!')
-                    pass
+                    self.log_verbose('-> does not match any pending request for %s/%s' %
+                                     (src, pending_ver))
+
+        # FIXME: this is a hack that mostly applies to re-running tests
+        # manually without giving a trigger. Tests which don't get
+        # triggered by a particular kernel version are fine with that, so
+        # add some heuristic once we drop the above code.
         if trigger:
             satisfied_triggers.add(trigger)
 
         # add this result
         src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}, False])
-        if ver is not None:
-            if passed:
-                # update ever_passed field
-                src_arch_results[2] = True
-            src_arch_results[1][ver] = (passed, merge_triggers(
-                src_arch_results[1].get(ver, (None, []))[1], satisfied_triggers))
+        if passed:
+            # update ever_passed field
+            src_arch_results[2] = True
+        if satisfied_triggers:
+            for trig in satisfied_triggers:
+                src_arch_results[1].setdefault(ver, {})[trig[0] + '/' + trig[1]] = passed
+        else:
+            # this result did not match any triggers? then we are in backwards
+            # compat mode for results without recorded triggers; update all
+            # results
+            for trig in src_arch_results[1].setdefault(ver, {}):
+                src_arch_results[1][ver][trig] = passed
         # update latest_stamp
         if stamp > src_arch_results[0]:
             src_arch_results[0] = stamp
@@ -446,15 +480,12 @@ class AutoPackageTest(object):
         '''Return (src, arch) set for failed tests for given trigger pkg'''
 
         result = set()
+        trigger = trigsrc + '/' + trigver
         for src, srcinfo in self.test_results.items():
             for arch, (stamp, vermap, ever_passed) in srcinfo.items():
-                for ver, (passed, triggers) in vermap.items():
-                    if not passed:
-                        # triggers might contain tuples or lists (after loading
-                        # from json), so iterate/check manually
-                        for s, v in triggers:
-                            if trigsrc == s and trigver == v:
-                                result.add((src, arch))
+                for ver, trig_results in vermap.items():
+                    if trig_results.get(trigger) is False:
+                        result.add((src, arch))
         return result
 
     #
@@ -498,7 +529,7 @@ class AutoPackageTest(object):
             kernel_triggers = set()
             nonkernel_triggers = set()
             for archinfo in verinfo.values():
-                for (t, v) in archinfo[arch]:
+                for (t, v) in archinfo.get(arch, []):
                     if t.startswith('linux-meta'):
                         kernel_triggers.add(t + '/' + v)
                     else:
@@ -584,6 +615,7 @@ class AutoPackageTest(object):
         '''
         # (src, ver) -> arch -> ALWAYSFAIL|PASS|FAIL|RUNNING
         pkg_arch_result = {}
+        trigger = trigsrc + '/' + trigver
 
         for arch in self.britney.options.adt_arches.split():
             for testsrc, testver in self.tests_for_source(trigsrc, trigver, arch):
@@ -595,15 +627,13 @@ class AutoPackageTest(object):
                     # runs might see built versions which we didn't see in
                     # britney yet
                     try:
-                        (status, triggers) = ver_map[testver]
-                        if not status:
+                        trigger_results = ver_map[testver]
+                        if not trigger_results[trigger]:
                             raise KeyError
                     except KeyError:
-                        (testver, (status, triggers)) = latest_item(ver_map, testver)
+                        (testver, trigger_results) = latest_item(ver_map, testver)
 
-                    # triggers might contain tuples or lists
-                    if (trigsrc, trigver) not in triggers and [trigsrc, trigver] not in triggers:
-                        raise KeyError('No result for trigger %s/%s yet' % (trigsrc, trigver))
+                    status = trigger_results[trigger]
                     if status:
                         result = 'PASS'
                     else:
@@ -623,8 +653,8 @@ class AutoPackageTest(object):
                         if not hasattr(self.britney.options, 'adt_swift_url'):
                             continue
                         # FIXME: Ignore this error for now as it crashes britney, but investigate!
-                        self.log_error('FIXME: Result for %s/%s/%s (triggered by %s/%s) is neither known nor pending!' %
-                                       (testsrc, testver, arch, trigsrc, trigver))
+                        self.log_error('FIXME: Result for %s/%s/%s (triggered by %s) is neither known nor pending!' %
+                                       (testsrc, testver, arch, trigger))
                         continue
 
                 pkg_arch_result.setdefault((testsrc, testver), {})[arch] = result

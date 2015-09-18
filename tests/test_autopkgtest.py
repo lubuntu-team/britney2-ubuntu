@@ -103,7 +103,8 @@ class TestAutoPkgTest(TestBase):
             print('------- output -----\n%s\n' % out)
 
         for src, (is_candidate, testmap) in expect_status.items():
-            self.assertEqual(excuses_dict[src]['is-candidate'], is_candidate)
+            self.assertEqual(excuses_dict[src]['is-candidate'], is_candidate,
+                             src + ': ' + str(excuses_dict[src]))
             for testsrc, archmap in testmap.items():
                 for arch, status in archmap.items():
                     self.assertEqual(excuses_dict[src]['tests']['autopkgtest'][testsrc][arch][0],
@@ -241,11 +242,11 @@ lightgreen 1 i386 green 2
             res = json.load(f)
         self.assertEqual(res['green']['i386'],
                          ['20150101_100200@',
-                          {'1': [False, []], '2': [True, [['green', '2']]]},
+                          {'1': {}, '2': {'green/2': True}},
                           True])
         self.assertEqual(res['lightgreen']['amd64'],
                          ['20150101_100101@',
-                          {'1': [True, [['green', '2']]]},
+                          {'1': {'green/2': True}},
                           True])
 
         # third run should not trigger any new tests, should all be in the
@@ -264,6 +265,46 @@ lightgreen 1 i386 green 2
 
     def test_multi_rdepends_with_tests_mixed(self):
         '''Multiple reverse dependencies with tests (mixed results)'''
+
+        # first run requests tests and marks them as pending
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                              })
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]})
+
+        # second run collects the results
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            # unrelated results (wrong trigger), ignore this!
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/1']}),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=blue/1']}),
+        }})
+
+        out = self.do_test(
+            [],
+            {'green': (False, {'green 2': {'amd64': 'ALWAYSFAIL', 'i386': 'PASS'},
+                               'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'RUNNING'},
+                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'PASS'},
+                              })
+            })
+
+        # not expecting any failures to retrieve from swift
+        self.assertNotIn('Failure', out, out)
+
+        # there should be some pending ones
+        self.assertIn('darkgreen 1 amd64 green 2', self.pending_requests)
+        self.assertIn('lightgreen 1 i386 green 2', self.pending_requests)
+
+    def test_multi_rdepends_with_tests_mixed_no_recorded_triggers(self):
+        '''Multiple reverse dependencies with tests (mixed results), no recorded triggers'''
 
         # first run requests tests and marks them as pending
         self.do_test(
@@ -1193,6 +1234,33 @@ fancy 1 i386 linux-meta 1
 fancy 1 i386 linux-meta-lts-grumpy 1
 '''
         self.assertEqual(self.pending_requests, expected_pending)
+
+    def test_dkms_results_per_kernel(self):
+        '''DKMS results get mapped to the triggering kernel version'''
+
+        self.data.add('dkms', False, {})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+
+        # works against linux-meta and -64only, fails against grumpy i386, no
+        # result yet for grumpy amd64
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/1']}),
+            'series/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/1']}),
+            'series/amd64/f/fancy/20150101_100201@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta-64only/1']}),
+            'series/i386/f/fancy/20150101_100301@': (4, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta-lts-grumpy/1']}),
+        }})
+
+        self.do_test(
+            [('linux-image-generic', {'Source': 'linux-meta'}, None),
+             ('linux-image-grumpy-generic', {'Source': 'linux-meta-lts-grumpy'}, None),
+             ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
+            ],
+            {'linux-meta': (True, {'fancy 1': {'amd64': 'PASS', 'i386': 'PASS'}}),
+             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'REGRESSION'}}),
+             'linux-meta-64only': (True, {'fancy 1': {'amd64': 'PASS'}}),
+            })
+
+        self.assertEqual(self.pending_requests, 'fancy 1 amd64 linux-meta-lts-grumpy 1\n')
 
     def test_kernel_triggers_lxc(self):
         '''LXC test gets triggered by kernel uploads'''
