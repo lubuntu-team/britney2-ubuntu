@@ -1271,6 +1271,38 @@ fancy 1 i386 linux-meta-lts-grumpy 1
 
         self.assertEqual(self.pending_requests, 'fancy 1 amd64 linux-meta-lts-grumpy 1\n')
 
+    def test_dkms_results_per_kernel_old_results(self):
+        '''DKMS results get mapped to the triggering kernel version, old results'''
+
+        self.data.add('dkms', False, {})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+
+        # works against linux-meta and -64only, fails against grumpy i386, no
+        # result yet for grumpy amd64
+        self.swift.set_results({'autopkgtest-series': {
+            # old results without trigger info
+            'series/i386/f/fancy/20140101_100101@': (0, 'fancy 1', {}),
+            'series/amd64/f/fancy/20140101_100101@': (8, 'fancy 1', {}),
+            # current results with triggers
+            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/1']}),
+            'series/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/1']}),
+            'series/amd64/f/fancy/20150101_100201@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta-64only/1']}),
+            'series/i386/f/fancy/20150101_100301@': (4, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta-lts-grumpy/1']}),
+        }})
+
+        self.do_test(
+            [('linux-image-generic', {'Source': 'linux-meta'}, None),
+             ('linux-image-grumpy-generic', {'Source': 'linux-meta-lts-grumpy'}, None),
+             ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
+            ],
+            {'linux-meta': (True, {'fancy 1': {'amd64': 'PASS', 'i386': 'PASS'}}),
+             # we don't have an explicit result for amd64, so the old one counts
+             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'}}),
+             'linux-meta-64only': (True, {'fancy 1': {'amd64': 'PASS'}}),
+            })
+
+        self.assertEqual(self.pending_requests, '')
+
     def test_kernel_triggers_lxc(self):
         '''LXC test gets triggered by kernel uploads'''
 

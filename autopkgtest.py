@@ -429,11 +429,11 @@ class AutoPackageTest(object):
                     # preferred (and robust) way of matching results to pending
                     # requests
                     for result_trigger in result_triggers:
+                        satisfied_triggers.add(result_trigger)
                         try:
                             request_map[src][pending_ver][arch].remove(result_trigger)
                             self.log_verbose('-> matches pending request %s/%s/%s for trigger %s' %
                                              (src, pending_ver, arch, str(result_trigger)))
-                            satisfied_triggers.add(result_trigger)
                         except (KeyError, ValueError):
                             self.log_verbose('-> does not match any pending request for %s/%s/%s' %
                                              (src, pending_ver, arch))
