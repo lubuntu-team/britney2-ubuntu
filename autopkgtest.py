@@ -22,7 +22,6 @@ import json
 import tarfile
 import io
 import copy
-import itertools
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
