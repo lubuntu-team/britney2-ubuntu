@@ -1310,8 +1310,19 @@ fancy 1 i386 linux-meta-lts-grumpy 1
                       testsuite='autopkgtest')
 
         self.do_test(
-            [('linux-generic', {'Source': 'linux-meta'}, None)],
-            {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
+            [('linux-image', {'Source': 'linux-meta'}, None),
+             ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
+            ],
+            {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
+             'linux-meta-64only': (False, {'lxc 1': {'amd64': 'RUNNING'}})
+            })
+
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:lxc {"triggers": ["linux-meta/1"]}',
+                 'debci-series-amd64:lxc {"triggers": ["linux-meta/1"]}',
+                 'debci-series-amd64:lxc {"triggers": ["linux-meta-64only/1"]}']))
+
 
     def test_gcc(self):
         '''gcc only triggers some key packages'''

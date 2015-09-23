@@ -222,11 +222,16 @@ class AutoPackageTest(object):
         # Hardcode linux → lxc trigger until we get a more flexible
         # implementation: https://bugs.debian.org/779559
         if src.startswith('linux-meta') and 'lxc' not in reported_pkgs:
-            try:
-                tests.append(('lxc', self.britney.sources['testing']['lxc'][VERSION]))
-            except KeyError:
-                # no lxc package in that series? *shrug*, then not
-                pass
+            # does this have any image on this arch?
+            for b in srcinfo[BINARIES]:
+                p, a = b.split('/', 1)
+                if a == arch and '-image' in p:
+                    try:
+                        tests.append(('lxc', self.britney.sources['testing']['lxc'][VERSION]))
+                    except KeyError:
+                        # no lxc package in that series? *shrug*, then not
+                        pass
+                    break
 
         tests.sort(key=lambda s_v: s_v[0])
         return tests
