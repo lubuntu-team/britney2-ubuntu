@@ -1115,6 +1115,51 @@ lightgreen 1 i386 green 3
             })
         self.assertEqual(self.pending_requests, '')
 
+    def test_rerun_failure_triggers(self):
+        '''manually re-running failed tests with different triggers get picked up'''
+
+        # first run fails
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/i386/g/green/20150101_100101@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/g/green/20150101_100101@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+        }})
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {'green 2': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
+                               'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
+                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                              }),
+            })
+        self.assertEqual(self.pending_requests, '')
+
+        self.swift.set_results({'autopkgtest-series': {
+            # re-run for the same trigger
+            'series/i386/g/green/20150101_100201@': (0, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            # re-run without trigger
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+            # i386 ran for a different trigger, but should still be taken into account
+            'series/i386/l/lightgreen/20150101_100201@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=foo/3']}),
+            # amd64 got re-run without trigger
+            'series/amd64/l/lightgreen/20150101_100201@': (0, 'lightgreen 1'),
+        }})
+        self.do_test(
+            [],
+            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'lightgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                             }),
+            })
+        self.assertEqual(self.pending_requests, '')
+
     def test_remove_from_unstable(self):
         '''broken package gets removed from unstable'''
 
