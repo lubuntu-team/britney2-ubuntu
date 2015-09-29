@@ -657,7 +657,13 @@ class AutoPackageTest(object):
                         result = 'PASS'
                     else:
                         # test failed, check ever_passed flag for that src/arch
-                        if ever_passed:
+                        # unless we got triggered from linux-meta*: we trigger
+                        # separate per-kernel tests for reverse test
+                        # dependencies, and we don't want to track per-trigger
+                        # ever_passed. This would be wrong for everything
+                        # except the kernel, and the kernel team tracks
+                        # per-kernel regressions already
+                        if ever_passed and not trigsrc.startswith('linux-meta') and trigsrc != 'linux':
                             result = 'REGRESSION'
                         else:
                             result = 'ALWAYSFAIL'

@@ -1310,7 +1310,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
              ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
             ],
             {'linux-meta': (True, {'fancy 1': {'amd64': 'PASS', 'i386': 'PASS'}}),
-             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'REGRESSION'}}),
+             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'ALWAYSFAIL'}}),
              'linux-meta-64only': (True, {'fancy 1': {'amd64': 'PASS'}}),
             })
 
@@ -1342,7 +1342,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             ],
             {'linux-meta': (True, {'fancy 1': {'amd64': 'PASS', 'i386': 'PASS'}}),
              # we don't have an explicit result for amd64, so the old one counts
-             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'}}),
+             'linux-meta-lts-grumpy': (True, {'fancy 1': {'amd64': 'ALWAYSFAIL', 'i386': 'ALWAYSFAIL'}}),
              'linux-meta-64only': (True, {'fancy 1': {'amd64': 'PASS'}}),
             })
 
