@@ -466,8 +466,13 @@ class AutoPackageTest(object):
         # add this result
         src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}, False])
         if passed:
-            # update ever_passed field
-            src_arch_results[2] = True
+            # update ever_passed field, unless we got triggered from
+            # linux-meta*: we trigger separate per-kernel tests for reverse
+            # test dependencies, and we don't want to track per-trigger
+            # ever_passed. This would be wrong for everything except the
+            # kernel, and the kernel team tracks per-kernel regressions already
+            if not result_triggers or not result_triggers[0][0].startswith('linux-meta'):
+                src_arch_results[2] = True
         if satisfied_triggers:
             for trig in satisfied_triggers:
                 src_arch_results[1].setdefault(ver, {})[trig[0] + '/' + trig[1]] = passed
