@@ -51,7 +51,8 @@ class TestAutoPkgTest(TestBase):
         # add a bunch of packages to testing to avoid repetition
         self.data.add('libc6', False)
         self.data.add('libgreen1', False, {'Source': 'green',
-                                           'Depends': 'libc6 (>= 0.9)'})
+                                           'Depends': 'libc6 (>= 0.9)'},
+                      testsuite='autopkgtest')
         self.data.add('green', False, {'Depends': 'libc6 (>= 0.9), libgreen1',
                                        'Conflicts': 'blue'},
                       testsuite='autopkgtest')
@@ -796,9 +797,11 @@ lightgreen 2 i386 lightgreen 2
             },
             {'newgreen': [('old-version', '-'), ('new-version', '2')]})
 
-        self.assertEqual(len(self.amqp_requests), 6)
+        self.assertEqual(len(self.amqp_requests), 8)
         expected_pending = '''darkgreen 1 amd64 newgreen 2
 darkgreen 1 i386 newgreen 2
+green 1 amd64 newgreen 2
+green 1 i386 newgreen 2
 lightgreen 1 amd64 newgreen 2
 lightgreen 1 i386 newgreen 2
 newgreen 2 amd64 newgreen 2
@@ -812,6 +815,8 @@ newgreen 2 i386 newgreen 2
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
             'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 1'),
             'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
             'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
             'series/i386/n/newgreen/20150101_100200@': (0, 'newgreen 2'),
@@ -823,6 +828,7 @@ newgreen 2 i386 newgreen 2
             {'newgreen': (True, {'newgreen 2': {'amd64': 'PASS', 'i386': 'PASS'},
                                  'lightgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
                                  'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                                 'green 1': {'amd64': 'PASS', 'i386': 'PASS'},
                                 }),
             },
             {'newgreen': [('old-version', '-'), ('new-version', '2')]})
