@@ -307,8 +307,14 @@ class AutoPackageTest(object):
         # didn't see in britney yet
         ver_trig_results = self.test_results.get(src, {}).get(arch, [None, {}, None])[1]
         unstable_ver = self.britney.sources['unstable'][src][VERSION]
-        for result_ver in [ver, unstable_ver]:
-            if result_ver not in ver_trig_results or apt_pkg.version_compare(result_ver, ver) < 0:
+        try:
+            testing_ver = self.britney.sources['testing'][src][VERSION]
+        except KeyError:
+            testing_ver = unstable_ver
+        for result_ver in set([testing_ver, ver, unstable_ver]):
+            # result_ver might be < ver here; that's okay, if we already have a
+            # result for trigsrc/trigver we don't need to re-run it again
+            if result_ver not in ver_trig_results:
                 continue
             for trigger in ver_trig_results[result_ver]:
                 (tsrc, tver) = trigger.split('/', 1)
@@ -646,18 +652,25 @@ class AutoPackageTest(object):
                 try:
                     (_, ver_map, ever_passed) = self.test_results[testsrc][arch]
 
-                    # we prefer passing tests for the specified testver; but if
-                    # they fail, we also check for a result > testver, as test
-                    # runs might see built versions which we didn't see in
-                    # britney yet
-                    try:
-                        trigger_results = ver_map[testver]
-                        if not trigger_results[trigger]:
-                            raise KeyError
-                    except KeyError:
-                        (testver, trigger_results) = latest_item(ver_map, testver)
+                    # check if we have a result for any version of testsrc that
+                    # was triggered for trigsrc/trigver; we prefer PASSes, as
+                    # it could be that an unrelated package upload could break
+                    # testsrc's tests at a later point
+                    status = None
+                    for ver, trigger_results in ver_map.items():
+                        try:
+                            status = trigger_results[trigger]
+                            testver = ver
+                            # if we found a PASS, we can stop searching
+                            if status is True:
+                                break
+                        except KeyError:
+                            pass
 
-                    status = trigger_results[trigger]
+                    if status is None:
+                        # no result? go to "still running" below
+                        raise KeyError
+
                     if status:
                         result = 'PASS'
                     else:

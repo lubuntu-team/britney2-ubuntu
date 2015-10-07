@@ -1087,6 +1087,44 @@ lightgreen 1 i386 green 3
             })
         self.assertEqual(self.pending_requests, '')
 
+    def test_new_runs_dont_clobber_pass(self):
+        '''passing once is sufficient
+
+        If a test succeeded once for a particular version and trigger,
+        subsequent failures (which might be triggered by other unstable
+        uploads) should not invalidate the PASS, as that new failure is the
+        fault of the new upload, not the original one.
+        '''
+        # new libc6 works fine with green
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', {'custom_environment': ['ADT_TEST_TRIGGERS=libc6/2']}),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 1', {'custom_environment': ['ADT_TEST_TRIGGERS=libc6/2']}),
+        }})
+
+        self.do_test(
+            [('libc6', {'Version': '2'}, None)],
+            {'libc6': (True, {'green 1': {'amd64': 'PASS', 'i386': 'PASS'}})})
+        self.assertEqual(self.pending_requests, '')
+
+        # new green fails; that's not libc6's fault though, so it should stay
+        # valid
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100100@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/amd64/g/green/20150101_100100@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+        }})
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {'green 2': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'}}),
+             'libc6': (True, {'green 1': {'amd64': 'PASS', 'i386': 'PASS'}}),
+            })
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:darkgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:darkgreen {"triggers": ["green/2"]}',
+                 'debci-series-i386:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:lightgreen {"triggers": ["green/2"]}',
+                ]))
+
     def test_remove_from_unstable(self):
         '''broken package gets removed from unstable'''
 
