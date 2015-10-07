@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2013 Canonical Ltd.
+# Copyright (C) 2013 - 2015 Canonical Ltd.
 # Authors:
 #   Colin Watson <cjwatson@ubuntu.com>
 #   Jean-Baptiste Lallement <jean-baptiste.lallement@canonical.com>

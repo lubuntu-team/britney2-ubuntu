@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# (C) 2014 Canonical Ltd.
+# (C) 2014 - 2015 Canonical Ltd.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,6 +26,10 @@ apt_pkg.init()
 
 class TestAutoPkgTest(TestBase):
     '''AMQP/cloud interface'''
+
+    ################################################################
+    # Common test code
+    ################################################################
 
     def setUp(self):
         super(TestAutoPkgTest, self).setUp()
@@ -136,6 +140,10 @@ class TestAutoPkgTest(TestBase):
         self.assertNotIn('FIXME', out)
 
         return (out, excuses_dict)
+
+    ################################################################
+    # Tests for generic packages
+    ################################################################
 
     def test_no_request_for_uninstallable(self):
         '''Does not request a test for an uninstallable package'''
@@ -737,93 +745,6 @@ lightgreen 1 i386 green 2
         self.assertEqual(self.pending_requests, '')
         self.assertEqual(self.amqp_requests, set())
 
-    def test_hint_force_badtest(self):
-        '''force-badtest hint'''
-
-        self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
-        }})
-
-        self.create_hint('pitti', 'force-badtest lightgreen/1')
-
-        self.do_test(
-            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
-                              'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
-                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
-                             }),
-            },
-            {'green': [('old-version', '1'), ('new-version', '2'),
-                       ('forced-reason', 'badtest lightgreen 1'),
-                       ('excuses', 'Should wait for lightgreen 1 test, but forced by pitti')]
-            })
-
-    def test_hint_force_badtest_different_version(self):
-        '''force-badtest hint with non-matching version'''
-
-        self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
-        }})
-
-        self.create_hint('pitti', 'force-badtest lightgreen/0.1')
-
-        exc = self.do_test(
-            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
-                               'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
-                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
-                              }),
-            },
-            {'green': [('reason', 'autopkgtest')]}
-        )[1]
-        self.assertNotIn('forced-reason', exc['green'])
-
-    def test_hint_force_skiptest(self):
-        '''force-skiptest hint'''
-
-        self.create_hint('pitti', 'force-skiptest green/2')
-
-        self.do_test(
-            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (True, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                              'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                              'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                             }),
-            },
-            {'green': [('old-version', '1'), ('new-version', '2'),
-                       ('forced-reason', 'skiptest'),
-                       ('excuses', 'Should wait for tests relating to green 2, but forced by pitti')]
-            })
-
-    def test_hint_force_skiptest_different_version(self):
-        '''force-skiptest hint with non-matching version'''
-
-        self.create_hint('pitti', 'force-skiptest green/1')
-        exc = self.do_test(
-            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                              }),
-            },
-            {'green': [('reason', 'autopkgtest')]}
-        )[1]
-        self.assertNotIn('forced-reason', exc['green'])
-
     def test_package_pair_running(self):
         '''Two packages in unstable that need to go in together (running)'''
 
@@ -1244,6 +1165,121 @@ lightgreen 1 i386 green 3
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
         )
 
+    def test_disable_adt(self):
+        '''Run without autopkgtest requests'''
+
+        # Disable AMQP server config, to ensure we don't touch them with ADT
+        # disabled
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if line.startswith('ADT_ENABLE'):
+                print('ADT_ENABLE = no')
+            elif not line.startswith('ADT_AMQP') and not line.startswith('ADT_SWIFT_URL'):
+                sys.stdout.write(line)
+
+        exc = self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {})},
+            {'green': [('old-version', '1'), ('new-version', '2')]})[1]
+        self.assertNotIn('autopkgtest', exc['green']['tests'])
+
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, None)
+
+    ################################################################
+    # Tests for hint processing
+    ################################################################
+
+    def test_hint_force_badtest(self):
+        '''force-badtest hint'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
+        }})
+
+        self.create_hint('pitti', 'force-badtest lightgreen/1')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2'),
+                       ('forced-reason', 'badtest lightgreen 1'),
+                       ('excuses', 'Should wait for lightgreen 1 test, but forced by pitti')]
+            })
+
+    def test_hint_force_badtest_different_version(self):
+        '''force-badtest hint with non-matching version'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
+        }})
+
+        self.create_hint('pitti', 'force-badtest lightgreen/0.1')
+
+        exc = self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                               'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
+                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                              }),
+            },
+            {'green': [('reason', 'autopkgtest')]}
+        )[1]
+        self.assertNotIn('forced-reason', exc['green'])
+
+    def test_hint_force_skiptest(self):
+        '''force-skiptest hint'''
+
+        self.create_hint('pitti', 'force-skiptest green/2')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                              'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                              'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2'),
+                       ('forced-reason', 'skiptest'),
+                       ('excuses', 'Should wait for tests relating to green 2, but forced by pitti')]
+            })
+
+    def test_hint_force_skiptest_different_version(self):
+        '''force-skiptest hint with non-matching version'''
+
+        self.create_hint('pitti', 'force-skiptest green/1')
+        exc = self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                              }),
+            },
+            {'green': [('reason', 'autopkgtest')]}
+        )[1]
+        self.assertNotIn('forced-reason', exc['green'])
+
+    ################################################################
+    # Kernel related tests
+    ################################################################
+
     def test_detect_dkms_autodep8(self):
         '''DKMS packages are autopkgtested (via autodep8)'''
 
@@ -1368,6 +1404,9 @@ fancy 1 i386 linux-meta-lts-grumpy 1
                  'debci-series-amd64:lxc {"triggers": ["linux-meta/1"]}',
                  'debci-series-amd64:lxc {"triggers": ["linux-meta-64only/1"]}']))
 
+    ################################################################
+    # Tests for special-cased packages
+    ################################################################
 
     def test_gcc(self):
         '''gcc only triggers some key packages'''
@@ -1381,26 +1420,6 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             {'gcc-5': (False, {'binutils 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
                                'linux 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})[1]
         self.assertNotIn('notme 1', exc['gcc-5']['tests']['autopkgtest'])
-
-    def test_disable_adt(self):
-        '''Run without autopkgtest requests'''
-
-        # Disable AMQP server config, to ensure we don't touch them with ADT
-        # disabled
-        for line in fileinput.input(self.britney_conf, inplace=True):
-            if line.startswith('ADT_ENABLE'):
-                print('ADT_ENABLE = no')
-            elif not line.startswith('ADT_AMQP') and not line.startswith('ADT_SWIFT_URL'):
-                sys.stdout.write(line)
-
-        exc = self.do_test(
-            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (True, {})},
-            {'green': [('old-version', '1'), ('new-version', '2')]})[1]
-        self.assertNotIn('autopkgtest', exc['green']['tests'])
-
-        self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, None)
 
 
 if __name__ == '__main__':
