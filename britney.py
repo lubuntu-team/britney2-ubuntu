@@ -1096,8 +1096,26 @@ class Britney(object):
         # local copies for better performance
         parse_depends = ma_parse_depends
 
-        # analyze the dependency fields (if present)
         deps = binary_u.depends
+
+        # make linux* wait on corresponding -meta package
+        if src.startswith('linux'):
+            meta = src.replace('linux', 'linux-meta', 1)
+            if meta in self.sources[suite]:
+                # copy deps here, don't modify self.binaries!
+                if deps:
+                    deps = deps + ', '
+                else:
+                    deps = ''
+                # find binary of our architecture
+                for pkg_id in self.sources[suite][meta].binaries:
+                    if pkg_id.architecture == arch:
+                        binver = self.binaries[suite][arch][0][pkg_id.package_name].source_version
+                        deps += '%s (>= %s)' % (pkg_id.package_name, binver)
+                        self.log('Synthesizing dependency %s to %s: %s' % (meta, src, deps))
+                        break
+
+        # analyze the dependency fields (if present)
         if not deps:
             return True
         is_all_ok = True
