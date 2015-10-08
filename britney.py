@@ -1152,6 +1152,27 @@ class Britney(object):
         parse_depends = apt_pkg.parse_depends
         get_dependency_solvers = self.get_dependency_solvers
 
+        # make linux* wait on corresponding -meta package
+        if src.startswith('linux'):
+            meta = src.replace('linux', 'linux-meta', 1)
+            if meta in self.sources[suite]:
+                # copy binary_u here, don't modify self.binaries!
+                if binary_u[DEPENDS]:
+                    binary_u[DEPENDS] = binary_u[DEPENDS] + ', '
+                else:
+                    binary_u[DEPENDS] = ''
+                # find binary of our architecture
+                binpkg = None
+                for b in self.sources[suite][meta][BINARIES]:
+                    pkg, a = b.split('/')
+                    if a == arch:
+                        binpkg = pkg
+                        break
+                if binpkg:
+                    binver = self.binaries[suite][arch][0][binpkg][SOURCEVER]
+                    binary_u[DEPENDS] += '%s (>= %s)' % (binpkg, binver)
+                    self.__log('Synthesizing dependency %s to %s: %s' % (meta, src, binary_u[DEPENDS]))
+
         # analyze the dependency fields (if present)
         if not binary_u[DEPENDS]:
             return True
