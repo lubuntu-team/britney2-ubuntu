@@ -1513,6 +1513,17 @@ fancy 1 i386 linux-meta-lts-grumpy 1
                                'linux 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})[1]
         self.assertNotIn('notme 1', exc['gcc-5']['tests']['autopkgtest'])
 
+    def test_alternative_gcc(self):
+        '''alternative gcc does not trigger anything'''
+
+        self.data.add('binutils', False, {}, testsuite='autopkgtest')
+        self.data.add('notme', False, {'Depends': 'libgcc1'}, testsuite='autopkgtest')
+
+        exc = self.do_test(
+            [('libgcc1', {'Source': 'gcc-snapshot', 'Version': '2'}, None)],
+            {'gcc-snapshot': (True, {})})[1]
+        self.assertNotIn('autopkgtest', exc['gcc-snapshot']['tests'])
+
 
 if __name__ == '__main__':
     unittest.main()

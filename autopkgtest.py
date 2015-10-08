@@ -22,6 +22,7 @@ import json
 import tarfile
 import io
 import copy
+import re
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -156,19 +157,24 @@ class AutoPackageTest(object):
                     pass
             return tests
 
-        # gcc-* triggers tons of tests via libgcc1, but this is mostly in vain:
+        # gcc-N triggers tons of tests via libgcc1, but this is mostly in vain:
         # gcc already tests itself during build, and it is being used from
         # -proposed, so holding it back on a dozen unrelated test failures
         # serves no purpose. Just check some key packages which actually use
         # gcc during the test, and libreoffice as an example for a libgcc user.
         if src.startswith('gcc-'):
-            for test in ['binutils', 'fglrx-installer', 'libreoffice', 'linux']:
-                try:
-                    tests.append((test, self.britney.sources['testing'][test][VERSION]))
-                except KeyError:
-                    # no package in that series? *shrug*, then not (mostly for testing)
-                    pass
-            return tests
+            if re.match('gcc-\d$', src):
+                for test in ['binutils', 'fglrx-installer', 'libreoffice', 'linux']:
+                    try:
+                        tests.append((test, self.britney.sources['testing'][test][VERSION]))
+                    except KeyError:
+                        # no package in that series? *shrug*, then not (mostly for testing)
+                        pass
+                return tests
+            else:
+                # for other compilers such as gcc-snapshot etc. we don't need
+                # to trigger anything
+                return []
 
         srcinfo = sources_info[src]
         # we want to test the package itself, if it still has a test in
