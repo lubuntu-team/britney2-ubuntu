@@ -1428,25 +1428,34 @@ fancy 1 i386 linux-meta-lts-grumpy 1
 
         self.assertEqual(self.pending_requests, '')
 
-    def test_kernel_triggers_lxc(self):
-        '''LXC test gets triggered by kernel uploads'''
+    def test_kernel_triggerered_tests(self):
+        '''linux, lxc, glibc tests get triggered by linux-meta* uploads'''
 
+        self.data.remove_all(False)
+        self.data.add('libc6-dev', False, {'Source': 'glibc', 'Depends': 'linux-libc-dev'},
+                      testsuite='autopkgtest')
         self.data.add('lxc', False, {'Testsuite-Triggers': 'linux-generic'},
                       testsuite='autopkgtest')
+        self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
+        self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
+        self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
 
-        self.do_test(
-            [('linux-image', {'Source': 'linux-meta'}, None),
+        exc = self.do_test(
+            [('linux-image', {'Version': '2', 'Depends': 'linux-image-2', 'Source': 'linux-meta'}, None),
              ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
+             ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
+             ('linux-libc-dev', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
             ],
-            {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
-             'linux-meta-64only': (False, {'lxc 1': {'amd64': 'RUNNING'}})
-            })
-
-        self.assertEqual(
-            self.amqp_requests,
-            set(['debci-series-i386:lxc {"triggers": ["linux-meta/1"]}',
-                 'debci-series-amd64:lxc {"triggers": ["linux-meta/1"]}',
-                 'debci-series-amd64:lxc {"triggers": ["linux-meta-64only/1"]}']))
+            {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                                    'glibc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                                    'linux 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                                   }),
+             'linux-meta-64only': (False, {'lxc 1': {'amd64': 'RUNNING'}}),
+             'linux': (False, {}),
+            })[1]
+        # the kernel itself should not trigger tests; we want to trigger
+        # everything from -meta
+        self.assertNotIn('autopkgtest', exc['linux']['tests'])
 
     def test_kernel_waits_on_meta(self):
         '''linux waits on linux-meta'''
@@ -1458,8 +1467,8 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('linux-firmware', False, {'Source': 'linux-firmware'}, testsuite='autopkgtest')
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/linux/20150101_100000@': (0, 'linux 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux/2']}),
-            'series/amd64/l/linux/20150101_100000@': (0, 'linux 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux/2']}),
+            'series/i386/l/linux/20150101_100000@': (0, 'linux 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/0.2']}),
+            'series/amd64/l/linux/20150101_100000@': (0, 'linux 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/0.2']}),
             'series/i386/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-firmware/2']}),
             'series/amd64/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-firmware/2']}),
         }})
@@ -1469,9 +1478,11 @@ fancy 1 i386 linux-meta-lts-grumpy 1
              ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
              ('linux-firmware', {'Version': '2', 'Source': 'linux-firmware'}, 'autopkgtest'),
             ],
-            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
-             # tests pass, but should wait on linux-meta
-             'linux': (False, {'linux 2': {'amd64': 'PASS', 'i386': 'PASS'}}),
+            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                                    'linux 2': {'amd64': 'PASS', 'i386': 'PASS'}
+                                   }),
+             # no tests, but should wait on linux-meta
+             'linux': (False, {}),
              # this one does not have a -meta, so don't wait
              'linux-firmware': (True, {'linux-firmware 2': {'amd64': 'PASS', 'i386': 'PASS'}}),
             },
@@ -1487,8 +1498,9 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         }})
         self.do_test(
             [],
-            {'linux-meta': (True, {'fancy 1': {'amd64': 'PASS', 'i386': 'PASS'}}),
-             'linux': (True, {'linux 2': {'amd64': 'PASS', 'i386': 'PASS'}}),
+            {'linux-meta': (True, {'fancy 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                                   'linux 2': {'amd64': 'PASS', 'i386': 'PASS'}}),
+             'linux': (True, {}),
              'linux-firmware': (True, {'linux-firmware 2': {'amd64': 'PASS', 'i386': 'PASS'}}),
             },
             {'linux': [('excuses', 'Depends: linux linux-meta')]

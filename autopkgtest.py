@@ -176,6 +176,13 @@ class AutoPackageTest(object):
                 # to trigger anything
                 return []
 
+        # for linux themselves we don't want to trigger tests -- these should
+        # all come from linux-meta*. A new kernel ABI without a corresponding
+        # -meta won't be installed and thus we can't sensibly run tests against
+        # it.
+        if src.startswith('linux') and src.replace('linux', 'linux-meta') in self.britney.sources['testing']:
+            return []
+
         srcinfo = sources_info[src]
         # we want to test the package itself, if it still has a test in
         # unstable
@@ -225,19 +232,24 @@ class AutoPackageTest(object):
                         tests.append((rdep_src, rdep_src_info[VERSION]))
                         reported_pkgs.add(rdep_src)
 
-        # Hardcode linux → lxc trigger until we get a more flexible
+        # Hardcode linux-meta →  linux, lxc, glibc triggers until we get a more flexible
         # implementation: https://bugs.debian.org/779559
-        if src.startswith('linux-meta') and 'lxc' not in reported_pkgs:
-            # does this have any image on this arch?
-            for b in srcinfo[BINARIES]:
-                p, a = b.split('/', 1)
-                if a == arch and '-image' in p:
-                    try:
-                        tests.append(('lxc', self.britney.sources['testing']['lxc'][VERSION]))
-                    except KeyError:
-                        # no lxc package in that series? *shrug*, then not
-                        pass
-                    break
+        if src.startswith('linux-meta'):
+            for pkg in ['lxc', 'glibc', src.replace('linux-meta', 'linux')]:
+                if pkg not in reported_pkgs:
+                    # does this have any image on this arch?
+                    for b in srcinfo[BINARIES]:
+                        p, a = b.split('/', 1)
+                        if a == arch and '-image' in p:
+                            try:
+                                tests.append((pkg, self.britney.sources['unstable'][pkg][VERSION]))
+                            except KeyError:
+                                try:
+                                    tests.append((pkg, self.britney.sources['testing'][pkg][VERSION]))
+                                except KeyError:
+                                    # package not in that series? *shrug*, then not
+                                    pass
+                            break
 
         tests.sort(key=lambda s_v: s_v[0])
         return tests
