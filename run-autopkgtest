@@ -26,6 +26,8 @@ def parse_args():
     parser.add_argument('--trigger', action='append', default=[],
                         help='Add triggering package to request. '
                         'Can be specified multiple times.')
+    parser.add_argument('--ppa', metavar='LPUSER/PPANAME',
+                        help='Enable PPA for requested test(s)')
     parser.add_argument('package', nargs='+',
                         help='Source package name(s) whose tests to run.')
     return parser.parse_args()
@@ -49,10 +51,12 @@ if __name__ == '__main__':
     if not args.architecture:
         args.architecture = config.adt_arches.split()
 
+    params = {}
     if args.trigger:
-        params = '\n' + json.dumps({'triggers': args.trigger})
-    else:
-        params = ''
+        params['triggers'] = args.trigger
+    if args.ppa:
+        params['ppa'] = args.ppa
+    params = '\n' + json.dumps(params)
 
     with kombu.Connection(config.adt_amqp) as conn:
         for arch in args.architecture:
