@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # Request re-runs of autopkgtests for packages
 
 import os
