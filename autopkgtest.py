@@ -121,16 +121,18 @@ class AutoPackageTest(object):
     def log_error(self, msg):
         print('E: [%s] - %s' % (time.asctime(), msg))
 
-    def has_autodep8(self, srcinfo):
+    @classmethod
+    def has_autodep8(kls, srcinfo, binaries):
         '''Check if package  is covered by autodep8
 
         srcinfo is an item from self.britney.sources
+        binaries is self.britney.binaries['unstable'][arch][0]
         '''
         # DKMS: some binary depends on "dkms"
         for bin_arch in srcinfo[BINARIES]:
             binpkg = bin_arch.split('/')[0]  # chop off arch
             try:
-                bininfo = self.britney.binaries['unstable']['amd64'][0][binpkg]
+                bininfo = binaries[binpkg]
             except KeyError:
                 continue
             if 'dkms' in (bininfo[DEPENDS] or ''):
@@ -186,7 +188,7 @@ class AutoPackageTest(object):
         srcinfo = sources_info[src]
         # we want to test the package itself, if it still has a test in
         # unstable
-        if srcinfo[AUTOPKGTEST] or self.has_autodep8(srcinfo):
+        if srcinfo[AUTOPKGTEST] or self.has_autodep8(srcinfo, binaries_info):
             reported_pkgs.add(src)
             tests.append((src, ver))
 
@@ -227,7 +229,7 @@ class AutoPackageTest(object):
                         continue
                 else:
                     rdep_src_info = sources_info[rdep_src]
-                if rdep_src_info[AUTOPKGTEST] or self.has_autodep8(rdep_src_info):
+                if rdep_src_info[AUTOPKGTEST] or self.has_autodep8(rdep_src_info, binaries_info):
                     if rdep_src not in reported_pkgs:
                         tests.append((rdep_src, rdep_src_info[VERSION]))
                         reported_pkgs.add(rdep_src)
