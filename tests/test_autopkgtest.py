@@ -1436,6 +1436,8 @@ fancy 1 i386 linux-meta-lts-grumpy 1
                       testsuite='autopkgtest')
         self.data.add('lxc', False, {'Testsuite-Triggers': 'linux-generic'},
                       testsuite='autopkgtest')
+        self.data.add('systemd', False, {'Testsuite-Triggers': 'linux-generic'},
+                      testsuite='autopkgtest')
         self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
@@ -1449,6 +1451,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
                                     'glibc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
                                     'linux 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                                    'systemd 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
                                    }),
              'linux-meta-64only': (False, {'lxc 1': {'amd64': 'RUNNING'}}),
              'linux': (False, {}),
