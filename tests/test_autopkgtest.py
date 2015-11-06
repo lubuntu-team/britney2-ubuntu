@@ -24,6 +24,11 @@ from tests import TestBase, mock_swift
 apt_pkg.init()
 
 
+# shortcut for test triggers
+def tr(s):
+    return {'custom_environment': ['ADT_TEST_TRIGGERS=%s' % s]}
+
+
 class TestAutoPkgTest(TestBase):
     '''AMQP/cloud interface'''
 
@@ -218,16 +223,16 @@ lightgreen 1 i386 green 2
 
         # second run collects the results
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('green/2')),
             # version in testing fails
-            'series/i386/g/green/20150101_020000@': (4, 'green 1'),
-            'series/amd64/g/green/20150101_020000@': (4, 'green 1'),
+            'series/i386/g/green/20150101_020000@': (4, 'green 1', tr('green/1')),
+            'series/amd64/g/green/20150101_020000@': (4, 'green 1', tr('green/1')),
             # version in unstable succeeds
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
         }})
 
         out = self.do_test(
@@ -287,14 +292,14 @@ lightgreen 1 i386 green 2
 
         # second run collects the results
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/g/green/20150101_100201@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2', tr('green/2')),
             # unrelated results (wrong trigger), ignore this!
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/1']}),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=blue/1']}),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/1')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('blue/1')),
         }})
 
         out = self.do_test(
@@ -353,15 +358,15 @@ lightgreen 1 i386 green 2
         '''Multiple reverse dependencies with tests (regression)'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2', tr('green/2')),
         }})
 
         out = self.do_test(
@@ -388,15 +393,14 @@ lightgreen 1 i386 green 2
         This ensures that we don't just evaluate the test result of the last
         test, but all of them.
         '''
-
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2', tr('green/2')),
         }})
 
         out = self.do_test(
@@ -417,15 +421,15 @@ lightgreen 1 i386 green 2
         '''Multiple reverse dependencies with tests (always failed)'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100200@': (4, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1')),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (4, 'green 2', tr('green/1')),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2', tr('green/2')),
         }})
 
         out = self.do_test(
@@ -474,18 +478,18 @@ lightgreen 1 i386 green 2
 
         # second run collects the results
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('green/2')),
             # version in testing fails
-            'series/i386/g/green/20150101_020000@': (4, 'green 1'),
-            'series/amd64/g/green/20150101_020000@': (4, 'green 1'),
+            'series/i386/g/green/20150101_020000@': (4, 'green 1', tr('green/1')),
+            'series/amd64/g/green/20150101_020000@': (4, 'green 1', tr('green/1')),
             # version in unstable succeeds
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
             # only amd64 result for green64
-            'series/amd64/g/green64/20150101_100200@': (0, 'green64 1'),
+            'series/amd64/g/green64/20150101_100200@': (0, 'green64 1', tr('green/2')),
         }})
 
         out = self.do_test(
@@ -527,16 +531,16 @@ lightgreen 1 i386 green 2
 
         # old lightgreen fails, thus new green should be held back
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_020000@': (0, 'green 1'),
-            'series/amd64/g/green/20150101_020000@': (0, 'green 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 1.1'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 1.1'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/1.1')),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/1.1')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1.1')),
+            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1.1')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1.1')),
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1.1')),
+            'series/i386/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
+            'series/amd64/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 1.1', tr('green/1.1')),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 1.1', tr('green/1.1')),
         }})
 
         # add unbuilt lightgreen; should run tests against the old version
@@ -575,8 +579,8 @@ lightgreen 1 i386 green 2
 
         # next run collects the results
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2'),
-            'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2'),
+            'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2', tr('lightgreen/2')),
         }})
         self.do_test(
             [],
@@ -598,14 +602,14 @@ lightgreen 1 i386 green 2
         '''Unbuilt reverse dependency which is not in testing'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/i386/g/green/20150101_020000@': (0, 'green 1'),
-            'series/amd64/g/green/20150101_020000@': (0, 'green 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
+            'series/i386/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
+            'series/amd64/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
         }})
         # run britney once to pick up previous results
         self.do_test(
@@ -638,16 +642,16 @@ lightgreen 1 i386 green 2
         '''
         # old lightgreen fails, thus new green should be held back
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_020000@': (0, 'green 1'),
-            'series/amd64/g/green/20150101_020000@': (0, 'green 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 1.1'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 1.1'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/1.1')),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/1.1')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1.1')),
+            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1.1')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1.1')),
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1.1')),
+            'series/i386/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
+            'series/amd64/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 1.1', tr('green/1.1')),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 1.1', tr('green/1.1')),
         }})
 
         # add unbuilt lightgreen; should run tests against the old version
@@ -670,8 +674,8 @@ lightgreen 1 i386 green 2
 
         # lightgreen 2 stays unbuilt in britney, but we get a test result for it
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2'),
-            'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2'),
+            'series/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2', tr('green/1.1')),
+            'series/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2', tr('green/1.1')),
         }})
         self.do_test(
             [],
@@ -716,14 +720,14 @@ lightgreen 1 i386 green 2
 
         # we only get a result for lightgreen 2, not for the requested 1
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5'),
-            'series/i386/l/lightgreen/20150101_100200@': (4, 'lightgreen 2'),
-            'series/amd64/l/lightgreen/20150101_100200@': (4, 'lightgreen 2'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100200@': (4, 'lightgreen 2', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100200@': (4, 'lightgreen 2', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
         }})
         self.do_test(
             [],
@@ -815,14 +819,14 @@ newgreen 2 i386 newgreen 2
         '''building an existing binary for a new source package (pass)'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
-            'series/amd64/g/green/20150101_100000@': (0, 'green 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/i386/n/newgreen/20150101_100200@': (0, 'newgreen 2'),
-            'series/amd64/n/newgreen/20150101_100201@': (0, 'newgreen 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('newgreen/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('newgreen/2')),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('newgreen/2')),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 1', tr('newgreen/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('newgreen/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('newgreen/2')),
+            'series/i386/n/newgreen/20150101_100200@': (0, 'newgreen 2', tr('newgreen/2')),
+            'series/amd64/n/newgreen/20150101_100201@': (0, 'newgreen 2', tr('newgreen/2')),
         }})
 
         self.do_test(
@@ -842,8 +846,8 @@ newgreen 2 i386 newgreen 2
         '''test result from older version than the uploaded one'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/2')),
         }})
 
         self.do_test(
@@ -859,10 +863,10 @@ newgreen 2 i386 newgreen 2
 
         # second run gets the results for darkgreen 2
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 2'),
-            'series/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/1')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/1')),
+            'series/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 2', tr('darkgreen/2')),
+            'series/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 2', tr('darkgreen/2')),
         }})
         self.do_test(
             [],
@@ -886,14 +890,14 @@ newgreen 2 i386 newgreen 2
         '''re-runs reverse dependency test on new versions'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
-            'series/amd64/g/green/20150101_100000@': (0, 'green 1'),
-            'series/i386/g/green/20150101_100010@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100010@': (0, 'green 2'),
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('green/1')),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 1', tr('green/1')),
+            'series/i386/g/green/20150101_100010@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100010@': (0, 'green 2', tr('green/2')),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
         }})
 
         self.do_test(
@@ -931,12 +935,10 @@ lightgreen 1 i386 green 3
         # third run gets the results for green and lightgreen, darkgreen is
         # still running
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100020@': (0, 'green 3'),
-            'series/amd64/g/green/20150101_100020@': (0, 'green 3'),
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100010@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100010@': (0, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100020@': (0, 'green 3', tr('green/3')),
+            'series/amd64/g/green/20150101_100020@': (0, 'green 3', tr('green/3')),
+            'series/i386/l/lightgreen/20150101_100010@': (0, 'lightgreen 1', tr('green/3')),
+            'series/amd64/l/lightgreen/20150101_100010@': (0, 'lightgreen 1', tr('green/3')),
         }})
         self.do_test(
             [],
@@ -951,8 +953,8 @@ lightgreen 1 i386 green 3
 
         # fourth run finally gets the new darkgreen result
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 1'),
+            'series/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 1', tr('green/3')),
+            'series/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 1', tr('green/3')),
         }})
         self.do_test(
             [],
@@ -969,10 +971,10 @@ lightgreen 1 i386 green 3
 
         # one tmpfail result without testpkg-version, should be ignored
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/2')),
             'series/i386/l/lightgreen/20150101_100101@': (16, None),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (16, 'lightgreen 2'),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150101_100101@': (16, 'lightgreen 2', tr('lightgreen/2')),
         }})
 
         self.do_test(
@@ -997,16 +999,16 @@ lightgreen 1 i386 green 3
 
         # first run fails
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 2'),
-            'series/i386/g/green/20150101_100101@': (4, 'green 2'),
-            'series/amd64/g/green/20150101_100000@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100101@': (4, 'green 2'),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 2', tr('green/2')),
+            'series/i386/g/green/20150101_100101@': (4, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100101@': (4, 'green 2', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
         }})
 
         self.do_test(
@@ -1021,64 +1023,10 @@ lightgreen 1 i386 green 3
         # re-running test manually succeeded (note: darkgreen result should be
         # cached already)
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 2'),
-            'series/i386/g/green/20150101_100101@': (4, 'green 2'),
-            'series/amd64/g/green/20150101_100000@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100101@': (4, 'green 2'),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-
-            'series/i386/g/green/20150101_100201@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
-            'series/i386/l/lightgreen/20150101_100201@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100201@': (0, 'lightgreen 1'),
-        }})
-        self.do_test(
-            [],
-            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
-                              'lightgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
-                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
-                             }),
-            })
-        self.assertEqual(self.pending_requests, '')
-
-    def test_rerun_failure_triggers(self):
-        '''manually re-running failed tests with different triggers get picked up'''
-
-        # first run fails
-        self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/i386/g/green/20150101_100101@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/g/green/20150101_100000@': (0, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/g/green/20150101_100101@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-        }})
-
-        self.do_test(
-            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
-                               'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
-                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
-                              }),
-            })
-        self.assertEqual(self.pending_requests, '')
-
-        self.swift.set_results({'autopkgtest-series': {
-            # re-run for the same trigger
-            'series/i386/g/green/20150101_100201@': (0, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            # re-run without trigger
-            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
-            # i386 ran for a different trigger, but should still be taken into account
-            'series/i386/l/lightgreen/20150101_100201@': (0, 'lightgreen 1', {'custom_environment': ['ADT_TEST_TRIGGERS=foo/3']}),
-            # amd64 got re-run without trigger
-            'series/amd64/l/lightgreen/20150101_100201@': (0, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100201@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100201@': (0, 'lightgreen 1', tr('green/2')),
         }})
         self.do_test(
             [],
@@ -1099,8 +1047,8 @@ lightgreen 1 i386 green 3
         '''
         # new libc6 works fine with green
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1', {'custom_environment': ['ADT_TEST_TRIGGERS=libc6/2']}),
-            'series/amd64/g/green/20150101_100000@': (0, 'green 1', {'custom_environment': ['ADT_TEST_TRIGGERS=libc6/2']}),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('libc6/2')),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 1', tr('libc6/2')),
         }})
 
         self.do_test(
@@ -1111,8 +1059,8 @@ lightgreen 1 i386 green 3
         # new green fails; that's not libc6's fault though, so it should stay
         # valid
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100100@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
-            'series/amd64/g/green/20150101_100100@': (4, 'green 2', {'custom_environment': ['ADT_TEST_TRIGGERS=green/2']}),
+            'series/i386/g/green/20150101_100100@': (4, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100100@': (4, 'green 2', tr('green/2')),
         }})
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
@@ -1131,16 +1079,16 @@ lightgreen 1 i386 green 3
         '''broken package gets removed from unstable'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100101@': (0, 'green 1'),
-            'series/amd64/g/green/20150101_100101@': (0, 'green 1'),
-            'series/i386/g/green/20150101_100201@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
-            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100201@': (4, 'lightgreen 2'),
-            'series/amd64/l/lightgreen/20150101_100201@': (4, 'lightgreen 2'),
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+            'series/i386/g/green/20150101_100101@': (0, 'green 1', tr('green/1')),
+            'series/amd64/g/green/20150101_100101@': (0, 'green 1', tr('green/1')),
+            'series/i386/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100201@': (4, 'lightgreen 2', tr('green/2 lightgreen/2')),
+            'series/amd64/l/lightgreen/20150101_100201@': (4, 'lightgreen 2', tr('green/2 lightgreen/2')),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
         }})
 
         self.do_test(
@@ -1158,19 +1106,9 @@ lightgreen 1 i386 green 3
         self.data.remove_all(True)
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100101@': (0, 'green 1'),
-            'series/amd64/g/green/20150101_100101@': (0, 'green 1'),
-            'series/i386/g/green/20150101_100201@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (0, 'green 2'),
-            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100201@': (4, 'lightgreen 2'),
-            'series/amd64/l/lightgreen/20150101_100201@': (4, 'lightgreen 2'),
             # add new result for lightgreen 1
-            'series/i386/l/lightgreen/20150101_100301@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100301@': (0, 'lightgreen 1'),
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1'),
+            'series/i386/l/lightgreen/20150101_100301@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100301@': (0, 'lightgreen 1', tr('green/2')),
         }})
 
         # next run should re-trigger lightgreen 1 to test against green/2
@@ -1239,14 +1177,14 @@ lightgreen 1 i386 green 3
         '''force-badtest hint'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
         }})
 
         self.create_hint('pitti', 'force-badtest lightgreen/1')
@@ -1267,14 +1205,14 @@ lightgreen 1 i386 green 3
         '''force-badtest hint with non-matching version'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100200@': (0, 'green 2'),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
         }})
 
         self.create_hint('pitti', 'force-badtest lightgreen/0.1')
@@ -1380,10 +1318,10 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         # works against linux-meta and -64only, fails against grumpy i386, no
         # result yet for grumpy amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/1']}),
-            'series/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/1']}),
-            'series/amd64/f/fancy/20150101_100201@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta-64only/1']}),
-            'series/i386/f/fancy/20150101_100301@': (4, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta-lts-grumpy/1']}),
+            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
+            'series/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
+            'series/amd64/f/fancy/20150101_100201@': (0, 'fancy 1', tr('linux-meta-64only/1')),
+            'series/i386/f/fancy/20150101_100301@': (4, 'fancy 1', tr('linux-meta-lts-grumpy/1')),
         }})
 
         self.do_test(
@@ -1411,10 +1349,10 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             'series/i386/f/fancy/20140101_100101@': (0, 'fancy 1', {}),
             'series/amd64/f/fancy/20140101_100101@': (8, 'fancy 1', {}),
             # current results with triggers
-            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/1']}),
-            'series/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/1']}),
-            'series/amd64/f/fancy/20150101_100201@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta-64only/1']}),
-            'series/i386/f/fancy/20150101_100301@': (4, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta-lts-grumpy/1']}),
+            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
+            'series/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
+            'series/amd64/f/fancy/20150101_100201@': (0, 'fancy 1', tr('linux-meta-64only/1')),
+            'series/i386/f/fancy/20150101_100301@': (4, 'fancy 1', tr('linux-meta-lts-grumpy/1')),
         }})
 
         self.do_test(
@@ -1472,10 +1410,10 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('linux-firmware', False, {'Source': 'linux-firmware'}, testsuite='autopkgtest')
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/linux/20150101_100000@': (0, 'linux 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/0.2']}),
-            'series/amd64/l/linux/20150101_100000@': (0, 'linux 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/0.2']}),
-            'series/i386/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-firmware/2']}),
-            'series/amd64/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-firmware/2']}),
+            'series/i386/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
+            'series/amd64/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
+            'series/i386/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', tr('linux-firmware/2')),
+            'series/amd64/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', tr('linux-firmware/2')),
         }})
 
         self.do_test(
@@ -1498,8 +1436,8 @@ fancy 1 i386 linux-meta-lts-grumpy 1
 
         # now linux-meta is ready to go
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/f/fancy/20150101_100000@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/0.2']}),
-            'series/amd64/f/fancy/20150101_100000@': (0, 'fancy 1', {'custom_environment': ['ADT_TEST_TRIGGERS=linux-meta/0.2']}),
+            'series/i386/f/fancy/20150101_100000@': (0, 'fancy 1', tr('linux-meta/0.2')),
+            'series/amd64/f/fancy/20150101_100000@': (0, 'fancy 1', tr('linux-meta/0.2')),
         }})
         self.do_test(
             [],
