@@ -560,17 +560,13 @@ class AutoPackageTest(object):
             verinfo is ver -> arch -> {(triggering-src1, ver1), ...}, i. e. an
             entry of self.requested_tests[arch]
 
-            Return pair of ({kernel_trigger1, ...}, {nonkernel_trigger1, ...}) sets.
+            Return {trigger1, ...}) set.
             '''
-            kernel_triggers = set()
-            nonkernel_triggers = set()
+            triggers = set()
             for archinfo in verinfo.values():
                 for (t, v) in archinfo.get(arch, []):
-                    if t.startswith('linux-meta'):
-                        kernel_triggers.add(t + '/' + v)
-                    else:
-                        nonkernel_triggers.add(t + '/' + v)
-            return (kernel_triggers, nonkernel_triggers)
+                    triggers.add(t + '/' + v)
+            return triggers
 
         # build per-queue request strings for new test requests
         # TODO: Once we support version constraints in AMQP requests, add them
@@ -584,12 +580,9 @@ class AutoPackageTest(object):
                     # run just one test for all triggers; but for proposed
                     # kernels we want to run a separate test for each, so that
                     # the test runs under that particular kernel
-                    kernel_triggers, other_triggers = _trigsources(verinfo, arch)
-                    for kt in sorted(kernel_triggers):
-                        params = {'triggers': [kt]}
-                        requests.append((pkg, json.dumps(params)))
-                    if other_triggers:
-                        params = {'triggers': sorted(other_triggers)}
+                    triggers = _trigsources(verinfo, arch)
+                    for t in sorted(triggers):
+                        params = {'triggers': [t]}
                         requests.append((pkg, json.dumps(params)))
             arch_queues[arch] = ('debci-%s-%s' % (self.series, arch), requests)
 

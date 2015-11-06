@@ -763,13 +763,15 @@ lightgreen 1 i386 green 2
             })
 
         # we expect the package's and its reverse dependencies' tests to get
-        # triggered; lightgreen should be triggered only once
+        # triggered; lightgreen should be triggered for each trigger
         self.assertEqual(
             self.amqp_requests,
             set(['debci-series-i386:green {"triggers": ["green/2"]}',
                  'debci-series-amd64:green {"triggers": ["green/2"]}',
-                 'debci-series-i386:lightgreen {"triggers": ["green/2", "lightgreen/2"]}',
-                 'debci-series-amd64:lightgreen {"triggers": ["green/2", "lightgreen/2"]}',
+                 'debci-series-i386:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-i386:lightgreen {"triggers": ["lightgreen/2"]}',
+                 'debci-series-amd64:lightgreen {"triggers": ["lightgreen/2"]}',
                  'debci-series-i386:darkgreen {"triggers": ["green/2"]}',
                  'debci-series-amd64:darkgreen {"triggers": ["green/2"]}']))
 
