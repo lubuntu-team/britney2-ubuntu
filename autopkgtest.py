@@ -535,7 +535,7 @@ class AutoPackageTest(object):
         self.log_verbose('Requested autopkgtests for %s, exclusions: %s' %
                          (['%s/%s' % i for i in packages], str(self.excludes)))
         for src, ver in packages:
-            for arch in self.britney.options.adt_arches.split():
+            for arch in self.britney.options.adt_arches:
                 for (testsrc, testver) in self.tests_for_source(src, ver, arch):
                     self.add_test_request(testsrc, testver, arch, src, ver)
 
@@ -572,7 +572,7 @@ class AutoPackageTest(object):
         # TODO: Once we support version constraints in AMQP requests, add them
         # arch →  (queue_name, [(pkg, params), ...])
         arch_queues = {}
-        for arch in self.britney.options.adt_arches.split():
+        for arch in self.britney.options.adt_arches:
             requests = []
             for pkg, verinfo in self.requested_tests.items():
                 if arch in _arches(verinfo):
@@ -660,7 +660,7 @@ class AutoPackageTest(object):
         pkg_arch_result = {}
         trigger = trigsrc + '/' + trigver
 
-        for arch in self.britney.options.adt_arches.split():
+        for arch in self.britney.options.adt_arches:
             for testsrc, testver in self.tests_for_source(trigsrc, trigver, arch):
                 try:
                     (_, ver_map, ever_passed) = self.test_results[testsrc][arch]

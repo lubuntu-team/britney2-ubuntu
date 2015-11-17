@@ -460,6 +460,7 @@ class Britney(object):
         self.options.outofsync_arches = self.options.outofsync_arches.split()
         self.options.break_arches = self.options.break_arches.split()
         self.options.new_arches = self.options.new_arches.split()
+        self.options.adt_arches = self.options.adt_arches.split()
 
         # Sort the architecture list
         allarches = sorted(self.options.architectures.split())
@@ -1592,7 +1593,7 @@ class Britney(object):
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
                 else:
                     update_candidate = False
-                    if arch in self.options.adt_arches.split():
+                    if arch in self.options.adt_arches:
                         run_autopkgtest = False
                     if arch in self.options.boottest_arches.split():
                         run_boottest = False
@@ -1636,7 +1637,7 @@ class Britney(object):
                 if binary_u[ARCHITECTURE] != 'all' or arch in self.options.nobreakall_arches:
                     if not self.excuse_unsat_deps(pkg, src, arch, suite, excuse):
                         update_candidate = False
-                        if arch in self.options.adt_arches.split():
+                        if arch in self.options.adt_arches:
                             run_autopkgtest = False
                         if arch in self.options.boottest_arches.split():
                             run_boottest = False
@@ -1664,7 +1665,7 @@ class Britney(object):
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
                 else:
                     update_candidate = False
-                    if arch in self.options.adt_arches.split():
+                    if arch in self.options.adt_arches:
                         run_autopkgtest = False
                     if arch in self.options.boottest_arches.split():
                         run_boottest = False
