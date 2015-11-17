@@ -460,7 +460,6 @@ class Britney(object):
         self.options.outofsync_arches = self.options.outofsync_arches.split()
         self.options.break_arches = self.options.break_arches.split()
         self.options.new_arches = self.options.new_arches.split()
-        self.options.adt_arches = self.options.adt_arches.split()
 
         # Sort the architecture list
         allarches = sorted(self.options.architectures.split())
@@ -472,6 +471,14 @@ class Britney(object):
         self.options.architectures = [sys.intern(arch) for arch in arches]
         self.options.smooth_updates = self.options.smooth_updates.split()
 
+        # restrict adt_arches to architectures we actually run for
+        adt_arches = []
+        for arch in self.options.adt_arches.split():
+            if arch in self.options.architectures:
+                adt_arches.append(arch)
+            else:
+                self.__log("Ignoring ADT_ARCHES %s as it is not in architectures list" % arch)
+        self.options.adt_arches = adt_arches
 
     def __log(self, msg, type="I"):
         """Print info messages according to verbosity level
