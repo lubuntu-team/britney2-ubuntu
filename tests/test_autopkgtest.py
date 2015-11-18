@@ -6,6 +6,8 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
+from textwrap import dedent
+
 import apt_pkg
 import os
 import sys
@@ -169,19 +171,54 @@ class TestAutoPkgTest(TestBase):
         self.assertEqual(self.pending_requests, '')
         self.assertEqual(self.amqp_requests, set())
 
+    def test_no_wait_for_always_failed_test(self):
+        '''We do not need to wait for results for tests which have always failed'''
+
+        # The package has failed before, and with a trigger too on amd64
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (4, 'green 1'),
+            'series/amd64/d/darkgreen/20150101_100000@': (4, 'green 1', tr('somepackage/1')),
+        }})
+
+        exc = self.do_test(
+            [('darkgreen', {'Version': '2'}, 'autopkgtest')],
+            {'darkgreen': (True, {'darkgreen 2': {'i386': 'RUNNING-NEVERPASSED',
+                                                  'amd64': 'RUNNING-NEVERPASSED'}})}
+            )[1]
+
+        # the test should stlil be triggered though
+        self.assertEqual(exc['darkgreen']['tests'], {'autopkgtest':
+            {'darkgreen 2': {
+                'amd64': ['RUNNING-NEVERPASSED',
+                          'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/amd64'],
+                'i386': ['RUNNING-NEVERPASSED',
+                         'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/i386']}}})
+
+        self.assertEqual(
+            self.pending_requests, dedent('''\
+                    darkgreen 2 amd64 darkgreen 2
+                    darkgreen 2 i386 darkgreen 2
+            '''))
+
+        self.assertEqual(
+            self.amqp_requests,
+                set(['debci-series-amd64:darkgreen {"triggers": ["darkgreen/2"]}',
+                     'debci-series-i386:darkgreen {"triggers": ["darkgreen/2"]}']))
+
+
     def test_multi_rdepends_with_tests_all_running(self):
         '''Multiple reverse dependencies with tests (all running)'''
 
-        # green has passed before
+        # green has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/g/green/20150101_100000@': (0, 'green 1'),
         }})
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                               'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                               })
             },
             {'green': [('old-version', '1'), ('new-version', '2')]})
@@ -216,7 +253,7 @@ lightgreen 1 i386 green 2
     def test_multi_rdepends_with_tests_all_pass(self):
         '''Multiple reverse dependencies with tests (all pass)'''
 
-        # green has passed before
+        # green has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/g/green/20150101_100000@': (0, 'green 1'),
         }})
@@ -224,9 +261,9 @@ lightgreen 1 i386 green 2
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                               'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                               })
             },
             {'green': [('old-version', '1'), ('new-version', '2')]})
@@ -290,7 +327,7 @@ lightgreen 1 i386 green 2
     def test_multi_rdepends_with_tests_mixed(self):
         '''Multiple reverse dependencies with tests (mixed results)'''
 
-        # green has passed before
+        # green has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/g/green/20150101_100000@': (0, 'green 1'),
         }})
@@ -298,9 +335,9 @@ lightgreen 1 i386 green 2
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                               'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                               })
             },
             {'green': [('old-version', '1'), ('new-version', '2')]})
@@ -335,7 +372,7 @@ lightgreen 1 i386 green 2
     def test_multi_rdepends_with_tests_mixed_no_recorded_triggers(self):
         '''Multiple reverse dependencies with tests (mixed results), no recorded triggers'''
 
-        # green has passed before
+        # green has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/g/green/20150101_100000@': (0, 'green 1'),
         }})
@@ -343,9 +380,9 @@ lightgreen 1 i386 green 2
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                               'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                               })
             },
             {'green': [('old-version', '1'), ('new-version', '2')]})
@@ -362,8 +399,8 @@ lightgreen 1 i386 green 2
         out = self.do_test(
             [],
             {'green': (False, {'green 2': {'amd64': 'ALWAYSFAIL', 'i386': 'PASS'},
-                               'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'PASS'},
+                               'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'RUNNING-NEVERPASSED'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'PASS'},
                               })
             })
 
@@ -469,7 +506,7 @@ lightgreen 1 i386 green 2
     def test_multi_rdepends_arch_specific(self):
         '''Multiple reverse dependencies with arch specific tests'''
 
-        # green64 has passed before
+        # green has passed before on amd64, doesn't exist on i386
         self.swift.set_results({'autopkgtest-series': {
             'series/amd64/g/green64/20150101_100000@': (0, 'green64 0.1'),
         }})
@@ -481,9 +518,9 @@ lightgreen 1 i386 green 2
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                                'green64 1': {'amd64': 'RUNNING'},
                               })
             })
@@ -734,9 +771,9 @@ lightgreen 1 i386 green 2
         self.data.add_src('lightgreen', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                               }),
              'lightgreen': (False, {}),
             },
@@ -782,7 +819,7 @@ lightgreen 1 i386 green 2
     def test_package_pair_running(self):
         '''Two packages in unstable that need to go in together (running)'''
 
-        # green has passed before
+        # green has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/g/green/20150101_100000@': (0, 'green 1'),
         }})
@@ -790,11 +827,11 @@ lightgreen 1 i386 green 2
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
              ('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 2)'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                               'lightgreen 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                               }),
-             'lightgreen': (False, {'lightgreen 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
+             'lightgreen': (False, {'lightgreen 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'}}),
             },
             {'green': [('old-version', '1'), ('new-version', '2')],
              'lightgreen': [('old-version', '1'), ('new-version', '2')],
@@ -830,9 +867,9 @@ lightgreen 2 i386 lightgreen 2
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'newgreen': (False, {'newgreen 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                                  'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                                  'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'newgreen': (True, {'newgreen 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                                 'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                                 'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                                  }),
             },
             {'newgreen': [('old-version', '-'), ('new-version', '2')]})
@@ -1171,7 +1208,7 @@ lightgreen 1 i386 green 3
     def test_multiarch_dep(self):
         '''multi-arch dependency'''
 
-        # lightgreen has passed before
+        # lightgreen has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
         }})
@@ -1181,8 +1218,8 @@ lightgreen 1 i386 green 3
 
         self.do_test(
             [('lightgreen', {'Version': '2'}, 'autopkgtest')],
-            {'lightgreen': (False, {'lightgreen 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                                    'rainbow 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'lightgreen': (False, {'lightgreen 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                                    'rainbow 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                                    }),
             },
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
@@ -1272,16 +1309,16 @@ lightgreen 1 i386 green 3
 
         self.create_hint('pitti', 'force-skiptest green/2')
 
-        # green has passed before
+        # green has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/g/green/20150101_100000@': (0, 'green 1'),
         }})
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (True, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                              'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                              'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (True, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                              'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                              'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                              }),
             },
             {'green': [('old-version', '1'), ('new-version', '2'),
@@ -1292,7 +1329,7 @@ lightgreen 1 i386 green 3
     def test_hint_force_skiptest_different_version(self):
         '''force-skiptest hint with non-matching version'''
 
-        # green has passed before
+        # green has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/g/green/20150101_100000@': (0, 'green 1'),
         }})
@@ -1300,9 +1337,9 @@ lightgreen 1 i386 green 3
         self.create_hint('pitti', 'force-skiptest green/1')
         exc = self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                               'lightgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                               'darkgreen 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                               }),
             },
             {'green': [('reason', 'autopkgtest')]}
@@ -1325,7 +1362,7 @@ lightgreen 1 i386 green 3
 
         self.do_test(
             [('dkms', {'Version': '2'}, None)],
-            {'dkms': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})},
+            {'dkms': (False, {'fancy 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'}})},
             {'dkms': [('old-version', '1'), ('new-version', '2')]})
 
     def test_kernel_triggers_dkms(self):
@@ -1339,9 +1376,9 @@ lightgreen 1 i386 green 3
              ('linux-image-grumpy-generic', {'Source': 'linux-meta-lts-grumpy'}, None),
              ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
             ],
-            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
-             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}}),
-             'linux-meta-64only': (False, {'fancy 1': {'amd64': 'RUNNING'}}),
+            {'linux-meta': (True, {'fancy 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'}}),
+             'linux-meta-lts-grumpy': (True, {'fancy 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'}}),
+             'linux-meta-64only': (True, {'fancy 1': {'amd64': 'RUNNING-NEVERPASSED'}}),
             })
 
         # one separate test should be triggered for each kernel
@@ -1446,10 +1483,10 @@ fancy 1 i386 linux-meta-lts-grumpy 1
              ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
              ('linux-libc-dev', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
             ],
-            {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                                    'glibc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                                    'linux 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                                    'systemd 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING-NEVERPASSED'},
+                                    'glibc 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                                    'linux 2': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
+                                    'systemd 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'},
                                    }),
              'linux-meta-64only': (False, {'lxc 1': {'amd64': 'RUNNING'}}),
              'linux': (False, {}),
@@ -1480,7 +1517,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
              ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
              ('linux-firmware', {'Version': '2', 'Source': 'linux-firmware'}, 'autopkgtest'),
             ],
-            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
                                     'linux 2': {'amd64': 'PASS', 'i386': 'PASS'}
                                    }),
              # no tests, but should wait on linux-meta
@@ -1521,15 +1558,15 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('linux', False, {}, testsuite='autopkgtest')
         self.data.add('notme', False, {'Depends': 'libgcc1'}, testsuite='autopkgtest')
 
-        # binutils has passed before
+        # binutils has passed before on i386 only, therefore NEVERPASSED on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/b/binutils/20150101_100000@': (0, 'binutils 1', tr('binutils/1')),
         }})
 
         exc = self.do_test(
             [('libgcc1', {'Source': 'gcc-5', 'Version': '2'}, None)],
-            {'gcc-5': (False, {'binutils 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'linux 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})[1]
+            {'gcc-5': (False, {'binutils 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING'},
+                               'linux 1': {'amd64': 'RUNNING-NEVERPASSED', 'i386': 'RUNNING-NEVERPASSED'}})})[1]
         self.assertNotIn('notme 1', exc['gcc-5']['tests']['autopkgtest'])
 
     def test_alternative_gcc(self):

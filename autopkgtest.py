@@ -653,10 +653,10 @@ class AutoPackageTest(object):
     def results(self, trigsrc, trigver):
         '''Return test results for triggering package
 
-        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING)
+        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING|RUNNING-NEVERPASSED)
         iterable for all package tests that got triggered by trigsrc/trigver.
         '''
-        # (src, ver) -> arch -> ALWAYSFAIL|PASS|FAIL|RUNNING
+        # (src, ver) -> arch -> ALWAYSFAIL|PASS|FAIL|RUNNING|RUNNING-NEVERPASSED
         pkg_arch_result = {}
         trigger = trigsrc + '/' + trigver
 
@@ -702,7 +702,13 @@ class AutoPackageTest(object):
                     # no result for testsrc/testver/arch; still running?
                     try:
                         self.pending_tests[testsrc][testver][arch]
-                        result = 'RUNNING'
+                        # if we can't find a result, assume that it has never passed (i.e. this is the first run)
+                        (_, _, ever_passed) = self.test_results.get(testsrc, {}).get(arch, (None, None, False))
+
+                        if ever_passed:
+                            result = 'RUNNING'
+                        else:
+                            result = 'RUNNING-NEVERPASSED'
                     except KeyError:
                         # ignore if adt or swift results are disabled,
                         # otherwise this is unexpected
