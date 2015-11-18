@@ -114,7 +114,7 @@ class TestAutoPkgTest(TestBase):
 
         for src, (is_candidate, testmap) in expect_status.items():
             self.assertEqual(excuses_dict[src]['is-candidate'], is_candidate,
-                             src + ': ' + str(excuses_dict[src]))
+                             src + ': ' + pprint.pformat(excuses_dict[src]))
             for testsrc, archmap in testmap.items():
                 for arch, status in archmap.items():
                     self.assertEqual(excuses_dict[src]['tests']['autopkgtest'][testsrc][arch][0],
