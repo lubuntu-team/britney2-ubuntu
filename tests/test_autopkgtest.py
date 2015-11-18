@@ -172,6 +172,11 @@ class TestAutoPkgTest(TestBase):
     def test_multi_rdepends_with_tests_all_running(self):
         '''Multiple reverse dependencies with tests (all running)'''
 
+        # green has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        }})
+
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             {'green': (False, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
@@ -210,6 +215,11 @@ lightgreen 1 i386 green 2
 
     def test_multi_rdepends_with_tests_all_pass(self):
         '''Multiple reverse dependencies with tests (all pass)'''
+
+        # green has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        }})
 
         # first run requests tests and marks them as pending
         self.do_test(
@@ -280,6 +290,11 @@ lightgreen 1 i386 green 2
     def test_multi_rdepends_with_tests_mixed(self):
         '''Multiple reverse dependencies with tests (mixed results)'''
 
+        # green has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        }})
+
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
@@ -319,6 +334,11 @@ lightgreen 1 i386 green 2
 
     def test_multi_rdepends_with_tests_mixed_no_recorded_triggers(self):
         '''Multiple reverse dependencies with tests (mixed results), no recorded triggers'''
+
+        # green has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        }})
 
         # first run requests tests and marks them as pending
         self.do_test(
@@ -448,6 +468,11 @@ lightgreen 1 i386 green 2
 
     def test_multi_rdepends_arch_specific(self):
         '''Multiple reverse dependencies with arch specific tests'''
+
+        # green64 has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/g/green64/20150101_100000@': (0, 'green64 0.1'),
+        }})
 
         self.data.add('green64', False, {'Depends': 'libc6 (>= 0.9), libgreen1',
                                          'Architecture': 'amd64'},
@@ -701,6 +726,10 @@ lightgreen 1 i386 green 2
     def test_rdepends_unbuilt_new_version_fail(self):
         '''Unbuilt reverse dependency gets failure for newer version'''
 
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('lightgreen/2')),
+        }})
+
         # add unbuilt lightgreen; should request tests against the old version
         self.data.add_src('lightgreen', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
         self.do_test(
@@ -752,6 +781,11 @@ lightgreen 1 i386 green 2
 
     def test_package_pair_running(self):
         '''Two packages in unstable that need to go in together (running)'''
+
+        # green has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        }})
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
@@ -1137,6 +1171,11 @@ lightgreen 1 i386 green 3
     def test_multiarch_dep(self):
         '''multi-arch dependency'''
 
+        # lightgreen has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+        }})
+
         self.data.add('rainbow', False, {'Depends': 'lightgreen:any'},
                       testsuite='autopkgtest')
 
@@ -1233,6 +1272,11 @@ lightgreen 1 i386 green 3
 
         self.create_hint('pitti', 'force-skiptest green/2')
 
+        # green has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        }})
+
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             {'green': (True, {'green 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
@@ -1247,6 +1291,11 @@ lightgreen 1 i386 green 3
 
     def test_hint_force_skiptest_different_version(self):
         '''force-skiptest hint with non-matching version'''
+
+        # green has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+        }})
 
         self.create_hint('pitti', 'force-skiptest green/1')
         exc = self.do_test(
@@ -1269,6 +1318,10 @@ lightgreen 1 i386 green 3
 
         self.data.add('dkms', False, {})
         self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 0.1')
+        }})
 
         self.do_test(
             [('dkms', {'Version': '2'}, None)],
@@ -1318,6 +1371,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         # works against linux-meta and -64only, fails against grumpy i386, no
         # result yet for grumpy amd64
         self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/f/fancy/20150101_100301@': (0, 'fancy 0.5'),
             'series/i386/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
             'series/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
             'series/amd64/f/fancy/20150101_100201@': (0, 'fancy 1', tr('linux-meta-64only/1')),
@@ -1382,6 +1436,10 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
 
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lxc/20150101_100101@': (0, 'lxc 0.1')
+        }})
+
         exc = self.do_test(
             [('linux-image', {'Version': '2', 'Depends': 'linux-image-2', 'Source': 'linux-meta'}, None),
              ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
@@ -1410,6 +1468,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('linux-firmware', False, {'Source': 'linux-firmware'}, testsuite='autopkgtest')
 
         self.swift.set_results({'autopkgtest-series': {
+            'series/i386/f/fancy/20150101_090000@': (0, 'fancy 0.5'),
             'series/i386/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
             'series/amd64/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
             'series/i386/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', tr('linux-firmware/2')),
@@ -1461,6 +1520,11 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('binutils', False, {}, testsuite='autopkgtest')
         self.data.add('linux', False, {}, testsuite='autopkgtest')
         self.data.add('notme', False, {'Depends': 'libgcc1'}, testsuite='autopkgtest')
+
+        # binutils has passed before
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/b/binutils/20150101_100000@': (0, 'binutils 1', tr('binutils/1')),
+        }})
 
         exc = self.do_test(
             [('libgcc1', {'Source': 'gcc-5', 'Version': '2'}, None)],
