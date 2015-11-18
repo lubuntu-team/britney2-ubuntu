@@ -1422,7 +1422,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
 
         self.assertEqual(self.pending_requests, '')
 
-    def test_kernel_triggerered_tests(self):
+    def test_kernel_triggered_tests(self):
         '''linux, lxc, glibc tests get triggered by linux-meta* uploads'''
 
         self.data.remove_all(False)
