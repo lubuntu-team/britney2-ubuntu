@@ -22,7 +22,7 @@ EXCUSES_LABELS = {
     "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
     "REGRESSION": '<span style="background:#ff6666">Regression</span>',
     "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
-    "RUNNING-NEVERPASSED": '<span style="background:#99ddff">Test in progress (always failed)</span>',
+    "RUNNING-ALWAYSFAILED": '<span style="background:#99ddff">Test in progress (always failed)</span>',
 }
 
 
@@ -73,7 +73,7 @@ class Excuse(object):
         self.reason = {}
         self.htmlline = []
         # type (e. g. "autopkgtest") -> package (e. g. "foo 2-1") -> arch ->
-        #   ['PASS'|'ALWAYSFAIL'|'REGRESSION'|'RUNNING'|'RUNNING-NEVERPASSED', url]
+        #   ['PASS'|'ALWAYSFAIL'|'REGRESSION'|'RUNNING'|'RUNNING-ALWAYSFAILED', url]
         self.tests = {}
 
     def sortkey(self):
