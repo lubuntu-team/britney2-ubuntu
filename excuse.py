@@ -22,7 +22,7 @@ EXCUSES_LABELS = {
     "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
     "REGRESSION": '<span style="background:#ff6666">Regression</span>',
     "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
-    "RUNNING-NEVERPASSED": '<span style="background:#99ddff">Test in progress (never passed)</span>',
+    "RUNNING-NEVERPASSED": '<span style="background:#99ddff">Test in progress (always failed)</span>',
 }
 
 
