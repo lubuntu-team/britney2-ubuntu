@@ -6,13 +6,13 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import mock
 import os
 import shutil
 import sys
 import tempfile
 import fileinput
 import unittest
+from unittest import mock
 
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
