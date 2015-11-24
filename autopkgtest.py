@@ -662,6 +662,8 @@ class AutoPackageTest(object):
 
         for arch in self.britney.options.adt_arches:
             for testsrc, testver in self.tests_for_source(trigsrc, trigver, arch):
+                # by default, assume that we has never passed (i.e. this is the first run)
+                ever_passed = False
                 try:
                     (_, ver_map, ever_passed) = self.test_results[testsrc][arch]
 
@@ -702,8 +704,6 @@ class AutoPackageTest(object):
                     # no result for testsrc/testver/arch; still running?
                     try:
                         self.pending_tests[testsrc][testver][arch]
-                        # if we can't find a result, assume that it has never passed (i.e. this is the first run)
-                        (_, _, ever_passed) = self.test_results.get(testsrc, {}).get(arch, (None, None, False))
 
                         if ever_passed:
                             result = 'RUNNING'
