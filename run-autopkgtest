@@ -27,8 +27,10 @@ def parse_args():
                         metavar='SOURCE/VERSION', required=True,
                         help='Add triggering package to request. '
                         'Can be specified multiple times.')
-    parser.add_argument('--ppa', metavar='LPUSER/PPANAME',
-                        help='Enable PPA for requested test(s)')
+    parser.add_argument('--ppa', metavar='LPUSER/PPANAME', action='append',
+                        default=[],
+                        help='Enable PPA for requested test(s). '
+                        'Can be specified multiple times.')
     parser.add_argument('package', nargs='+',
                         help='Source package name(s) whose tests to run.')
     args = parser.parse_args()
@@ -39,6 +41,13 @@ def parse_args():
             (src, ver) = t.split('/')
         except ValueError:
             parser.error('Invalid trigger format "%s", must be "sourcepkg/version"' % t)
+
+    # verify syntax of PPAs
+    for t in args.ppa:
+        try:
+            (user, name) = t.split('/')
+        except ValueError:
+            parser.error('Invalid ppa format "%s", must be "lpuser/ppaname"' % t)
 
     return args
 
@@ -65,7 +74,7 @@ if __name__ == '__main__':
     if args.trigger:
         params['triggers'] = args.trigger
     if args.ppa:
-        params['ppa'] = args.ppa
+        params['ppas'] = args.ppa
     params = '\n' + json.dumps(params)
 
     with kombu.Connection(config.adt_amqp) as conn:
