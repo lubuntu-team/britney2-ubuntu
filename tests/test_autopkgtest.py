@@ -345,7 +345,7 @@ lightgreen 1 i386 green 2
         # second run collects the results
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
             'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
             'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
             'series/amd64/g/green/20150101_100201@': (4, 'green 2', tr('green/2')),
@@ -422,7 +422,7 @@ lightgreen 1 i386 green 2
             'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
             'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
             'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
-            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/1')),
             'series/amd64/g/green/20150101_100201@': (4, 'green 2', tr('green/2')),
         }})
 
@@ -456,7 +456,7 @@ lightgreen 1 i386 green 2
             'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
             'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
             'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
-            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/1')),
             'series/amd64/g/green/20150101_100201@': (4, 'green 2', tr('green/2')),
         }})
 
@@ -595,9 +595,9 @@ lightgreen 1 i386 green 2
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/1.1')),
             'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/1.1')),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1.1')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1')),
             'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1.1')),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1.1')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1')),
             'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1.1')),
             'series/i386/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
             'series/amd64/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
@@ -706,9 +706,9 @@ lightgreen 1 i386 green 2
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/1.1')),
             'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/1.1')),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1.1')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1')),
             'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1.1')),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1.1')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1')),
             'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1.1')),
             'series/i386/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
             'series/amd64/g/green/20150101_020000@': (0, 'green 1', tr('green/1')),
@@ -788,8 +788,8 @@ lightgreen 1 i386 green 2
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5', tr('green/2')),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5', tr('green/1')),
             'series/i386/l/lightgreen/20150101_100200@': (4, 'lightgreen 2', tr('green/2')),
             'series/amd64/l/lightgreen/20150101_100200@': (4, 'lightgreen 2', tr('green/2')),
             'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
@@ -1042,9 +1042,9 @@ lightgreen 1 i386 green 3
 
         # one tmpfail result without testpkg-version, should be ignored
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/2')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'series/i386/l/lightgreen/20150101_100101@': (16, None, tr('lightgreen/2')),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'series/amd64/l/lightgreen/20150101_100101@': (16, 'lightgreen 2', tr('lightgreen/2')),
         }})
 
@@ -1070,13 +1070,13 @@ lightgreen 1 i386 green 3
 
         # first run fails
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 2', tr('green/2')),
+            'series/i386/g/green/20150101_100000@': (0, 'green 2', tr('green/1')),
             'series/i386/g/green/20150101_100101@': (4, 'green 2', tr('green/2')),
-            'series/amd64/g/green/20150101_100000@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100000@': (0, 'green 2', tr('green/1')),
             'series/amd64/g/green/20150101_100101@': (4, 'green 2', tr('green/2')),
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1')),
             'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
-            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1')),
             'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'series/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
@@ -1154,8 +1154,8 @@ lightgreen 1 i386 green 3
             'series/amd64/g/green/20150101_100101@': (0, 'green 1', tr('green/1')),
             'series/i386/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
             'series/amd64/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
-            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('green/2')),
-            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('green/1')),
             'series/i386/l/lightgreen/20150101_100201@': (4, 'lightgreen 2', tr('green/2 lightgreen/2')),
             'series/amd64/l/lightgreen/20150101_100201@': (4, 'lightgreen 2', tr('green/2 lightgreen/2')),
             'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
