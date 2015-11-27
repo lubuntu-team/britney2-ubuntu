@@ -177,7 +177,7 @@ class TestAutoPkgTest(TestBase):
         # The package has failed before, and with a trigger too on amd64
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/d/darkgreen/20150101_100000@': (4, 'green 1'),
-            'series/amd64/d/darkgreen/20150101_100000@': (4, 'green 1', tr('somepackage/1')),
+            'series/amd64/d/darkgreen/20150101_100000@': (4, 'green 1', tr('failedbefore/1')),
         }})
 
         exc = self.do_test(
@@ -186,7 +186,7 @@ class TestAutoPkgTest(TestBase):
                                                   'amd64': 'RUNNING-ALWAYSFAILED'}})}
             )[1]
 
-        # the test should stlil be triggered though
+        # the test should still be triggered though
         self.assertEqual(exc['darkgreen']['tests'], {'autopkgtest':
             {'darkgreen 2': {
                 'amd64': ['RUNNING-ALWAYSFAILED',
@@ -209,9 +209,9 @@ class TestAutoPkgTest(TestBase):
     def test_multi_rdepends_with_tests_all_running(self):
         '''Multiple reverse dependencies with tests (all running)'''
 
-        # green has passed before on i386 only, therefore NEVERPASSED on amd64
+        # green has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
         self.do_test(
@@ -253,9 +253,9 @@ lightgreen 1 i386 green 2
     def test_multi_rdepends_with_tests_all_pass(self):
         '''Multiple reverse dependencies with tests (all pass)'''
 
-        # green has passed before on i386 only, therefore NEVERPASSED on amd64
+        # green has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
         # first run requests tests and marks them as pending
@@ -327,9 +327,9 @@ lightgreen 1 i386 green 2
     def test_multi_rdepends_with_tests_mixed(self):
         '''Multiple reverse dependencies with tests (mixed results)'''
 
-        # green has passed before on i386 only, therefore NEVERPASSED on amd64
+        # green has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
         # first run requests tests and marks them as pending
@@ -372,9 +372,9 @@ lightgreen 1 i386 green 2
     def test_multi_rdepends_with_tests_mixed_no_recorded_triggers(self):
         '''Multiple reverse dependencies with tests (mixed results), no recorded triggers'''
 
-        # green has passed before on i386 only, therefore NEVERPASSED on amd64
+        # green has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
         # first run requests tests and marks them as pending
@@ -508,7 +508,7 @@ lightgreen 1 i386 green 2
 
         # green has passed before on amd64, doesn't exist on i386
         self.swift.set_results({'autopkgtest-series': {
-            'series/amd64/g/green64/20150101_100000@': (0, 'green64 0.1'),
+            'series/amd64/g/green64/20150101_100000@': (0, 'green64 0.1', tr('passedbefore/1')),
         }})
 
         self.data.add('green64', False, {'Depends': 'libc6 (>= 0.9), libgreen1',
@@ -819,9 +819,9 @@ lightgreen 1 i386 green 2
     def test_package_pair_running(self):
         '''Two packages in unstable that need to go in together (running)'''
 
-        # green has passed before on i386 only, therefore NEVERPASSED on amd64
+        # green has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
         self.do_test(
@@ -1043,7 +1043,7 @@ lightgreen 1 i386 green 3
         # one tmpfail result without testpkg-version, should be ignored
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/2')),
-            'series/i386/l/lightgreen/20150101_100101@': (16, None),
+            'series/i386/l/lightgreen/20150101_100101@': (16, None, tr('lightgreen/2')),
             'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/2')),
             'series/amd64/l/lightgreen/20150101_100101@': (16, 'lightgreen 2', tr('lightgreen/2')),
         }})
@@ -1055,7 +1055,7 @@ lightgreen 1 i386 green 3
 
         # one more tmpfail result, should not confuse britney with None version
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/lightgreen/20150101_100201@': (16, None),
+            'series/i386/l/lightgreen/20150101_100201@': (16, None, tr('lightgreen/2')),
         }})
         self.do_test(
             [],
@@ -1208,9 +1208,9 @@ lightgreen 1 i386 green 3
     def test_multiarch_dep(self):
         '''multi-arch dependency'''
 
-        # lightgreen has passed before on i386 only, therefore NEVERPASSED on amd64
+        # lightgreen has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1'),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
         }})
 
         self.data.add('rainbow', False, {'Depends': 'lightgreen:any'},
@@ -1309,9 +1309,9 @@ lightgreen 1 i386 green 3
 
         self.create_hint('pitti', 'force-skiptest green/2')
 
-        # green has passed before on i386 only, therefore NEVERPASSED on amd64
+        # green has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
         self.do_test(
@@ -1329,9 +1329,9 @@ lightgreen 1 i386 green 3
     def test_hint_force_skiptest_different_version(self):
         '''force-skiptest hint with non-matching version'''
 
-        # green has passed before on i386 only, therefore NEVERPASSED on amd64
+        # green has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1'),
+            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
         self.create_hint('pitti', 'force-skiptest green/1')
@@ -1357,7 +1357,7 @@ lightgreen 1 i386 green 3
         self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 0.1')
+            'series/i386/f/fancy/20150101_100101@': (0, 'fancy 0.1', tr('passedbefore/1'))
         }})
 
         self.do_test(
@@ -1408,7 +1408,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         # works against linux-meta and -64only, fails against grumpy i386, no
         # result yet for grumpy amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/amd64/f/fancy/20150101_100301@': (0, 'fancy 0.5'),
+            'series/amd64/f/fancy/20150101_100301@': (0, 'fancy 0.5', tr('passedbefore/1')),
             'series/i386/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
             'series/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
             'series/amd64/f/fancy/20150101_100201@': (0, 'fancy 1', tr('linux-meta-64only/1')),
@@ -1474,7 +1474,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/amd64/l/lxc/20150101_100101@': (0, 'lxc 0.1')
+            'series/amd64/l/lxc/20150101_100101@': (0, 'lxc 0.1', tr('passedbefore/1'))
         }})
 
         exc = self.do_test(
@@ -1505,7 +1505,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('linux-firmware', False, {'Source': 'linux-firmware'}, testsuite='autopkgtest')
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/f/fancy/20150101_090000@': (0, 'fancy 0.5'),
+            'series/i386/f/fancy/20150101_090000@': (0, 'fancy 0.5', tr('passedbefore/1')),
             'series/i386/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
             'series/amd64/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
             'series/i386/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', tr('linux-firmware/2')),
@@ -1558,9 +1558,9 @@ fancy 1 i386 linux-meta-lts-grumpy 1
         self.data.add('linux', False, {}, testsuite='autopkgtest')
         self.data.add('notme', False, {'Depends': 'libgcc1'}, testsuite='autopkgtest')
 
-        # binutils has passed before on i386 only, therefore NEVERPASSED on amd64
+        # binutils has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/b/binutils/20150101_100000@': (0, 'binutils 1', tr('binutils/1')),
+            'series/i386/b/binutils/20150101_100000@': (0, 'binutils 1', tr('passedbefore/1')),
         }})
 
         exc = self.do_test(
