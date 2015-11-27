@@ -24,7 +24,7 @@ def parse_args():
                         help='Only run test(s) on given architecture name(s). '
                         'Can be specified multiple times (default: all).')
     parser.add_argument('--trigger', action='append', default=[],
-                        metavar='SOURCE/VERSION', required=True,
+                        metavar='SOURCE/VERSION',
                         help='Add triggering package to request. '
                         'Can be specified multiple times.')
     parser.add_argument('--ppa', metavar='LPUSER/PPANAME', action='append',
@@ -34,6 +34,9 @@ def parse_args():
     parser.add_argument('package', nargs='+',
                         help='Source package name(s) whose tests to run.')
     args = parser.parse_args()
+
+    if not args.trigger and not args.ppa:
+        parser.error('One of --trigger or --ppa must be given')
 
     # verify syntax of triggers
     for t in args.trigger:
