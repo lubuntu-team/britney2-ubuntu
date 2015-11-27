@@ -303,7 +303,7 @@ lightgreen 1 i386 green 2
             res = json.load(f)
         self.assertEqual(res['green']['i386'],
                          ['20150101_100200@',
-                          {'1': {}, '2': {'green/2': True}},
+                          {'1': {'passedbefore/1': True}, '2': {'green/2': True}},
                           True])
         self.assertEqual(res['lightgreen']['amd64'],
                          ['20150101_100101@',
@@ -369,47 +369,31 @@ lightgreen 1 i386 green 2
         self.assertIn('darkgreen 1 amd64 green 2', self.pending_requests)
         self.assertIn('lightgreen 1 i386 green 2', self.pending_requests)
 
-    def test_multi_rdepends_with_tests_mixed_no_recorded_triggers(self):
-        '''Multiple reverse dependencies with tests (mixed results), no recorded triggers'''
+    def test_results_without_triggers(self):
+        '''Old results without recorded triggers'''
 
-        # green has passed before on i386 only, therefore ALWAYSFAILED on amd64
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
+            'series/i386/g/green/20150101_100100@': (0, 'green 1', tr('passedbefore/1')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
+            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
         }})
 
-        # first run requests tests and marks them as pending
+        # none of the above results should be accepted
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAILED', 'i386': 'RUNNING'},
                                'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAILED', 'i386': 'RUNNING-ALWAYSFAILED'},
                                'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAILED', 'i386': 'RUNNING-ALWAYSFAILED'},
                               })
-            },
-            {'green': [('old-version', '1'), ('new-version', '2')]})
-
-        # second run collects the results
-        self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
-            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
-            'series/i386/g/green/20150101_100200@': (0, 'green 2'),
-            'series/amd64/g/green/20150101_100201@': (4, 'green 2'),
-        }})
-
-        out = self.do_test(
-            [],
-            {'green': (False, {'green 2': {'amd64': 'ALWAYSFAIL', 'i386': 'PASS'},
-                               'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'RUNNING-ALWAYSFAILED'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAILED', 'i386': 'PASS'},
-                              })
             })
-
-        # not expecting any failures to retrieve from swift
-        self.assertNotIn('Failure', out, out)
 
         # there should be some pending ones
         self.assertIn('darkgreen 1 amd64 green 2', self.pending_requests)
         self.assertIn('lightgreen 1 i386 green 2', self.pending_requests)
+        self.assertIn('green 2 i386 green 2', self.pending_requests)
 
     def test_multi_rdepends_with_tests_regression(self):
         '''Multiple reverse dependencies with tests (regression)'''
@@ -1452,12 +1436,13 @@ fancy 1 i386 linux-meta-lts-grumpy 1
              ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
             ],
             {'linux-meta': (True, {'fancy 1': {'amd64': 'PASS', 'i386': 'PASS'}}),
-             # we don't have an explicit result for amd64, so the old one counts
-             'linux-meta-lts-grumpy': (True, {'fancy 1': {'amd64': 'ALWAYSFAIL', 'i386': 'ALWAYSFAIL'}}),
+             # we don't have an explicit result for amd64
+             'linux-meta-lts-grumpy': (True, {'fancy 1': {'amd64': 'RUNNING-ALWAYSFAILED', 'i386': 'ALWAYSFAIL'}}),
              'linux-meta-64only': (True, {'fancy 1': {'amd64': 'PASS'}}),
             })
 
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests,
+                         'fancy 1 amd64 linux-meta-lts-grumpy 1\n')
 
     def test_kernel_triggered_tests(self):
         '''linux, lxc, glibc tests get triggered by linux-meta* uploads'''

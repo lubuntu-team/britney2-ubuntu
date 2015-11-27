@@ -351,7 +351,7 @@ class AutoPackageTest(object):
         self.requested_tests.setdefault(src, {}).setdefault(
             ver, {}).setdefault(arch, set()).add((trigsrc, trigver))
 
-    def fetch_swift_results(self, swift_url, src, arch, trigger=None):
+    def fetch_swift_results(self, swift_url, src, arch):
         '''Download new results for source package/arch from swift'''
 
         # prepare query: get all runs with a timestamp later than latest_stamp
@@ -387,14 +387,12 @@ class AutoPackageTest(object):
 
         for p in result_paths:
             self.fetch_one_result(
-                os.path.join(swift_url, 'autopkgtest-' + self.series, p, 'result.tar'),
-                src, arch, trigger)
+                os.path.join(swift_url, 'autopkgtest-' + self.series, p, 'result.tar'), src, arch)
 
-    def fetch_one_result(self, url, src, arch, trigger=None):
+    def fetch_one_result(self, url, src, arch):
         '''Download one result URL for source/arch
 
-        Remove matching pending_tests entries. If trigger is given (src, ver)
-        it is added to the triggers of that result.
+        Remove matching pending_tests entries.
         '''
         try:
             f = urlopen(url)
@@ -413,11 +411,7 @@ class AutoPackageTest(object):
                 exitcode = int(tar.extractfile('exitcode').read().strip())
                 srcver = tar.extractfile('testpkg-version').read().decode().strip()
                 (ressrc, ver) = srcver.split()
-                try:
-                    testinfo = json.loads(tar.extractfile('testinfo.json').read().decode())
-                except KeyError:
-                    self.log_error('warning: %s does not have a testinfo.json' % url)
-                    testinfo = {}
+                testinfo = json.loads(tar.extractfile('testinfo.json').read().decode())
         except (KeyError, ValueError, tarfile.TarError) as e:
             self.log_error('%s is damaged, ignoring: %s' % (url, str(e)))
             # ignore this; this will leave an orphaned request in pending.txt
@@ -431,13 +425,13 @@ class AutoPackageTest(object):
             return
 
         # parse recorded triggers in test result
-        if 'custom_environment' in testinfo:
-            for e in testinfo['custom_environment']:
-                if e.startswith('ADT_TEST_TRIGGERS='):
-                    result_triggers = [tuple(i.split('/', 1)) for i in e.split('=', 1)[1].split() if '/' in i]
-                    break
+        for e in testinfo.get('custom_environment', []):
+            if e.startswith('ADT_TEST_TRIGGERS='):
+                result_triggers = [tuple(i.split('/', 1)) for i in e.split('=', 1)[1].split() if '/' in i]
+                break
         else:
-            result_triggers = None
+            self.log_error('%s result has no ADT_TEST_TRIGGERS, ignoring')
+            return
 
         stamp = os.path.basename(os.path.dirname(url))
         # allow some skipped tests, but nothing else
@@ -446,68 +440,49 @@ class AutoPackageTest(object):
         self.log_verbose('Fetched test result for %s/%s/%s %s (triggers: %s): %s' % (
             src, ver, arch, stamp, result_triggers, passed and 'pass' or 'fail'))
 
-        # remove matching test requests, remember triggers
-        satisfied_triggers = set()
+        # remove matching test requests
         for request_map in [self.requested_tests, self.pending_tests]:
             for pending_ver, pending_archinfo in request_map.get(src, {}).copy().items():
                 # don't consider newer requested versions
                 if apt_pkg.version_compare(pending_ver, ver) > 0:
                     continue
 
-                if result_triggers:
-                    # explicitly recording/retrieving test triggers is the
-                    # preferred (and robust) way of matching results to pending
-                    # requests
-                    for result_trigger in result_triggers:
-                        satisfied_triggers.add(result_trigger)
-                        try:
-                            request_map[src][pending_ver][arch].remove(result_trigger)
-                            self.log_verbose('-> matches pending request %s/%s/%s for trigger %s' %
-                                             (src, pending_ver, arch, str(result_trigger)))
-                        except (KeyError, ValueError):
-                            self.log_verbose('-> does not match any pending request for %s/%s/%s' %
-                                             (src, pending_ver, arch))
-                else:
-                    # ... but we still need to support results without
-                    # testinfo.json and recorded triggers until we stop caring about
-                    # existing wily and trusty results; match the latest result to all
-                    # triggers for src that have at least the requested version
+                for result_trigger in result_triggers:
                     try:
-                        t = pending_archinfo[arch]
-                        self.log_verbose('-> matches pending request %s/%s for triggers %s' %
-                                         (src, pending_ver, str(t)))
-                        satisfied_triggers.update(t)
-                        del request_map[src][pending_ver][arch]
-                    except KeyError:
-                        self.log_verbose('-> does not match any pending request for %s/%s' %
-                                         (src, pending_ver))
-
-        # FIXME: this is a hack that mostly applies to re-running tests
-        # manually without giving a trigger. Tests which don't get
-        # triggered by a particular kernel version are fine with that, so
-        # add some heuristic once we drop the above code.
-        if trigger:
-            satisfied_triggers.add(trigger)
+                        request_map[src][pending_ver][arch].remove(result_trigger)
+                        self.log_verbose('-> matches pending request %s/%s/%s for trigger %s' %
+                                         (src, pending_ver, arch, str(result_trigger)))
+                    except (KeyError, ValueError):
+                        self.log_verbose('-> does not match any pending request for %s/%s/%s' %
+                                         (src, pending_ver, arch))
 
         # add this result
         src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}, False])
-        if passed:
-            # update ever_passed field, unless we got triggered from
-            # linux-meta*: we trigger separate per-kernel tests for reverse
-            # test dependencies, and we don't want to track per-trigger
-            # ever_passed. This would be wrong for everything except the
-            # kernel, and the kernel team tracks per-kernel regressions already
-            if not result_triggers or not result_triggers[0][0].startswith('linux-meta'):
-                src_arch_results[2] = True
-        if satisfied_triggers:
-            for trig in satisfied_triggers:
-                src_arch_results[1].setdefault(ver, {})[trig[0] + '/' + trig[1]] = passed
-        else:
-            # this result did not match any triggers? then we are in backwards
-            # compat mode for results without recorded triggers; update all
-            # results
-            for trig in src_arch_results[1].setdefault(ver, {}):
-                src_arch_results[1][ver][trig] = passed
+        trigmap = src_arch_results[1].setdefault(ver, {})
+        for trig in result_triggers:
+            trig_idx = trig[0] + '/' + trig[1]
+
+            # If a test runs because of its own package (newer version), ensure
+            # that we got a new enough version; FIXME: this should be done more
+            # generically by matching against testpkg-versions
+            if trig[0] == src and apt_pkg.version_compare(ver, trig[1]) < 0:
+                self.log_error('test trigger %s, but run for older version %s, ignoring' %
+                               (trig_idx, ver))
+                continue
+
+            # passed results are always good, but don't clobber existing passed
+            # results with failures from re-runs
+            if passed or trig_idx not in trigmap:
+                trigmap[trig_idx] = passed
+
+        # update ever_passed field, unless we got triggered from
+        # linux-meta*: we trigger separate per-kernel tests for reverse
+        # test dependencies, and we don't want to track per-trigger
+        # ever_passed. This would be wrong for everything except the
+        # kernel, and the kernel team tracks per-kernel regressions already
+        if passed and not result_triggers[0][0].startswith('linux-meta'):
+            src_arch_results[2] = True
+
         # update latest_stamp
         if stamp > src_arch_results[0]:
             src_arch_results[0] = stamp
@@ -640,7 +615,7 @@ class AutoPackageTest(object):
                 if arch not in self.pending_tests.get(trigpkg, {}).get(trigver, {}):
                     self.log_verbose('Checking for new results for failed %s on %s for trigger %s/%s' %
                                      (pkg, arch, trigpkg, trigver))
-                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, (trigpkg, trigver))
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch)
 
         # update the results cache
         with open(self.results_cache_file + '.new', 'w') as f:
