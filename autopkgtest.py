@@ -23,11 +23,11 @@ import tarfile
 import io
 import copy
 import re
-from urllib.parse import urlencode
+import urllib.parse
 from urllib.request import urlopen
 
 import apt_pkg
-import kombu
+import amqplib.client_0_8 as amqp
 
 from consts import (AUTOPKGTEST, BINARIES, DEPENDS, RDEPENDS, SOURCE, VERSION)
 
@@ -368,7 +368,7 @@ class AutoPackageTest(object):
 
         # request new results from swift
         url = os.path.join(swift_url, 'autopkgtest-' + self.series)
-        url += '?' + urlencode(query)
+        url += '?' + urllib.parse.urlencode(query)
         try:
             f = urlopen(url)
             if f.getcode() == 200:
@@ -590,13 +590,14 @@ class AutoPackageTest(object):
 
         if amqp_url.startswith('amqp://'):
             # in production mode, send them out via AMQP
-            with kombu.Connection(amqp_url) as conn:
-                for arch, (queue, requests) in arch_queues.items():
-                    # don't use SimpleQueue here as it always declares queues;
-                    # ACLs might not allow that
-                    with kombu.Producer(conn, routing_key=queue, auto_declare=False) as p:
+            creds = urllib.parse.urlsplit(amqp_url, allow_fragments=False)
+            with amqp.Connection(creds.hostname, userid=creds.username,
+                                 password=creds.password) as amqp_con:
+                with amqp_con.channel() as ch:
+                    for arch, (queue, requests) in arch_queues.items():
                         for (pkg, params) in requests:
-                            p.publish(pkg + '\n' + params)
+                            ch.basic_publish(amqp.Message(pkg + '\n' + params),
+                                             routing_key=queue)
         elif amqp_url.startswith('file://'):
             # in testing mode, adt_amqp will be a file:// URL
             with open(amqp_url[7:], 'a') as f:

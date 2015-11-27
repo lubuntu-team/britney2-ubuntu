@@ -5,8 +5,9 @@ import os
 import sys
 import argparse
 import json
+import urllib.parse
 
-import kombu
+import amqplib.client_0_8 as amqp
 
 my_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
 
@@ -80,11 +81,14 @@ if __name__ == '__main__':
         params['ppas'] = args.ppa
     params = '\n' + json.dumps(params)
 
-    with kombu.Connection(config.adt_amqp) as conn:
-        for arch in args.architecture:
-            # don't use SimpleQueue here as it always declares queues;
-            # ACLs might not allow that
-            with kombu.Producer(conn, routing_key='debci-%s-%s' % (args.series, arch),
-                                auto_declare=False) as p:
+    creds = urllib.parse.urlsplit(config.adt_amqp, allow_fragments=False)
+    assert creds.scheme == 'amqp'
+
+    with amqp.Connection(creds.hostname, userid=creds.username,
+                         password=creds.password) as amqp_con:
+        with amqp_con.channel() as ch:
+            for arch in args.architecture:
+                queue = 'debci-%s-%s' % (args.series, arch)
                 for pkg in args.package:
-                    p.publish(pkg + params)
+                    ch.basic_publish(amqp.Message(pkg + params),
+                                     routing_key=queue)
