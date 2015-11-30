@@ -1584,10 +1584,10 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
         )
 
-        self.assertEqual(
-            self.amqp_requests,
-                set(['debci-series-amd64:lightgreen {"triggers": ["lightgreen/2"], "ppas": ["joe/foo", "awesome-developers/staging"]}',
-                     'debci-series-i386:lightgreen {"triggers": ["lightgreen/2"], "ppas": ["joe/foo", "awesome-developers/staging"]}']))
+        for arch in ['i386', 'amd64']:
+            self.assertTrue('debci-series-%s:lightgreen {"triggers": ["lightgreen/2"], "ppas": ["joe/foo", "awesome-developers/staging"]}' % arch in self.amqp_requests or
+                            'debci-series-%s:lightgreen {"ppas": ["joe/foo", "awesome-developers/staging"], "triggers": ["lightgreen/2"]}' % arch in self.amqp_requests)
+        self.assertEqual(len(self.amqp_requests), 2)
 
 
 if __name__ == '__main__':
