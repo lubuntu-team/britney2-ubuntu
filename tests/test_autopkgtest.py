@@ -1209,26 +1209,6 @@ lightgreen 1 i386 green 3
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
         )
 
-    def test_disable_adt(self):
-        '''Run without autopkgtest requests'''
-
-        # Disable AMQP server config, to ensure we don't touch them with ADT
-        # disabled
-        for line in fileinput.input(self.britney_conf, inplace=True):
-            if line.startswith('ADT_ENABLE'):
-                print('ADT_ENABLE = no')
-            elif not line.startswith('ADT_AMQP') and not line.startswith('ADT_SWIFT_URL'):
-                sys.stdout.write(line)
-
-        exc = self.do_test(
-            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (True, {})},
-            {'green': [('old-version', '1'), ('new-version', '2')]})[1]
-        self.assertNotIn('autopkgtest', exc['green']['tests'])
-
-        self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, None)
-
     ################################################################
     # Tests for hint processing
     ################################################################
@@ -1564,6 +1544,50 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             [('libgcc1', {'Source': 'gcc-snapshot', 'Version': '2'}, None)],
             {'gcc-snapshot': (True, {})})[1]
         self.assertNotIn('autopkgtest', exc['gcc-snapshot']['tests'])
+
+    ################################################################
+    # Tests for non-default ADT_* configuration modes
+    ################################################################
+
+    def test_disable_adt(self):
+        '''Run without autopkgtest requests'''
+
+        # Disable AMQP server config, to ensure we don't touch them with ADT
+        # disabled
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if line.startswith('ADT_ENABLE'):
+                print('ADT_ENABLE = no')
+            elif not line.startswith('ADT_AMQP') and not line.startswith('ADT_SWIFT_URL'):
+                sys.stdout.write(line)
+
+        exc = self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {})},
+            {'green': [('old-version', '1'), ('new-version', '2')]})[1]
+        self.assertNotIn('autopkgtest', exc['green']['tests'])
+
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, None)
+
+    def test_ppas(self):
+        '''Run test requests with additional PPAs'''
+
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if line.startswith('ADT_PPAS'):
+                print('ADT_PPAS = joe/foo awesome-developers/staging')
+            else:
+                sys.stdout.write(line)
+
+        self.do_test(
+            [('lightgreen', {'Version': '2'}, 'autopkgtest')],
+            {'lightgreen': (True, {'lightgreen 2': {'amd64': 'RUNNING-ALWAYSFAILED'}})},
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
+        )
+
+        self.assertEqual(
+            self.amqp_requests,
+                set(['debci-series-amd64:lightgreen {"triggers": ["lightgreen/2"], "ppas": ["joe/foo", "awesome-developers/staging"]}',
+                     'debci-series-i386:lightgreen {"triggers": ["lightgreen/2"], "ppas": ["joe/foo", "awesome-developers/staging"]}']))
 
 
 if __name__ == '__main__':

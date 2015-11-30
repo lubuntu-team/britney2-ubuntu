@@ -558,6 +558,8 @@ class AutoPackageTest(object):
                     triggers = _trigsources(verinfo, arch)
                     for t in sorted(triggers):
                         params = {'triggers': [t]}
+                        if self.britney.options.adt_ppas:
+                            params['ppas'] = self.britney.options.adt_ppas
                         requests.append((pkg, json.dumps(params)))
             arch_queues[arch] = ('debci-%s-%s' % (self.series, arch), requests)
 
