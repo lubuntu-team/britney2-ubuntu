@@ -1931,10 +1931,6 @@ class Britney(object):
                 autopkgtest_excuses.append(e)
                 autopkgtest_packages.append((e.name, e.ver[1]))
             autopkgtest.request(autopkgtest_packages, autopkgtest_excludes)
-            if not self.options.dry_run:
-                autopkgtest.collect_requested()
-                autopkgtest.submit()
-                autopkgtest.collect(autopkgtest_packages)
             cloud_url = "http://autopkgtest.ubuntu.com/packages/%(h)s/%(s)s/%(r)s/%(a)s"
             for e in autopkgtest_excuses:
                 adtpass = True
