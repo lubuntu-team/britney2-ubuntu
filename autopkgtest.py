@@ -41,26 +41,6 @@ def srchash(src):
         return src[0]
 
 
-def latest_item(ver_map, min_version=None):
-    '''Return (ver, value) from version -> value map with latest version number
-
-    If min_version is given, version has to be >= that, otherwise a KeyError is
-    raised.
-    '''
-    latest = None
-    for ver in ver_map:
-        if latest is None or apt_pkg.version_compare(ver, latest) > 0:
-            latest = ver
-    if min_version is not None and latest is not None and \
-       apt_pkg.version_compare(latest, min_version) < 0:
-        latest = None
-
-    if latest is not None:
-        return (latest, ver_map[latest])
-    else:
-        raise KeyError('no version >= %s' % min_version)
-
-
 class AutoPackageTest(object):
     """autopkgtest integration
 
