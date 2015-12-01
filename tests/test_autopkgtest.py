@@ -748,7 +748,7 @@ lightgreen 1 i386 green 2
         '''Unbuilt reverse dependency gets failure for newer version'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('lightgreen/2')),
+            'series/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
         }})
 
         # add unbuilt lightgreen; should request tests against the old version
@@ -901,8 +901,8 @@ newgreen 2 i386 newgreen 2
         '''test result from older version than the uploaded one'''
 
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/2')),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/2')),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/1')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/1')),
         }})
 
         self.do_test(
@@ -918,8 +918,6 @@ newgreen 2 i386 newgreen 2
 
         # second run gets the results for darkgreen 2
         self.swift.set_results({'autopkgtest-series': {
-            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/1')),
-            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/1')),
             'series/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 2', tr('darkgreen/2')),
             'series/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 2', tr('darkgreen/2')),
         }})
