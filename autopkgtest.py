@@ -611,10 +611,10 @@ class AutoPackageTest(object):
     def results(self, trigsrc, trigver):
         '''Return test results for triggering package
 
-        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|FAIL|RUNNING|RUNNING-ALWAYSFAILED)
+        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|REGRESSION|RUNNING|RUNNING-ALWAYSFAIL)
         iterable for all package tests that got triggered by trigsrc/trigver.
         '''
-        # (src, ver) -> arch -> ALWAYSFAIL|PASS|FAIL|RUNNING|RUNNING-ALWAYSFAILED
+        # (src, ver) -> arch -> ALWAYSFAIL|PASS|REGRESSION|RUNNING|RUNNING-ALWAYSFAIL
         pkg_arch_result = {}
         trigger = trigsrc + '/' + trigver
 
@@ -666,7 +666,7 @@ class AutoPackageTest(object):
                         if ever_passed:
                             result = 'RUNNING'
                         else:
-                            result = 'RUNNING-ALWAYSFAILED'
+                            result = 'RUNNING-ALWAYSFAIL'
                     except KeyError:
                         # ignore if adt or swift results are disabled,
                         # otherwise this is unexpected
