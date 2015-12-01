@@ -301,14 +301,11 @@ lightgreen 1 i386 green 2
         # caches the results and triggers
         with open(os.path.join(self.data.path, 'data/series-proposed/autopkgtest/results.cache')) as f:
             res = json.load(f)
-        self.assertEqual(res['green']['i386'],
-                         ['20150101_100200@',
-                          {'1': {'passedbefore/1': True}, '2': {'green/2': True}},
-                          True])
-        self.assertEqual(res['lightgreen']['amd64'],
-                         ['20150101_100101@',
-                          {'1': {'green/2': True}},
-                          True])
+        self.assertEqual(res['green/1']['green']['amd64'],
+                         [False, '1', '20150101_020000@'])
+        self.assertEqual(set(res['green/2']), {'darkgreen', 'green', 'lightgreen'})
+        self.assertEqual(res['green/2']['lightgreen']['i386'],
+                         [True, '1', '20150101_100100@'])
 
         # third run should not trigger any new tests, should all be in the
         # cache
@@ -1415,7 +1412,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             ],
             {'linux-meta': (True, {'fancy 1': {'amd64': 'PASS', 'i386': 'PASS'}}),
              # we don't have an explicit result for amd64
-             'linux-meta-lts-grumpy': (True, {'fancy 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'ALWAYSFAIL'}}),
+             'linux-meta-lts-grumpy': (False, {'fancy 1': {'amd64': 'RUNNING', 'i386': 'ALWAYSFAIL'}}),
              'linux-meta-64only': (True, {'fancy 1': {'amd64': 'PASS'}}),
             })
 

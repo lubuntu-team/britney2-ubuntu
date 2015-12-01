@@ -69,19 +69,15 @@ class AutoPackageTest(object):
             os.mkdir(self.test_state_dir)
         self.read_pending_tests()
 
-        # results map: src -> arch -> [latest_stamp, ver -> trigger -> passed, ever_passed]
-        # - It's tempting to just use a global "latest" time stamp, but due to
-        #   swift's "eventual consistency" we might miss results with older time
-        #   stamps from other packages that we don't see in the current run, but
-        #   will in the next one. This doesn't hurt for older results of the same
-        #   package.
+        # results map: trigger -> src -> arch -> [passed, version, run_id]
         # - trigger is "source/version" of an unstable package that triggered
-        #   this test run. We need to track this to avoid unnecessarily
-        #   re-running tests.
+        #   this test run.
         # - "passed" is a bool
-        # - ever_passed is a bool whether there is any successful test of
-        #   src/arch of any version. This is used for detecting "regression"
-        #   vs. "always failed"
+        # - "version" is the package version  of "src" of that test
+        # - "run_id" is an opaque ID that identifies a particular test run for
+        #   a given src/arch. It's usually a time stamp like "20150120_125959".
+        #   This is also used for tracking the latest seen time stamp for
+        #   requesting only newer results.
         self.test_results = {}
         self.results_cache_file = os.path.join(self.test_state_dir, 'results.cache')
 
@@ -298,31 +294,23 @@ class AutoPackageTest(object):
     def add_test_request(self, src, ver, arch, trigsrc, trigver):
         '''Add one test request to the local self.requested_tests queue
 
+        trigger is "pkgname/version" of the package that triggers the testing
+        of src.
+
         This will only be done if that test wasn't already requested in a
         previous run (i. e. not already in self.pending_tests) or there already
         is a result for it.
         '''
-        # check for existing results for both the requested and the current
-        # unstable version: test runs might see newly built versions which we
-        # didn't see in britney yet
-        ver_trig_results = self.test_results.get(src, {}).get(arch, [None, {}, None])[1]
-        unstable_ver = self.britney.sources['unstable'][src][VERSION]
+        # Don't re-request if we already have a result
         try:
-            testing_ver = self.britney.sources['testing'][src][VERSION]
+            self.test_results[trigsrc + '/' + trigver][src][arch]
+            self.log_verbose('There already is a result for %s/%s triggered by %s/%s' %
+                             (src, arch, trigsrc, trigver))
+            return
         except KeyError:
-            testing_ver = unstable_ver
-        for result_ver in set([testing_ver, ver, unstable_ver]):
-            # result_ver might be < ver here; that's okay, if we already have a
-            # result for trigsrc/trigver we don't need to re-run it again
-            if result_ver not in ver_trig_results:
-                continue
-            for trigger in ver_trig_results[result_ver]:
-                (tsrc, tver) = trigger.split('/', 1)
-                if tsrc == trigsrc and apt_pkg.version_compare(tver, trigver) >= 0:
-                    self.log_verbose('There already is a result for %s/%s/%s triggered by %s/%s' %
-                                     (src, result_ver, arch, tsrc, tver))
-                    return
+            pass
 
+        # Don't re-request if it's already pending
         if (trigsrc, trigver) in self.pending_tests.get(src, {}).get(
                 ver, {}).get(arch, set()):
             self.log_verbose('test %s/%s/%s for %s/%s is already pending, not queueing' %
@@ -331,20 +319,32 @@ class AutoPackageTest(object):
         self.requested_tests.setdefault(src, {}).setdefault(
             ver, {}).setdefault(arch, set()).add((trigsrc, trigver))
 
-    def fetch_swift_results(self, swift_url, src, arch):
-        '''Download new results for source package/arch from swift'''
+    def fetch_swift_results(self, swift_url, src, arch, triggers):
+        '''Download new results for source package/arch from swift
 
-        # prepare query: get all runs with a timestamp later than latest_stamp
-        # for this package/arch; '@' is at the end of each run timestamp, to
+        triggers is an iterable of (trigsrc, trigver) for which to check
+        results.
+        '''
+        # prepare query: get all runs with a timestamp later than the latest
+        # run_id for this package/arch; '@' is at the end of each run id, to
         # mark the end of a test run directory path
         # example: <autopkgtest-wily>wily/amd64/libp/libpng/20150630_054517@/result.tar
         query = {'delimiter': '@',
                  'prefix': '%s/%s/%s/%s/' % (self.series, arch, srchash(src), src)}
-        try:
-            query['marker'] = query['prefix'] + self.test_results[src][arch][0]
-        except KeyError:
-            # no stamp yet, download all results
-            pass
+
+        # determine latest run_id from results
+        # FIXME: consider dropping "triggers" arg again and iterate over all
+        # results, if that's not too slow; cache the results?
+        latest_run_id = ''
+        for trigsrc, trigver in triggers:
+            try:
+                run_id = self.test_results[trigsrc + '/' + trigver][src][arch][2]
+            except KeyError:
+                continue
+            if run_id > latest_run_id:
+                latest_run_id = run_id
+        if latest_run_id:
+            query['marker'] = query['prefix'] + latest_run_id
 
         # request new results from swift
         url = os.path.join(swift_url, 'autopkgtest-' + self.series)
@@ -437,47 +437,45 @@ class AutoPackageTest(object):
                                          (src, pending_ver, arch))
 
         # add this result
-        src_arch_results = self.test_results.setdefault(src, {}).setdefault(arch, [stamp, {}, False])
-        trigmap = src_arch_results[1].setdefault(ver, {})
-        for trig in result_triggers:
-            trig_idx = trig[0] + '/' + trig[1]
-
+        for (trigsrc, trigver) in result_triggers:
             # If a test runs because of its own package (newer version), ensure
             # that we got a new enough version; FIXME: this should be done more
             # generically by matching against testpkg-versions
-            if trig[0] == src and apt_pkg.version_compare(ver, trig[1]) < 0:
-                self.log_error('test trigger %s, but run for older version %s, ignoring' %
-                               (trig_idx, ver))
+            if trigsrc == src and apt_pkg.version_compare(ver, trigver) < 0:
+                self.log_error('test trigger %s/%s, but run for older version %s, ignoring' %
+                               (trigsrc, trigver, ver))
                 continue
 
-            # passed results are always good, but don't clobber existing passed
-            # results with failures from re-runs
-            if passed or trig_idx not in trigmap:
-                trigmap[trig_idx] = passed
+            result = self.test_results.setdefault(trigsrc + '/' + trigver, {}).setdefault(
+                src, {}).setdefault(arch, [False, None, ''])
 
-        # update ever_passed field, unless we got triggered from
-        # linux-meta*: we trigger separate per-kernel tests for reverse
-        # test dependencies, and we don't want to track per-trigger
-        # ever_passed. This would be wrong for everything except the
-        # kernel, and the kernel team tracks per-kernel regressions already
-        if passed and not result_triggers[0][0].startswith('linux-meta'):
-            src_arch_results[2] = True
-
-        # update latest_stamp
-        if stamp > src_arch_results[0]:
-            src_arch_results[0] = stamp
+            # don't clobber existing passed results with failures from re-runs
+            result[0] = result[0] or passed
+            result[1] = ver
+            if stamp > result[2]:
+                result[2] = stamp
 
     def failed_tests_for_trigger(self, trigsrc, trigver):
         '''Return (src, arch) set for failed tests for given trigger pkg'''
 
-        result = set()
-        trigger = trigsrc + '/' + trigver
-        for src, srcinfo in self.test_results.items():
-            for arch, (stamp, vermap, ever_passed) in srcinfo.items():
-                for ver, trig_results in vermap.items():
-                    if trig_results.get(trigger) is False:
-                        result.add((src, arch))
-        return result
+        failed = set()
+        for src, srcinfo in self.test_results.get(trigsrc + '/' + trigver, {}).items():
+            for arch, result in srcinfo.items():
+                if not result[0]:
+                    failed.add((src, arch))
+        return failed
+
+    def check_ever_passed(self, src, arch):
+        '''Check if tests for src ever passed on arch'''
+
+        # FIXME: add caching
+        for srcmap in self.test_results.values():
+            try:
+                if srcmap[src][arch][0]:
+                    return True
+            except KeyError:
+                pass
+        return False
 
     #
     # Public API
@@ -578,8 +576,8 @@ class AutoPackageTest(object):
         '''
         for pkg, verinfo in copy.deepcopy(self.requested_tests).items():
             for archinfo in verinfo.values():
-                for arch in archinfo:
-                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch)
+                for arch, triggers in archinfo.items():
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, triggers)
 
     def collect(self, packages):
         '''Update results from swift for all pending packages
@@ -588,8 +586,8 @@ class AutoPackageTest(object):
         '''
         for pkg, verinfo in copy.deepcopy(self.pending_tests).items():
             for archinfo in verinfo.values():
-                for arch in archinfo:
-                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch)
+                for arch, triggers in archinfo.items():
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, triggers)
         # also update results for excuses whose tests failed, in case a
         # manual retry worked
         for (trigpkg, trigver) in packages:
@@ -597,7 +595,7 @@ class AutoPackageTest(object):
                 if arch not in self.pending_tests.get(trigpkg, {}).get(trigver, {}):
                     self.log_verbose('Checking for new results for failed %s on %s for trigger %s/%s' %
                                      (pkg, arch, trigpkg, trigver))
-                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch)
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, [(trigpkg, trigver)])
 
         # update the results cache
         with open(self.results_cache_file + '.new', 'w') as f:
@@ -620,62 +618,39 @@ class AutoPackageTest(object):
 
         for arch in self.britney.options.adt_arches:
             for testsrc, testver in self.tests_for_source(trigsrc, trigver, arch):
-                # by default, assume that we has never passed (i.e. this is the first run)
-                ever_passed = False
+                ever_passed = self.check_ever_passed(testsrc, arch)
+
+                # Do we have a result already? (possibly for an older or newer
+                # version, that's okay)
                 try:
-                    (_, ver_map, ever_passed) = self.test_results[testsrc][arch]
-
-                    # check if we have a result for any version of testsrc that
-                    # was triggered for trigsrc/trigver; we prefer PASSes, as
-                    # it could be that an unrelated package upload could break
-                    # testsrc's tests at a later point
-                    status = None
-                    for ver, trigger_results in ver_map.items():
-                        try:
-                            status = trigger_results[trigger]
-                            testver = ver
-                            # if we found a PASS, we can stop searching
-                            if status is True:
-                                break
-                        except KeyError:
-                            pass
-
-                    if status is None:
-                        # no result? go to "still running" below
-                        raise KeyError
-
-                    if status:
+                    r = self.test_results[trigger][testsrc][arch]
+                    testver = r[1]
+                    if r[0]:
                         result = 'PASS'
                     else:
-                        # test failed, check ever_passed flag for that src/arch
-                        # unless we got triggered from linux-meta*: we trigger
-                        # separate per-kernel tests for reverse test
-                        # dependencies, and we don't want to track per-trigger
-                        # ever_passed. This would be wrong for everything
-                        # except the kernel, and the kernel team tracks
-                        # per-kernel regressions already
-                        if ever_passed and not trigsrc.startswith('linux-meta') and trigsrc != 'linux':
-                            result = 'REGRESSION'
-                        else:
-                            result = 'ALWAYSFAIL'
-                except KeyError:
-                    # no result for testsrc/testver/arch; still running?
-                    try:
-                        self.pending_tests[testsrc][testver][arch]
+                        # Special-case triggers from linux-meta*: we cannot compare
+                        # results against different kernels, as e. g. a DKMS module
+                        # might work against the default kernel but fail against a
+                        # different flavor; so for those, ignore the "ever
+                        # passed" check; FIXME: check against trigsrc only
+                        if trigsrc.startswith('linux-meta') or trigsrc == 'linux':
+                            ever_passed = False
 
-                        if ever_passed:
-                            result = 'RUNNING'
-                        else:
-                            result = 'RUNNING-ALWAYSFAIL'
-                    except KeyError:
+                        result = ever_passed and 'REGRESSION' or 'ALWAYSFAIL'
+                except KeyError:
+                    # no result for testsrc/arch; still running?
+                    result = None
+                    for arch_map in self.pending_tests.get(testsrc, {}).values():
+                        if (trigsrc, trigver) in arch_map.get(arch, set()):
+                            result = ever_passed and 'RUNNING' or 'RUNNING-ALWAYSFAIL'
+                            break
+                    else:
                         # ignore if adt or swift results are disabled,
                         # otherwise this is unexpected
                         if not hasattr(self.britney.options, 'adt_swift_url'):
                             continue
-                        # FIXME: Ignore this error for now as it crashes britney, but investigate!
-                        self.log_error('FIXME: Result for %s/%s/%s (triggered by %s) is neither known nor pending!' %
-                                       (testsrc, testver, arch, trigger))
-                        continue
+                        raise RuntimeError('Result for %s/%s/%s (triggered by %s) is neither known nor pending!' %
+                                           (testsrc, testver, arch, trigger))
 
                 pkg_arch_result.setdefault((testsrc, testver), {})[arch] = result
 
