@@ -21,7 +21,6 @@ import time
 import json
 import tarfile
 import io
-import copy
 import re
 import urllib.parse
 from urllib.request import urlopen
@@ -59,11 +58,11 @@ class AutoPackageTest(object):
         self.test_state_dir = os.path.join(britney.options.unstable,
                                            'autopkgtest')
         # map of requested tests from request()
-        # src -> ver -> arch -> {(triggering-src1, ver1), ...}
+        # trigger -> src -> [arch]
         self.requested_tests = {}
         # same map for tests requested in previous runs
         self.pending_tests = None
-        self.pending_tests_file = os.path.join(self.test_state_dir, 'pending.txt')
+        self.pending_tests_file = os.path.join(self.test_state_dir, 'pending.json')
 
         if not os.path.isdir(self.test_state_dir):
             os.mkdir(self.test_state_dir)
@@ -239,59 +238,41 @@ class AutoPackageTest(object):
     def read_pending_tests(self):
         '''Read pending test requests from previous britney runs
 
-        Read UNSTABLE/autopkgtest/requested.txt with the format:
-            srcpkg srcver triggering-srcpkg triggering-srcver
-
         Initialize self.pending_tests with that data.
         '''
         assert self.pending_tests is None, 'already initialized'
-        self.pending_tests = {}
         if not os.path.exists(self.pending_tests_file):
             self.log_verbose('No %s, starting with no pending tests' %
                              self.pending_tests_file)
+            self.pending_tests = {}
             return
         with open(self.pending_tests_file) as f:
-            for l in f:
-                l = l.strip()
-                if not l:
-                    continue
-                try:
-                    (src, ver, arch, trigsrc, trigver) = l.split()
-                except ValueError:
-                    self.log_error('ignoring malformed line in %s: %s' %
-                                   (self.pending_tests_file, l))
-                    continue
-                self.pending_tests.setdefault(src, {}).setdefault(
-                    ver, {}).setdefault(arch, set()).add((trigsrc, trigver))
+            self.pending_tests = json.load(f)
         self.log_verbose('Read pending requested tests from %s: %s' %
                          (self.pending_tests_file, self.pending_tests))
 
     def update_pending_tests(self):
-        '''Update pending tests after submitting requested tests
+        '''Update pending tests after submitting requested tests'''
 
-        Update UNSTABLE/autopkgtest/requested.txt, see read_pending_tests() for
-        the format.
-        '''
         # merge requested_tests into pending_tests
-        for src, verinfo in self.requested_tests.items():
-            for ver, archinfo in verinfo.items():
-                for arch, triggers in archinfo.items():
-                    self.pending_tests.setdefault(src, {}).setdefault(
-                        ver, {}).setdefault(arch, set()).update(triggers)
-        self.requested_tests = {}
+        for trigger, srcmap in self.requested_tests.items():
+            for src, archlist in srcmap.items():
+                try:
+                    arches = set(self.pending_tests[trigger][src])
+                except KeyError:
+                    arches = set()
+                arches.update(archlist)
+                self.pending_tests.setdefault(trigger, {})[src] = sorted(arches)
+        self.requested_tests.clear()
 
         # write it
         with open(self.pending_tests_file + '.new', 'w') as f:
-            for src in sorted(self.pending_tests):
-                for ver in sorted(self.pending_tests[src]):
-                    for arch in sorted(self.pending_tests[src][ver]):
-                        for (trigsrc, trigver) in sorted(self.pending_tests[src][ver][arch]):
-                            f.write('%s %s %s %s %s\n' % (src, ver, arch, trigsrc, trigver))
+            json.dump(self.pending_tests, f, indent=2)
         os.rename(self.pending_tests_file + '.new', self.pending_tests_file)
         self.log_verbose('Updated pending requested tests in %s' %
                          self.pending_tests_file)
 
-    def add_test_request(self, src, ver, arch, trigsrc, trigver):
+    def add_test_request(self, src, arch, trigger):
         '''Add one test request to the local self.requested_tests queue
 
         trigger is "pkgname/version" of the package that triggers the testing
@@ -303,26 +284,26 @@ class AutoPackageTest(object):
         '''
         # Don't re-request if we already have a result
         try:
-            self.test_results[trigsrc + '/' + trigver][src][arch]
-            self.log_verbose('There already is a result for %s/%s triggered by %s/%s' %
-                             (src, arch, trigsrc, trigver))
+            self.test_results[trigger][src][arch]
+            self.log_verbose('There already is a result for %s/%s triggered by %s' %
+                             (src, arch, trigger))
             return
         except KeyError:
             pass
 
         # Don't re-request if it's already pending
-        if (trigsrc, trigver) in self.pending_tests.get(src, {}).get(
-                ver, {}).get(arch, set()):
-            self.log_verbose('test %s/%s/%s for %s/%s is already pending, not queueing' %
-                             (src, ver, arch, trigsrc, trigver))
-            return
-        self.requested_tests.setdefault(src, {}).setdefault(
-            ver, {}).setdefault(arch, set()).add((trigsrc, trigver))
+        if arch in self.pending_tests.get(trigger, {}).get(src, []):
+            self.log_verbose('test %s/%s for %s is already pending, not queueing' %
+                             (src, arch, trigger))
+        else:
+            arch_list = self.requested_tests.setdefault(trigger, {}).setdefault(src, [])
+            assert arch not in arch_list
+            arch_list.append(arch)
 
     def fetch_swift_results(self, swift_url, src, arch, triggers):
         '''Download new results for source package/arch from swift
 
-        triggers is an iterable of (trigsrc, trigver) for which to check
+        triggers is an iterable of triggers for which to check
         results.
         '''
         # prepare query: get all runs with a timestamp later than the latest
@@ -336,9 +317,9 @@ class AutoPackageTest(object):
         # FIXME: consider dropping "triggers" arg again and iterate over all
         # results, if that's not too slow; cache the results?
         latest_run_id = ''
-        for trigsrc, trigver in triggers:
+        for trigger in triggers:
             try:
-                run_id = self.test_results[trigsrc + '/' + trigver][src][arch][2]
+                run_id = self.test_results[trigger][src][arch][2]
             except KeyError:
                 continue
             if run_id > latest_run_id:
@@ -394,7 +375,7 @@ class AutoPackageTest(object):
                 testinfo = json.loads(tar.extractfile('testinfo.json').read().decode())
         except (KeyError, ValueError, tarfile.TarError) as e:
             self.log_error('%s is damaged, ignoring: %s' % (url, str(e)))
-            # ignore this; this will leave an orphaned request in pending.txt
+            # ignore this; this will leave an orphaned request in pending.json
             # and thus require manual retries after fixing the tmpfail, but we
             # can't just blindly attribute it to some pending test.
             return
@@ -407,7 +388,7 @@ class AutoPackageTest(object):
         # parse recorded triggers in test result
         for e in testinfo.get('custom_environment', []):
             if e.startswith('ADT_TEST_TRIGGERS='):
-                result_triggers = [tuple(i.split('/', 1)) for i in e.split('=', 1)[1].split() if '/' in i]
+                result_triggers = [i for i in e.split('=', 1)[1].split() if '/' in i]
                 break
         else:
             self.log_error('%s result has no ADT_TEST_TRIGGERS, ignoring')
@@ -421,32 +402,30 @@ class AutoPackageTest(object):
             src, ver, arch, stamp, result_triggers, passed and 'pass' or 'fail'))
 
         # remove matching test requests
-        for request_map in [self.requested_tests, self.pending_tests]:
-            for pending_ver, pending_archinfo in request_map.get(src, {}).copy().items():
-                # don't consider newer requested versions
-                if apt_pkg.version_compare(pending_ver, ver) > 0:
-                    continue
-
-                for result_trigger in result_triggers:
-                    try:
-                        request_map[src][pending_ver][arch].remove(result_trigger)
-                        self.log_verbose('-> matches pending request %s/%s/%s for trigger %s' %
-                                         (src, pending_ver, arch, str(result_trigger)))
-                    except (KeyError, ValueError):
-                        self.log_verbose('-> does not match any pending request for %s/%s/%s' %
-                                         (src, pending_ver, arch))
+        for trigger in result_triggers:
+            for request_map in [self.requested_tests, self.pending_tests]:
+                try:
+                    arch_list = request_map[trigger][src]
+                    arch_list.remove(arch)
+                    if not arch_list:
+                        del request_map[trigger][src]
+                    if not request_map[trigger]:
+                        del request_map[trigger]
+                    self.log_verbose('-> matches pending request %s/%s for trigger %s' % (src, arch, trigger))
+                except (KeyError, ValueError):
+                    self.log_verbose('-> does not match any pending request for %s/%s' % (src, arch))
 
         # add this result
-        for (trigsrc, trigver) in result_triggers:
+        for trigger in result_triggers:
             # If a test runs because of its own package (newer version), ensure
             # that we got a new enough version; FIXME: this should be done more
             # generically by matching against testpkg-versions
+            (trigsrc, trigver) = trigger.split('/', 1)
             if trigsrc == src and apt_pkg.version_compare(ver, trigver) < 0:
-                self.log_error('test trigger %s/%s, but run for older version %s, ignoring' %
-                               (trigsrc, trigver, ver))
+                self.log_error('test trigger %s, but run for older version %s, ignoring' % (trigger, ver))
                 continue
 
-            result = self.test_results.setdefault(trigsrc + '/' + trigver, {}).setdefault(
+            result = self.test_results.setdefault(trigger, {}).setdefault(
                 src, {}).setdefault(arch, [False, None, ''])
 
             # don't clobber existing passed results with failures from re-runs
@@ -455,11 +434,11 @@ class AutoPackageTest(object):
             if stamp > result[2]:
                 result[2] = stamp
 
-    def failed_tests_for_trigger(self, trigsrc, trigver):
-        '''Return (src, arch) set for failed tests for given trigger pkg'''
+    def failed_tests_for_trigger(self, trigger):
+        '''Return (src, arch) set for failed tests for given trigger'''
 
         failed = set()
-        for src, srcinfo in self.test_results.get(trigsrc + '/' + trigver, {}).items():
+        for src, srcinfo in self.test_results.get(trigger, {}).items():
             for arch, result in srcinfo.items():
                 if not result[0]:
                     failed.add((src, arch))
@@ -490,56 +469,27 @@ class AutoPackageTest(object):
         for src, ver in packages:
             for arch in self.britney.options.adt_arches:
                 for (testsrc, testver) in self.tests_for_source(src, ver, arch):
-                    self.add_test_request(testsrc, testver, arch, src, ver)
+                    self.add_test_request(testsrc, arch, src + '/' + ver)
 
         if self.britney.options.verbose:
-            for src, verinfo in self.requested_tests.items():
-                for ver, archinfo in verinfo.items():
-                    for arch, triggers in archinfo.items():
-                        self.log_verbose('Requesting %s/%s/%s autopkgtest to verify %s' %
-                                         (src, ver, arch, ', '.join(['%s/%s' % i for i in triggers])))
+            for trigger, srcmap in self.requested_tests.items():
+                for src, archlist in srcmap.items():
+                    self.log_verbose('Requesting %s autopkgtest on %s to verify %s' %
+                                     (src, ' '.join(archlist), trigger))
 
     def submit(self):
-
-        def _arches(verinfo):
-            res = set()
-            for archinfo in verinfo.values():
-                res.update(archinfo.keys())
-            return res
-
-        def _trigsources(verinfo, arch):
-            '''Calculate the triggers for a given verinfo map
-
-            verinfo is ver -> arch -> {(triggering-src1, ver1), ...}, i. e. an
-            entry of self.requested_tests[arch]
-
-            Return {trigger1, ...}) set.
-            '''
-            triggers = set()
-            for archinfo in verinfo.values():
-                for (t, v) in archinfo.get(arch, []):
-                    triggers.add(t + '/' + v)
-            return triggers
-
         # build per-queue request strings for new test requests
         # TODO: Once we support version constraints in AMQP requests, add them
-        # arch →  (queue_name, [(pkg, params), ...])
-        arch_queues = {}
-        for arch in self.britney.options.adt_arches:
-            requests = []
-            for pkg, verinfo in self.requested_tests.items():
-                if arch in _arches(verinfo):
-                    # if a package gets triggered by several sources, we can
-                    # run just one test for all triggers; but for proposed
-                    # kernels we want to run a separate test for each, so that
-                    # the test runs under that particular kernel
-                    triggers = _trigsources(verinfo, arch)
-                    for t in sorted(triggers):
-                        params = {'triggers': [t]}
-                        if self.britney.options.adt_ppas:
-                            params['ppas'] = self.britney.options.adt_ppas
-                        requests.append((pkg, json.dumps(params)))
-            arch_queues[arch] = ('debci-%s-%s' % (self.series, arch), requests)
+        # queue_name -> [(pkg, params), ...])
+        queues = {}
+        for trigger, srcmap in self.requested_tests.items():
+            params = {'triggers': [trigger]}
+            if self.britney.options.adt_ppas:
+                params['ppas'] = self.britney.options.adt_ppas
+            for src, archlist in srcmap.items():
+                for arch in archlist:
+                    qname = 'debci-%s-%s' % (self.series, arch)
+                    queues.setdefault(qname, []).append((src, json.dumps(params)))
 
         amqp_url = self.britney.options.adt_amqp
 
@@ -549,14 +499,14 @@ class AutoPackageTest(object):
             with amqp.Connection(creds.hostname, userid=creds.username,
                                  password=creds.password) as amqp_con:
                 with amqp_con.channel() as ch:
-                    for arch, (queue, requests) in arch_queues.items():
+                    for queue, requests in queues.items():
                         for (pkg, params) in requests:
                             ch.basic_publish(amqp.Message(pkg + '\n' + params),
                                              routing_key=queue)
         elif amqp_url.startswith('file://'):
             # in testing mode, adt_amqp will be a file:// URL
             with open(amqp_url[7:], 'a') as f:
-                for arch, (queue, requests) in arch_queues.items():
+                for queue, requests in queues.items():
                     for (pkg, params) in requests:
                         f.write('%s:%s %s\n' % (queue, pkg, params))
         else:
@@ -574,28 +524,42 @@ class AutoPackageTest(object):
         happens when you have to blow away results.cache and let it rebuild
         from scratch.
         '''
-        for pkg, verinfo in copy.deepcopy(self.requested_tests).items():
-            for archinfo in verinfo.values():
-                for arch, triggers in archinfo.items():
-                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, triggers)
+        # build src -> arch -> triggers inverted map
+        requests_by_src = {}
+        for trigger, srcmap in self.requested_tests.items():
+            for src, archlist in srcmap.items():
+                for arch in archlist:
+                    requests_by_src.setdefault(src, {}).setdefault(arch, set()).add(trigger)
+
+        for src, archmap in requests_by_src.items():
+            for arch, triggers in archmap.items():
+                self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch, triggers)
 
     def collect(self, packages):
         '''Update results from swift for all pending packages
 
         Remove pending tests for which we have results.
         '''
-        for pkg, verinfo in copy.deepcopy(self.pending_tests).items():
-            for archinfo in verinfo.values():
-                for arch, triggers in archinfo.items():
-                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, triggers)
+        # build src -> arch -> triggers inverted map
+        requests_by_src = {}
+        for trigger, srcmap in self.pending_tests.items():
+            for src, archlist in srcmap.items():
+                for arch in archlist:
+                    requests_by_src.setdefault(src, {}).setdefault(arch, set()).add(trigger)
+
+        for src, archmap in requests_by_src.items():
+            for arch, triggers in archmap.items():
+                self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch, triggers)
+
         # also update results for excuses whose tests failed, in case a
         # manual retry worked
         for (trigpkg, trigver) in packages:
-            for (pkg, arch) in self.failed_tests_for_trigger(trigpkg, trigver):
-                if arch not in self.pending_tests.get(trigpkg, {}).get(trigver, {}):
-                    self.log_verbose('Checking for new results for failed %s on %s for trigger %s/%s' %
-                                     (pkg, arch, trigpkg, trigver))
-                    self.fetch_swift_results(self.britney.options.adt_swift_url, pkg, arch, [(trigpkg, trigver)])
+            trigger = trigpkg + '/' + trigver
+            for (src, arch) in self.failed_tests_for_trigger(trigger):
+                if arch not in self.pending_tests.get(trigger, {}).get(src, []):
+                    self.log_verbose('Checking for new results for failed %s on %s for trigger %s' %
+                                     (src, arch, trigger))
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch, [trigger])
 
         # update the results cache
         with open(self.results_cache_file + '.new', 'w') as f:
@@ -639,11 +603,8 @@ class AutoPackageTest(object):
                         result = ever_passed and 'REGRESSION' or 'ALWAYSFAIL'
                 except KeyError:
                     # no result for testsrc/arch; still running?
-                    result = None
-                    for arch_map in self.pending_tests.get(testsrc, {}).values():
-                        if (trigsrc, trigver) in arch_map.get(arch, set()):
-                            result = ever_passed and 'RUNNING' or 'RUNNING-ALWAYSFAIL'
-                            break
+                    if arch in self.pending_tests.get(trigger, {}).get(testsrc, []):
+                        result = ever_passed and 'RUNNING' or 'RUNNING-ALWAYSFAIL'
                     else:
                         # ignore if adt or swift results are disabled,
                         # otherwise this is unexpected

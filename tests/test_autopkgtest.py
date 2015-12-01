@@ -6,9 +6,6 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-from textwrap import dedent
-
-import apt_pkg
 import os
 import sys
 import fileinput
@@ -16,6 +13,7 @@ import unittest
 import json
 import pprint
 
+import apt_pkg
 import yaml
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -140,8 +138,8 @@ class TestAutoPkgTest(TestBase):
             pass
 
         try:
-            with open(os.path.join(self.data.path, 'data/series-proposed/autopkgtest/pending.txt')) as f:
-                self.pending_requests = f.read()
+            with open(os.path.join(self.data.path, 'data/series-proposed/autopkgtest/pending.json')) as f:
+                self.pending_requests = json.load(f)
         except IOError:
                 self.pending_requests = None
 
@@ -168,7 +166,7 @@ class TestAutoPkgTest(TestBase):
         # autopkgtest should not be triggered for uninstallable pkg
         self.assertEqual(exc['lightgreen']['tests'], {})
 
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         self.assertEqual(self.amqp_requests, set())
 
     def test_no_wait_for_always_failed_test(self):
@@ -184,7 +182,7 @@ class TestAutoPkgTest(TestBase):
             [('darkgreen', {'Version': '2'}, 'autopkgtest')],
             {'darkgreen': (True, {'darkgreen 2': {'i386': 'RUNNING-ALWAYSFAIL',
                                                   'amd64': 'RUNNING-ALWAYSFAIL'}})}
-            )[1]
+        )[1]
 
         # the test should still be triggered though
         self.assertEqual(exc['darkgreen']['tests'], {'autopkgtest':
@@ -194,17 +192,13 @@ class TestAutoPkgTest(TestBase):
                 'i386': ['RUNNING-ALWAYSFAIL',
                          'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/i386']}}})
 
-        self.assertEqual(
-            self.pending_requests, dedent('''\
-                    darkgreen 2 amd64 darkgreen 2
-                    darkgreen 2 i386 darkgreen 2
-            '''))
+        self.assertEqual(self.pending_requests,
+                         {'darkgreen/2': {'darkgreen': ['amd64', 'i386']}})
 
         self.assertEqual(
             self.amqp_requests,
-                set(['debci-series-amd64:darkgreen {"triggers": ["darkgreen/2"]}',
-                     'debci-series-i386:darkgreen {"triggers": ["darkgreen/2"]}']))
-
+            set(['debci-series-amd64:darkgreen {"triggers": ["darkgreen/2"]}',
+                 'debci-series-i386:darkgreen {"triggers": ["darkgreen/2"]}']))
 
     def test_multi_rdepends_with_tests_all_running(self):
         '''Multiple reverse dependencies with tests (all running)'''
@@ -235,13 +229,9 @@ class TestAutoPkgTest(TestBase):
                  'debci-series-amd64:darkgreen {"triggers": ["green/2"]}']))
 
         # ... and that they get recorded as pending
-        expected_pending = '''darkgreen 1 amd64 green 2
-darkgreen 1 i386 green 2
-green 2 amd64 green 2
-green 2 i386 green 2
-lightgreen 1 amd64 green 2
-lightgreen 1 i386 green 2
-'''
+        expected_pending = {'green/2': {'darkgreen': ['amd64', 'i386'],
+                                        'green': ['amd64', 'i386'],
+                                        'lightgreen': ['amd64', 'i386']}}
         self.assertEqual(self.pending_requests, expected_pending)
 
         # if we run britney again this should *not* trigger any new tests
@@ -293,7 +283,7 @@ lightgreen 1 i386 green 2
         )[0]
 
         # all tests ran, there should be no more pending ones
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
@@ -318,7 +308,7 @@ lightgreen 1 i386 green 2
                              })
             })[0]
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         self.assertNotIn('Failure', out, out)
 
     def test_multi_rdepends_with_tests_mixed(self):
@@ -363,8 +353,8 @@ lightgreen 1 i386 green 2
         self.assertNotIn('Failure', out, out)
 
         # there should be some pending ones
-        self.assertIn('darkgreen 1 amd64 green 2', self.pending_requests)
-        self.assertIn('lightgreen 1 i386 green 2', self.pending_requests)
+        self.assertEqual(self.pending_requests,
+                         {'green/2': {'darkgreen': ['amd64'], 'lightgreen': ['i386']}})
 
     def test_results_without_triggers(self):
         '''Old results without recorded triggers'''
@@ -388,9 +378,10 @@ lightgreen 1 i386 green 2
             })
 
         # there should be some pending ones
-        self.assertIn('darkgreen 1 amd64 green 2', self.pending_requests)
-        self.assertIn('lightgreen 1 i386 green 2', self.pending_requests)
-        self.assertIn('green 2 i386 green 2', self.pending_requests)
+        self.assertEqual(self.pending_requests,
+                         {'green/2': {'lightgreen': ['amd64', 'i386'],
+                                      'green': ['amd64', 'i386'],
+                                      'darkgreen': ['amd64', 'i386']}})
 
     def test_multi_rdepends_with_tests_regression(self):
         '''Multiple reverse dependencies with tests (regression)'''
@@ -420,7 +411,7 @@ lightgreen 1 i386 green 2
         # we already had all results before the run, so this should not trigger
         # any new requests
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
@@ -451,7 +442,7 @@ lightgreen 1 i386 green 2
             {'green': [('old-version', '1'), ('new-version', '2')]}
         )[0]
 
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
 
@@ -480,7 +471,7 @@ lightgreen 1 i386 green 2
             {'green': [('old-version', '1'), ('new-version', '2')]}
         )[0]
 
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
 
@@ -516,8 +507,11 @@ lightgreen 1 i386 green 2
                  'debci-series-amd64:darkgreen {"triggers": ["green/2"]}',
                  'debci-series-amd64:green64 {"triggers": ["green/2"]}']))
 
-        self.assertIn('green64 1 amd64', self.pending_requests)
-        self.assertNotIn('green64 1 i386', self.pending_requests)
+        self.assertEqual(self.pending_requests,
+                         {'green/2': {'lightgreen': ['amd64', 'i386'],
+                                      'darkgreen': ['amd64', 'i386'],
+                                      'green64': ['amd64'],
+                                      'green': ['amd64', 'i386']}})
 
         # second run collects the results
         self.swift.set_results({'autopkgtest-series': {
@@ -548,7 +542,7 @@ lightgreen 1 i386 green 2
 
         # all tests ran, there should be no more pending ones
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # not expecting any failures to retrieve from swift
         self.assertNotIn('Failure', out, out)
@@ -603,12 +597,12 @@ lightgreen 1 i386 green 2
         )
 
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # next run should not trigger any new requests
         self.do_test([], {'green': (False, {}), 'lightgreen': (False, {})})
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # now lightgreen 2 gets built, should trigger a new test run
         self.data.remove_all(True)
@@ -639,7 +633,7 @@ lightgreen 1 i386 green 2
             }
         )
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
     def test_rdepends_unbuilt_unstable_only(self):
         '''Unbuilt reverse dependency which is not in testing'''
@@ -713,7 +707,7 @@ lightgreen 1 i386 green 2
             }
         )
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # lightgreen 2 stays unbuilt in britney, but we get a test result for it
         self.swift.set_results({'autopkgtest-series': {
@@ -734,12 +728,12 @@ lightgreen 1 i386 green 2
             }
         )
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # next run should not trigger any new requests
         self.do_test([], {'green': (True, {}), 'lightgreen': (False, {})})
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
     def test_rdepends_unbuilt_new_version_fail(self):
         '''Unbuilt reverse dependency gets failure for newer version'''
@@ -790,11 +784,11 @@ lightgreen 1 i386 green 2
             }
         )
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # next run should not trigger any new requests
         self.do_test([], {'green': (False, {}), 'lightgreen': (False, {})})
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         self.assertEqual(self.amqp_requests, set())
 
     def test_package_pair_running(self):
@@ -832,16 +826,11 @@ lightgreen 1 i386 green 2
                  'debci-series-amd64:darkgreen {"triggers": ["green/2"]}']))
 
         # ... and that they get recorded as pending
-        expected_pending = '''darkgreen 1 amd64 green 2
-darkgreen 1 i386 green 2
-green 2 amd64 green 2
-green 2 i386 green 2
-lightgreen 2 amd64 green 2
-lightgreen 2 amd64 lightgreen 2
-lightgreen 2 i386 green 2
-lightgreen 2 i386 lightgreen 2
-'''
-        self.assertEqual(self.pending_requests, expected_pending)
+        self.assertEqual(self.pending_requests,
+                         {'lightgreen/2': {'lightgreen': ['amd64', 'i386']},
+                          'green/2': {'darkgreen': ['amd64', 'i386'],
+                                      'green': ['amd64', 'i386'],
+                                      'lightgreen': ['amd64', 'i386']}})
 
     def test_binary_from_new_source_package_running(self):
         '''building an existing binary for a new source package (running)'''
@@ -856,16 +845,11 @@ lightgreen 2 i386 lightgreen 2
             {'newgreen': [('old-version', '-'), ('new-version', '2')]})
 
         self.assertEqual(len(self.amqp_requests), 8)
-        expected_pending = '''darkgreen 1 amd64 newgreen 2
-darkgreen 1 i386 newgreen 2
-green 1 amd64 newgreen 2
-green 1 i386 newgreen 2
-lightgreen 1 amd64 newgreen 2
-lightgreen 1 i386 newgreen 2
-newgreen 2 amd64 newgreen 2
-newgreen 2 i386 newgreen 2
-'''
-        self.assertEqual(self.pending_requests, expected_pending)
+        self.assertEqual(self.pending_requests,
+                         {'newgreen/2': {'darkgreen': ['amd64', 'i386'],
+                                         'green': ['amd64', 'i386'],
+                                         'lightgreen': ['amd64', 'i386'],
+                                         'newgreen': ['amd64', 'i386']}})
 
     def test_binary_from_new_source_package_pass(self):
         '''building an existing binary for a new source package (pass)'''
@@ -892,7 +876,7 @@ newgreen 2 i386 newgreen 2
             {'newgreen': [('old-version', '-'), ('new-version', '2')]})
 
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
     def test_result_from_older_version(self):
         '''test result from older version than the uploaded one'''
@@ -911,7 +895,7 @@ newgreen 2 i386 newgreen 2
             set(['debci-series-i386:darkgreen {"triggers": ["darkgreen/2"]}',
                  'debci-series-amd64:darkgreen {"triggers": ["darkgreen/2"]}']))
         self.assertEqual(self.pending_requests,
-                         'darkgreen 2 amd64 darkgreen 2\ndarkgreen 2 i386 darkgreen 2\n')
+                         {'darkgreen/2': {'darkgreen': ['amd64', 'i386']}})
 
         # second run gets the results for darkgreen 2
         self.swift.set_results({'autopkgtest-series': {
@@ -922,7 +906,7 @@ newgreen 2 i386 newgreen 2
             [],
             {'darkgreen': (True, {'darkgreen 2': {'amd64': 'PASS', 'i386': 'PASS'}})})
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # next run sees a newer darkgreen, should re-run tests
         self.data.remove_all(True)
@@ -934,7 +918,7 @@ newgreen 2 i386 newgreen 2
             set(['debci-series-i386:darkgreen {"triggers": ["darkgreen/3"]}',
                  'debci-series-amd64:darkgreen {"triggers": ["darkgreen/3"]}']))
         self.assertEqual(self.pending_requests,
-                         'darkgreen 3 amd64 darkgreen 3\ndarkgreen 3 i386 darkgreen 3\n')
+                         {'darkgreen/3': {'darkgreen': ['amd64', 'i386']}})
 
     def test_old_result_from_rdep_version(self):
         '''re-runs reverse dependency test on new versions'''
@@ -959,7 +943,7 @@ newgreen 2 i386 newgreen 2
             })
 
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         self.data.remove_all(True)
 
         # second run: new version re-triggers all tests
@@ -972,15 +956,10 @@ newgreen 2 i386 newgreen 2
             })
 
         self.assertEqual(len(self.amqp_requests), 6)
-
-        expected_pending = '''darkgreen 1 amd64 green 3
-darkgreen 1 i386 green 3
-green 3 amd64 green 3
-green 3 i386 green 3
-lightgreen 1 amd64 green 3
-lightgreen 1 i386 green 3
-'''
-        self.assertEqual(self.pending_requests, expected_pending)
+        self.assertEqual(self.pending_requests,
+                         {'green/3': {'darkgreen': ['amd64', 'i386'],
+                                      'green': ['amd64', 'i386'],
+                                      'lightgreen': ['amd64', 'i386']}})
 
         # third run gets the results for green and lightgreen, darkgreen is
         # still running
@@ -999,7 +978,7 @@ lightgreen 1 i386 green 3
             })
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests,
-                         'darkgreen 1 amd64 green 3\ndarkgreen 1 i386 green 3\n')
+                         {'green/3': {'darkgreen': ['amd64', 'i386']}})
 
         # fourth run finally gets the new darkgreen result
         self.swift.set_results({'autopkgtest-series': {
@@ -1014,7 +993,7 @@ lightgreen 1 i386 green 3
                              }),
             })
         self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
     def test_tmpfail(self):
         '''tmpfail results'''
@@ -1030,7 +1009,8 @@ lightgreen 1 i386 green 3
         self.do_test(
             [('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 1)'}, 'autopkgtest')],
             {'lightgreen': (False, {'lightgreen 2': {'amd64': 'REGRESSION', 'i386': 'RUNNING'}})})
-        self.assertEqual(self.pending_requests, 'lightgreen 2 i386 lightgreen 2\n')
+        self.assertEqual(self.pending_requests,
+                         {'lightgreen/2': {'lightgreen': ['i386']}})
 
         # one more tmpfail result, should not confuse britney with None version
         self.swift.set_results({'autopkgtest-series': {
@@ -1068,7 +1048,7 @@ lightgreen 1 i386 green 3
                                'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
                               }),
             })
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # re-running test manually succeeded (note: darkgreen result should be
         # cached already)
@@ -1085,7 +1065,7 @@ lightgreen 1 i386 green 3
                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
                              }),
             })
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
     def test_new_runs_dont_clobber_pass(self):
         '''passing once is sufficient
@@ -1104,7 +1084,7 @@ lightgreen 1 i386 green 3
         self.do_test(
             [('libc6', {'Version': '2'}, None)],
             {'libc6': (True, {'green 1': {'amd64': 'PASS', 'i386': 'PASS'}})})
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
 
         # new green fails; that's not libc6's fault though, so it should stay
         # valid
@@ -1148,7 +1128,7 @@ lightgreen 1 i386 green 3
                                'lightgreen 2': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
                               }),
             })
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         self.assertEqual(self.amqp_requests, set())
 
         # remove new lightgreen by resetting archive indexes, and re-adding
@@ -1171,7 +1151,7 @@ lightgreen 1 i386 green 3
         self.assertNotIn('lightgreen 2', exc['green']['tests']['autopkgtest'])
 
         # should not trigger new requests
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         self.assertEqual(self.amqp_requests, set())
 
         # but the next run should not trigger anything new
@@ -1181,7 +1161,7 @@ lightgreen 1 i386 green 3
                               'lightgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
                              }),
             })
-        self.assertEqual(self.pending_requests, '')
+        self.assertEqual(self.pending_requests, {})
         self.assertEqual(self.amqp_requests, set())
 
     def test_multiarch_dep(self):
@@ -1350,13 +1330,10 @@ lightgreen 1 i386 green 3
                  'debci-series-amd64:fancy {"triggers": ["linux-meta-64only/1"]}']))
 
         # ... and that they get recorded as pending
-        expected_pending = '''fancy 1 amd64 linux-meta 1
-fancy 1 amd64 linux-meta-64only 1
-fancy 1 amd64 linux-meta-lts-grumpy 1
-fancy 1 i386 linux-meta 1
-fancy 1 i386 linux-meta-lts-grumpy 1
-'''
-        self.assertEqual(self.pending_requests, expected_pending)
+        self.assertEqual(self.pending_requests,
+                         {'linux-meta-lts-grumpy/1': {'fancy': ['amd64', 'i386']},
+                          'linux-meta/1': {'fancy': ['amd64', 'i386']},
+                          'linux-meta-64only/1': {'fancy': ['amd64']}})
 
     def test_dkms_results_per_kernel(self):
         '''DKMS results get mapped to the triggering kernel version'''
@@ -1384,7 +1361,8 @@ fancy 1 i386 linux-meta-lts-grumpy 1
              'linux-meta-64only': (True, {'fancy 1': {'amd64': 'PASS'}}),
             })
 
-        self.assertEqual(self.pending_requests, 'fancy 1 amd64 linux-meta-lts-grumpy 1\n')
+        self.assertEqual(self.pending_requests,
+                         {'linux-meta-lts-grumpy/1': {'fancy': ['amd64']}})
 
     def test_dkms_results_per_kernel_old_results(self):
         '''DKMS results get mapped to the triggering kernel version, old results'''
@@ -1417,7 +1395,7 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             })
 
         self.assertEqual(self.pending_requests,
-                         'fancy 1 amd64 linux-meta-lts-grumpy 1\n')
+                         {'linux-meta-lts-grumpy/1': {'fancy': ['amd64']}})
 
     def test_kernel_triggered_tests(self):
         '''linux, lxc, glibc tests get triggered by linux-meta* uploads'''
@@ -1505,7 +1483,6 @@ fancy 1 i386 linux-meta-lts-grumpy 1
             {'linux': [('excuses', 'Depends: linux linux-meta')]
             }
         )
-
 
     ################################################################
     # Tests for special-cased packages
