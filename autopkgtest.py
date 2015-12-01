@@ -300,12 +300,32 @@ class AutoPackageTest(object):
             assert arch not in arch_list
             arch_list.append(arch)
 
-    def fetch_swift_results(self, swift_url, src, arch, triggers):
-        '''Download new results for source package/arch from swift
+    def latest_run_for_package(self, src, arch):
+        '''Return latest run ID for src on arch'''
 
-        triggers is an iterable of triggers for which to check
-        results.
-        '''
+        # this requires iterating over all triggers and thus is expensive;
+        # cache the results
+        try:
+            return self.latest_run_for_package._cache[src][arch]
+        except KeyError:
+            pass
+
+        latest_run_id = ''
+        for srcmap in self.test_results.values():
+            try:
+                run_id = srcmap[src][arch][2]
+            except KeyError:
+                continue
+            if run_id > latest_run_id:
+                latest_run_id = run_id
+        self.latest_run_for_package._cache.setdefault(src, {})[arch] = latest_run_id
+        return latest_run_id
+
+    latest_run_for_package._cache = {}
+
+    def fetch_swift_results(self, swift_url, src, arch):
+        '''Download new results for source package/arch from swift'''
+
         # prepare query: get all runs with a timestamp later than the latest
         # run_id for this package/arch; '@' is at the end of each run id, to
         # mark the end of a test run directory path
@@ -314,16 +334,7 @@ class AutoPackageTest(object):
                  'prefix': '%s/%s/%s/%s/' % (self.series, arch, srchash(src), src)}
 
         # determine latest run_id from results
-        # FIXME: consider dropping "triggers" arg again and iterate over all
-        # results, if that's not too slow; cache the results?
-        latest_run_id = ''
-        for trigger in triggers:
-            try:
-                run_id = self.test_results[trigger][src][arch][2]
-            except KeyError:
-                continue
-            if run_id > latest_run_id:
-                latest_run_id = run_id
+        latest_run_id = self.latest_run_for_package(src, arch)
         if latest_run_id:
             query['marker'] = query['prefix'] + latest_run_id
 
@@ -533,7 +544,7 @@ class AutoPackageTest(object):
 
         for src, archmap in requests_by_src.items():
             for arch, triggers in archmap.items():
-                self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch, triggers)
+                self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch)
 
     def collect(self, packages):
         '''Update results from swift for all pending packages
@@ -549,7 +560,7 @@ class AutoPackageTest(object):
 
         for src, archmap in requests_by_src.items():
             for arch, triggers in archmap.items():
-                self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch, triggers)
+                self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch)
 
         # also update results for excuses whose tests failed, in case a
         # manual retry worked
@@ -559,7 +570,7 @@ class AutoPackageTest(object):
                 if arch not in self.pending_tests.get(trigger, {}).get(src, []):
                     self.log_verbose('Checking for new results for failed %s on %s for trigger %s' %
                                      (src, arch, trigger))
-                    self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch, [trigger])
+                    self.fetch_swift_results(self.britney.options.adt_swift_url, src, arch)
 
         # update the results cache
         with open(self.results_cache_file + '.new', 'w') as f:
