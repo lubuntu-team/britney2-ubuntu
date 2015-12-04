@@ -479,7 +479,10 @@ class Britney(object):
             else:
                 self.__log("Ignoring ADT_ARCHES %s as it is not in architectures list" % arch)
         self.options.adt_arches = adt_arches
-        self.options.adt_ppas = self.options.adt_ppas.strip().split()
+        try:
+            self.options.adt_ppas = self.options.adt_ppas.strip().split()
+        except AttributeError:
+            self.options.adt_ppas = []
 
     def __log(self, msg, type="I"):
         """Print info messages according to verbosity level
