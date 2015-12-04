@@ -1989,8 +1989,11 @@ class Britney(object):
                         adtpass = False
 
                 if not adtpass:
-                    upgrade_me.remove(e.name)
-                    unconsidered.append(e.name)
+                    try:
+                        upgrade_me.remove(e.name)
+                        unconsidered.append(e.name)
+                    except ValueError:
+                        pass
                     e.addhtml("Not considered")
                     e.addreason("autopkgtest")
                     e.is_valid = False
