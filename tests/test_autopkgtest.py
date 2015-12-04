@@ -1255,15 +1255,16 @@ class TestAutoPkgTest(TestBase):
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (True, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                              'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                              'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                             }),
+            {'green': (True, {}),
             },
             {'green': [('old-version', '1'), ('new-version', '2'),
                        ('forced-reason', 'skiptest'),
                        ('excuses', 'Should wait for tests relating to green 2, but forced by pitti')]
             })
+
+        # should not issue test requests as it's hinted anyway
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, {})
 
     def test_hint_force_skiptest_different_version(self):
         '''force-skiptest hint with non-matching version'''
