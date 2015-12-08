@@ -423,9 +423,9 @@ class AutoPackageTest(object):
                 src, {}).setdefault(arch, [False, None, ''])
 
             # don't clobber existing passed results with failures from re-runs
-            result[0] = result[0] or passed
-            result[1] = ver
-            if stamp > result[2]:
+            if passed or not result[0]:
+                result[0] = passed
+                result[1] = ver
                 result[2] = stamp
 
     def send_test_request(self, src, arch, trigger):
