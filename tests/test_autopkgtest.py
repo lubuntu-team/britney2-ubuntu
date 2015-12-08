@@ -29,7 +29,7 @@ def tr(s):
     return {'custom_environment': ['ADT_TEST_TRIGGERS=%s' % s]}
 
 
-class TestAutoPkgTest(TestBase):
+class T(TestBase):
     '''AMQP/cloud interface'''
 
     ################################################################
@@ -37,7 +37,7 @@ class TestAutoPkgTest(TestBase):
     ################################################################
 
     def setUp(self):
-        super(TestAutoPkgTest, self).setUp()
+        super().setUp()
         self.fake_amqp = os.path.join(self.data.path, 'amqp')
 
         # Disable boottests and set fake AMQP and Swift server
