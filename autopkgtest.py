@@ -78,6 +78,10 @@ class AutoPackageTest(object):
         self.test_results = {}
         self.results_cache_file = os.path.join(self.test_state_dir, 'results.cache')
 
+        self.swift_container = 'autopkgtest-' + self.series
+        if self.britney.options.adt_ppas:
+            self.swift_container += '-' + self.britney.options.adt_ppas[-1].replace('/', '-')
+
         # read the cached results that we collected so far
         if os.path.exists(self.results_cache_file):
             with open(self.results_cache_file) as f:
@@ -321,10 +325,7 @@ class AutoPackageTest(object):
             query['marker'] = query['prefix'] + latest_run_id
 
         # request new results from swift
-        container = 'autopkgtest-' + self.series
-        if self.britney.options.adt_ppas:
-            container += '-' + self.britney.options.adt_ppas[-1].replace('/', '-')
-        url = os.path.join(swift_url, container)
+        url = os.path.join(swift_url, self.swift_container)
         url += '?' + urllib.parse.urlencode(query)
         try:
             f = urlopen(url)
@@ -344,7 +345,7 @@ class AutoPackageTest(object):
 
         for p in result_paths:
             self.fetch_one_result(
-                os.path.join(swift_url, container, p, 'result.tar'), src, arch)
+                os.path.join(swift_url, self.swift_container, p, 'result.tar'), src, arch)
 
     fetch_swift_results._done = set()
 
@@ -542,7 +543,8 @@ class AutoPackageTest(object):
     def results(self, trigsrc, trigver):
         '''Return test results for triggering package
 
-        Return (passed, src, ver, arch -> ALWAYSFAIL|PASS|REGRESSION|RUNNING|RUNNING-ALWAYSFAIL)
+        Return (passed, src, ver, arch ->
+                (ALWAYSFAIL|PASS|REGRESSION|RUNNING|RUNNING-ALWAYSFAIL, log_url))
         iterable for all package tests that got triggered by trigsrc/trigver.
         '''
         # (src, ver) -> arch -> ALWAYSFAIL|PASS|REGRESSION|RUNNING|RUNNING-ALWAYSFAIL
@@ -552,12 +554,14 @@ class AutoPackageTest(object):
         for arch in self.britney.options.adt_arches:
             for testsrc, testver in self.tests_for_source(trigsrc, trigver, arch):
                 ever_passed = self.check_ever_passed(testsrc, arch)
+                url = None
 
                 # Do we have a result already? (possibly for an older or newer
                 # version, that's okay)
                 try:
                     r = self.test_results[trigger][testsrc][arch]
                     testver = r[1]
+                    run_id = r[2]
                     if r[0]:
                         result = 'PASS'
                     else:
@@ -570,10 +574,19 @@ class AutoPackageTest(object):
                             ever_passed = False
 
                         result = ever_passed and 'REGRESSION' or 'ALWAYSFAIL'
+                    url = os.path.join(self.britney.options.adt_swift_url,
+                                       self.swift_container,
+                                       self.series,
+                                       arch,
+                                       srchash(testsrc),
+                                       testsrc,
+                                       run_id,
+                                       'log.gz')
                 except KeyError:
                     # no result for testsrc/arch; still running?
                     if arch in self.pending_tests.get(trigger, {}).get(testsrc, []):
                         result = ever_passed and 'RUNNING' or 'RUNNING-ALWAYSFAIL'
+                        url = 'http://autopkgtest.ubuntu.com/running.shtml'
                     else:
                         # ignore if adt or swift results are disabled,
                         # otherwise this is unexpected
@@ -582,9 +595,9 @@ class AutoPackageTest(object):
                         raise RuntimeError('Result for %s/%s/%s (triggered by %s) is neither known nor pending!' %
                                            (testsrc, testver, arch, trigger))
 
-                pkg_arch_result.setdefault((testsrc, testver), {})[arch] = result
+                pkg_arch_result.setdefault((testsrc, testver), {})[arch] = (result, url)
 
         for ((testsrc, testver), arch_results) in pkg_arch_result.items():
-            r = arch_results.values()
+            r = [v[0] for v in arch_results.values()]
             passed = 'REGRESSION' not in r and 'RUNNING' not in r
             yield (passed, testsrc, testver, arch_results)

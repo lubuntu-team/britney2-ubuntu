@@ -73,7 +73,7 @@ class Excuse(object):
         self.reason = {}
         self.htmlline = []
         # type (e. g. "autopkgtest") -> package (e. g. "foo 2-1") -> arch ->
-        #   ['PASS'|'ALWAYSFAIL'|'REGRESSION'|'RUNNING'|'RUNNING-ALWAYSFAIL', url]
+        #   ['PASS'|'ALWAYSFAIL'|'REGRESSION'|'RUNNING'|'RUNNING-ALWAYSFAIL', log_url, history_url]
         self.tests = {}
 
     def sortkey(self):
@@ -182,9 +182,9 @@ class Excuse(object):
             for pkg in sorted(self.tests[testtype]):
                 archmsg = []
                 for arch in sorted(self.tests[testtype][pkg]):
-                    status, url = self.tests[testtype][pkg][arch]
-                    archmsg.append('<a href="%s">%s: %s</a>' %
-                                   (url, arch, EXCUSES_LABELS[status]))
+                    status, log_url, history_url = self.tests[testtype][pkg][arch]
+                    archmsg.append('<a href="%s">%s</a>: <a href="%s">%s</a>' %
+                                   (history_url or log_url, arch, log_url, EXCUSES_LABELS[status]))
                 res = res + ("<li>%s for %s: %s</li>\n" % (testtype, pkg, ', '.join(archmsg)))
 
         for x in self.htmlline:
@@ -215,9 +215,9 @@ class Excuse(object):
         """"adding reason"""
         self.reason[reason] = 1
 
-    def addtest(self, type_, package, arch, state, url):
+    def addtest(self, type_, package, arch, state, log_url, history_url=None):
         """Add test result"""
-        self.tests.setdefault(type_, {}).setdefault(package, {})[arch] = [state, url]
+        self.tests.setdefault(type_, {}).setdefault(package, {})[arch] = [state, log_url, history_url]
 
     # TODO merge with html()
     def text(self):

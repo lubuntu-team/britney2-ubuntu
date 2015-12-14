@@ -188,8 +188,10 @@ class T(TestBase):
         self.assertEqual(exc['darkgreen']['tests'], {'autopkgtest':
             {'darkgreen 2': {
                 'amd64': ['RUNNING-ALWAYSFAIL',
+                          'http://autopkgtest.ubuntu.com/running.shtml',
                           'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/amd64'],
                 'i386': ['RUNNING-ALWAYSFAIL',
+                         'http://autopkgtest.ubuntu.com/running.shtml',
                          'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/i386']}}})
 
         self.assertEqual(self.pending_requests,
