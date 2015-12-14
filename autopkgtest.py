@@ -321,7 +321,10 @@ class AutoPackageTest(object):
             query['marker'] = query['prefix'] + latest_run_id
 
         # request new results from swift
-        url = os.path.join(swift_url, 'autopkgtest-' + self.series)
+        container = 'autopkgtest-' + self.series
+        if self.britney.options.adt_ppas:
+            container += '-' + self.britney.options.adt_ppas[-1].replace('/', '-')
+        url = os.path.join(swift_url, container)
         url += '?' + urllib.parse.urlencode(query)
         try:
             f = urlopen(url)
@@ -341,7 +344,7 @@ class AutoPackageTest(object):
 
         for p in result_paths:
             self.fetch_one_result(
-                os.path.join(swift_url, 'autopkgtest-' + self.series, p, 'result.tar'), src, arch)
+                os.path.join(swift_url, container, p, 'result.tar'), src, arch)
 
     fetch_swift_results._done = set()
 

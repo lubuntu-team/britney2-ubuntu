@@ -1562,6 +1562,20 @@ class T(TestBase):
                             'debci-series-%s:lightgreen {"ppas": ["joe/foo", "awesome-developers/staging"], "triggers": ["lightgreen/2"]}' % arch in self.amqp_requests)
         self.assertEqual(len(self.amqp_requests), 2)
 
+        # add results to PPA specific swift container
+        self.swift.set_results({'autopkgtest-series-awesome-developers-staging': {
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        self.do_test(
+            [],
+            {'lightgreen': (True, {'lightgreen 2': {'i386': 'PASS', 'amd64': 'PASS'}})},
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
+        )
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, {})
+
 
 if __name__ == '__main__':
     unittest.main()
