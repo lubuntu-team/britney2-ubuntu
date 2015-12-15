@@ -110,12 +110,12 @@ class AutoPackageTest(object):
             self.amqp_con = amqp.Connection(creds.hostname, userid=creds.username,
                                             password=creds.password)
             self.amqp_channel = self.amqp_con.channel()
-            self.log_verbose('Connected to AMQP server %s' % amqp_url)
+            self.log_verbose('Connected to AMQP server')
         elif amqp_url.startswith('file://'):
             # in testing mode, adt_amqp will be a file:// URL
             self.amqp_file = amqp_url[7:]
         else:
-            raise RuntimeError('Unknown ADT_AMQP schema in %s' % amqp_url)
+            raise RuntimeError('Unknown ADT_AMQP schema %s' % amqp_url.split(':', 1)[0])
 
     def log_verbose(self, msg):
         if self.britney.options.verbose:
