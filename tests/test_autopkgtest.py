@@ -169,6 +169,11 @@ class T(TestBase):
         self.assertEqual(self.pending_requests, {})
         self.assertEqual(self.amqp_requests, set())
 
+        with open(os.path.join(self.data.path, 'output', 'series', 'output.txt')) as f:
+            upgrade_out = f.read()
+        self.assertNotIn('accepted:', upgrade_out)
+        self.assertIn('SUCCESS (0/0)', upgrade_out)
+
     def test_no_wait_for_always_failed_test(self):
         '''We do not need to wait for results for tests which have always failed'''
 
@@ -201,6 +206,11 @@ class T(TestBase):
             self.amqp_requests,
             set(['debci-series-amd64:darkgreen {"triggers": ["darkgreen/2"]}',
                  'debci-series-i386:darkgreen {"triggers": ["darkgreen/2"]}']))
+
+        with open(os.path.join(self.data.path, 'output', 'series', 'output.txt')) as f:
+            upgrade_out = f.read()
+        self.assertIn('accepted: darkgreen', upgrade_out)
+        self.assertIn('SUCCESS (1/0)', upgrade_out)
 
     def test_multi_rdepends_with_tests_all_running(self):
         '''Multiple reverse dependencies with tests (all running)'''
@@ -1577,6 +1587,19 @@ class T(TestBase):
         )
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})
+
+    def test_disable_upgrade_tester(self):
+        '''Run without second stage upgrade tester'''
+
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if not line.startswith('UPGRADE_OUTPUT'):
+                sys.stdout.write(line)
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {})[1]
+
+        self.assertFalse(os.path.exists(os.path.join(self.data.path, 'output', 'series', 'output.txt')))
 
 
 if __name__ == '__main__':

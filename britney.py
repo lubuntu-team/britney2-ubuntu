@@ -3335,6 +3335,13 @@ class Britney(object):
         else:
             self.upgrade_me = self.options.actions.split()
 
+        # skip upgrade testing if UPGRADE_OUTPUT option is absent or empty
+        try:
+            if not self.options.upgrade_output:
+                return
+        except AttributeError:
+            return
+
         ensuredir(os.path.dirname(self.options.upgrade_output))
         with open(self.options.upgrade_output, 'w', encoding='utf-8') as f:
             self.__output = f
