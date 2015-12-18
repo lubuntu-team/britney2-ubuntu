@@ -2999,6 +2999,13 @@ class Britney(object):
         for policy in self.policies:
             policy.save_state(self)
 
+        # skip upgrade testing if UPGRADE_OUTPUT option is absent or empty
+        try:
+            if not self.options.upgrade_output:
+                return
+        except AttributeError:
+            return
+
         with open(self.options.upgrade_output, 'w', encoding='utf-8') as f:
             self.__output = f
 
