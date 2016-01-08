@@ -32,6 +32,25 @@ def parse_args():
                         default=[],
                         help='Enable PPA for requested test(s). '
                         'Can be specified multiple times.')
+    parser.add_argument('--env', metavar='KEY=VALUE', action='append',
+                        default=[],
+                        help='List of VAR=value strings. '
+                        'This can be used to influence a test\'s behaviour '
+                        'from a test request. '
+                        'Can be specified multiple times.')
+    parser.add_argument('--test-git',
+                        help='A single URL or URL branchname. '
+                        'The test will be git cloned from that URL and ran '
+                        'from the checkout. This will not build binary '
+                        'packages from the branch and run tests against '
+                        'those, the test dependencies will be taken from the '
+                        'archive, or PPA if given. In this case the '
+                        'srcpkgname will only be used for the result path in '
+                        'swift and be irrelevant for the actual test.')
+    parser.add_argument('--test-bzr',
+                        help='A single URL. '
+                        'The test will be checked out with bzr from that URL. '
+                        'Otherwise this has the same behaviour as test-git.')
     parser.add_argument('package', nargs='+',
                         help='Source package name(s) whose tests to run.')
     args = parser.parse_args()
@@ -79,6 +98,12 @@ if __name__ == '__main__':
         params['triggers'] = args.trigger
     if args.ppa:
         params['ppas'] = args.ppa
+    if args.env:
+        params['env'] = args.env
+    if args.test_git:
+        params['test-git'] = args.test_git
+    if args.test_bzr:
+        params['test-bzr'] = args.test_bzr
     params = '\n' + json.dumps(params)
 
     creds = urllib.parse.urlsplit(config.adt_amqp, allow_fragments=False)
