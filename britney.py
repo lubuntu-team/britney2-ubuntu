@@ -1965,7 +1965,8 @@ class Britney(object):
                     for arch, (status, log_url) in arch_status.items():
                         kwargs = {}
                         if self.options.adt_ppas:
-                            kwargs['artifact_url'] = log_url.replace('log.gz', 'artifacts.tar.gz')
+                            if log_url.endswith('log.gz'):
+                                kwargs['artifact_url'] = log_url.replace('log.gz', 'artifacts.tar.gz')
                         else:
                             kwargs['history_url'] = cloud_url % {
                                 'h': srchash(adtsrc), 's': adtsrc,
