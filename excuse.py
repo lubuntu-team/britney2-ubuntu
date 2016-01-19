@@ -182,9 +182,13 @@ class Excuse(object):
             for pkg in sorted(self.tests[testtype]):
                 archmsg = []
                 for arch in sorted(self.tests[testtype][pkg]):
-                    status, log_url, history_url = self.tests[testtype][pkg][arch]
-                    archmsg.append('<a href="%s">%s</a>: <a href="%s">%s</a>' %
-                                   (history_url or log_url, arch, log_url, EXCUSES_LABELS[status]))
+                    status, log_url, history_url, artifact_url = self.tests[testtype][pkg][arch]
+                    label = EXCUSES_LABELS[status]
+                    message = '<a href="{history_url}">{arch}</a>' if history_url else '{arch}'
+                    message += ': <a href="{log_url}">{label}</a>'
+                    if artifact_url:
+                        message += ' <a href="{artifact_url}">[artifacts]</a>'
+                    archmsg.append(message.format(**locals()))
                 res = res + ("<li>%s for %s: %s</li>\n" % (testtype, pkg, ', '.join(archmsg)))
 
         for x in self.htmlline:
@@ -215,9 +219,9 @@ class Excuse(object):
         """"adding reason"""
         self.reason[reason] = 1
 
-    def addtest(self, type_, package, arch, state, log_url, history_url=None):
+    def addtest(self, type_, package, arch, state, log_url, history_url=None, artifact_url=None):
         """Add test result"""
-        self.tests.setdefault(type_, {}).setdefault(package, {})[arch] = [state, log_url, history_url]
+        self.tests.setdefault(type_, {}).setdefault(package, {})[arch] = [state, log_url, history_url, artifact_url]
 
     # TODO merge with html()
     def text(self):

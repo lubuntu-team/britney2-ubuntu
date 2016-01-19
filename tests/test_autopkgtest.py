@@ -194,10 +194,12 @@ class T(TestBase):
             {'darkgreen 2': {
                 'amd64': ['RUNNING-ALWAYSFAIL',
                           'http://autopkgtest.ubuntu.com/running.shtml',
-                          'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/amd64'],
+                          'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/amd64',
+                          None],
                 'i386': ['RUNNING-ALWAYSFAIL',
                          'http://autopkgtest.ubuntu.com/running.shtml',
-                         'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/i386']}}})
+                         'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/i386',
+                         None]}}})
 
         self.assertEqual(self.pending_requests,
                          {'darkgreen/2': {'darkgreen': ['amd64', 'i386']}})
@@ -1563,11 +1565,22 @@ class T(TestBase):
             else:
                 sys.stdout.write(line)
 
-        self.do_test(
+        exc = self.do_test(
             [('lightgreen', {'Version': '2'}, 'autopkgtest')],
             {'lightgreen': (True, {'lightgreen 2': {'amd64': 'RUNNING-ALWAYSFAIL'}})},
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
-        )
+        )[1]
+        self.assertEqual(exc['lightgreen']['tests'], {'autopkgtest':
+            {'lightgreen 2': {
+                'amd64': ['RUNNING-ALWAYSFAIL',
+                          'http://autopkgtest.ubuntu.com/running.shtml',
+                          None,
+                          None],
+                'i386': ['RUNNING-ALWAYSFAIL',
+                         'http://autopkgtest.ubuntu.com/running.shtml',
+                         None,
+                         None]}
+            }})
 
         for arch in ['i386', 'amd64']:
             self.assertTrue('debci-series-%s:lightgreen {"triggers": ["lightgreen/2"], "ppas": ["joe/foo", "awesome-developers/staging"]}' % arch in self.amqp_requests or
@@ -1580,11 +1593,22 @@ class T(TestBase):
             'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
         }})
 
-        self.do_test(
+        exc = self.do_test(
             [],
             {'lightgreen': (True, {'lightgreen 2': {'i386': 'PASS', 'amd64': 'PASS'}})},
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
-        )
+        )[1]
+        self.assertEqual(exc['lightgreen']['tests'], {'autopkgtest':
+            {'lightgreen 2': {
+                'amd64': ['PASS',
+                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/amd64/l/lightgreen/20150101_100101@/log.gz',
+                          None,
+                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/amd64/l/lightgreen/20150101_100101@/artifacts.tar.gz'],
+                'i386': ['PASS',
+                         'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/log.gz',
+                         None,
+                         'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz']}
+            }})
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})
 
