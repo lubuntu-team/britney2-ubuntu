@@ -184,12 +184,10 @@ class Excuse(object):
                 for arch in sorted(self.tests[testtype][pkg]):
                     status, log_url, history_url, artifact_url = self.tests[testtype][pkg][arch]
                     label = EXCUSES_LABELS[status]
+                    message = '<a href="{history_url}">{arch}</a>' if history_url else '{arch}'
+                    message += ': <a href="{log_url}">{label}</a>'
                     if artifact_url:
-                        message = '{arch}: <a href="{log_url}">{label}</a> <a href="{artifact_url}">[artifacts]</a>'
-                    elif history_url:
-                        message = '<a href="{history_url}">{arch}</a>: <a href="{log_url}">{label}</a>'
-                    else:
-                        message = '{arch}: <a href="{log_url}">{label}</a>'
+                        message += ' <a href="{artifact_url}">[artifacts]</a>'
                     archmsg.append(message.format(**locals()))
                 res = res + ("<li>%s for %s: %s</li>\n" % (testtype, pkg, ', '.join(archmsg)))
 
