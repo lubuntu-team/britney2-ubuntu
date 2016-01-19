@@ -1967,7 +1967,7 @@ class Britney(object):
                                                    'r': self.options.series, 'a': arch}
                         artifact_url = None
                         if self.options.adt_ppas:
-                            artifact_url = log_url.replace('log.gz', 'artifact.tar.gz')
+                            artifact_url = log_url.replace('log.gz', 'artifacts.tar.gz')
                         e.addtest('autopkgtest', '%s %s' % (adtsrc, adtver),
                                   arch, status, log_url, history_url, artifact_url)
 
