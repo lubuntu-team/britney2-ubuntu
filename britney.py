@@ -1965,8 +1965,11 @@ class Britney(object):
                     for arch, (status, log_url) in arch_status.items():
                         history_url = cloud_url % {'h': srchash(adtsrc), 's': adtsrc,
                                                    'r': self.options.series, 'a': arch}
+                        artifact_url = None
+                        if self.options.adt_ppas:
+                            artifact_url = log_url.replace('log.gz', 'artifact.tar.gz')
                         e.addtest('autopkgtest', '%s %s' % (adtsrc, adtver),
-                                  arch, status, log_url, history_url)
+                                  arch, status, log_url, history_url, artifact_url)
 
                     # hints can override failures
                     if not passed:
