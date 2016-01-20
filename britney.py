@@ -489,7 +489,7 @@ class Britney(object):
             self.log("Cannot use --control-files with mirror-layout (components)!", type="E")
             sys.exit(1)
 
-        if not hasattr(self.options, "heidi_delta_output"):
+        if self.options.heidi_output and not hasattr(self.options, "heidi_delta_output"):
             self.options.heidi_delta_output = self.options.heidi_output + "Delta"
 
         self.options.nobreakall_arches = self.options.nobreakall_arches.split()
@@ -2795,14 +2795,15 @@ class Britney(object):
             for policy in self.policies:
                 policy.save_state(self)
 
-            # write HeidiResult
-            self.log("Writing Heidi results to %s" % self.options.heidi_output)
-            write_heidi(self.options.heidi_output, self.sources["testing"],
-                        self.binaries["testing"])
+            if self.options.heidi_output:
+                # write HeidiResult
+                self.log("Writing Heidi results to %s" % self.options.heidi_output)
+                write_heidi(self.options.heidi_output, self.sources["testing"],
+                            self.binaries["testing"])
 
-            self.log("Writing delta to %s" % self.options.heidi_delta_output)
-            write_heidi_delta(self.options.heidi_delta_output,
-                              self.all_selected)
+                self.log("Writing delta to %s" % self.options.heidi_delta_output)
+                write_heidi_delta(self.options.heidi_delta_output,
+                                  self.all_selected)
 
 
         self.printuninstchange()
