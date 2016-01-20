@@ -453,7 +453,7 @@ class Britney(object):
                          not getattr(self.options, k.lower()):
                         setattr(self.options, k.lower(), v)
 
-        if not hasattr(self.options, "heidi_delta_output"):
+        if self.options.heidi_output and not hasattr(self.options, "heidi_delta_output"):
             self.options.heidi_delta_output = self.options.heidi_output + "Delta"
 
         self.options.nobreakall_arches = self.options.nobreakall_arches.split()
@@ -3023,14 +3023,15 @@ class Britney(object):
             except AttributeError:
                 self.write_dates(self.options.testing, self.dates)
 
-            # write HeidiResult
-            self.__log("Writing Heidi results to %s" % self.options.heidi_output)
-            write_heidi(self.options.heidi_output, self.sources["testing"],
-                        self.binaries["testing"])
+            if self.options.heidi_output:
+                # write HeidiResult
+                self.__log("Writing Heidi results to %s" % self.options.heidi_output)
+                write_heidi(self.options.heidi_output, self.sources["testing"],
+                            self.binaries["testing"])
 
-            self.__log("Writing delta to %s" % self.options.heidi_delta_output)
-            write_heidi_delta(self.options.heidi_delta_output,
-                              self.all_selected)
+                self.__log("Writing delta to %s" % self.options.heidi_delta_output)
+                write_heidi_delta(self.options.heidi_delta_output,
+                                  self.all_selected)
 
 
         self.printuninstchange()
