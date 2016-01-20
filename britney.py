@@ -484,7 +484,7 @@ class Britney(object):
         if self.options.series == '':
             self.options.series = self.suite_info.target_suite.name
 
-        if not hasattr(self.options, "heidi_delta_output"):
+        if hasattr(self.options, 'heidi_output') and not hasattr(self.options, "heidi_delta_output"):
             self.options.heidi_delta_output = self.options.heidi_output + "Delta"
 
         self.options.smooth_updates = self.options.smooth_updates.split()
@@ -1273,15 +1273,16 @@ class Britney(object):
         if not self.options.dry_run:
             target_suite = self.suite_info.target_suite
 
-            # write HeidiResult
-            self.logger.info("Writing Heidi results to %s", self.options.heidi_output)
-            write_heidi(self.options.heidi_output,
-                        target_suite,
-                        outofsync_arches=self.options.outofsync_arches)
+            if hasattr(self.options, 'heidi_output'):
+                # write HeidiResult
+                self.logger.info("Writing Heidi results to %s", self.options.heidi_output)
+                write_heidi(self.options.heidi_output,
+                            target_suite,
+                            outofsync_arches=self.options.outofsync_arches)
 
-            self.logger.info("Writing delta to %s", self.options.heidi_delta_output)
-            write_heidi_delta(self.options.heidi_delta_output,
-                              self.all_selected)
+                self.logger.info("Writing delta to %s", self.options.heidi_delta_output)
+                write_heidi_delta(self.options.heidi_delta_output,
+                                  self.all_selected)
 
         self.logger.info("Test completed!")
 
