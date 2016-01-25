@@ -196,7 +196,7 @@ from functools import reduce, partial
 from itertools import chain, product
 from operator import attrgetter
 
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from installability.builder import InstallabilityTesterBuilder
 from excuse import Excuse
@@ -1971,6 +1971,12 @@ class Britney(object):
                             kwargs['history_url'] = cloud_url % {
                                 'h': srchash(adtsrc), 's': adtsrc,
                                 'r': self.options.series, 'a': arch}
+                            if status == 'REGRESSION':
+                                kwargs['retry_url'] = 'https://autopkgtest.ubuntu.com/retry.cgi?' + \
+                                        urlencode({'release': self.options.series,
+                                                   'arch': arch,
+                                                   'package': adtsrc,
+                                                   'trigger': '%s/%s' % (e.name, e.ver[1])})
                         e.addtest('autopkgtest', '%s %s' % (adtsrc, adtver),
                                   arch, status, log_url, **kwargs)
 

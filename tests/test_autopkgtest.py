@@ -12,6 +12,7 @@ import fileinput
 import unittest
 import json
 import pprint
+import urllib.parse
 
 import apt_pkg
 import yaml
@@ -195,10 +196,12 @@ class T(TestBase):
                 'amd64': ['RUNNING-ALWAYSFAIL',
                           'http://autopkgtest.ubuntu.com/running.shtml',
                           'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/amd64',
+                          None,
                           None],
                 'i386': ['RUNNING-ALWAYSFAIL',
                          'http://autopkgtest.ubuntu.com/running.shtml',
                          'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/i386',
+                         None,
                          None]}}})
 
         self.assertEqual(self.pending_requests,
@@ -412,7 +415,7 @@ class T(TestBase):
             'series/amd64/g/green/20150101_100201@': (4, 'green 2', tr('green/2')),
         }})
 
-        out = self.do_test(
+        out, exc = self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             {'green': (False, {'green 2': {'amd64': 'REGRESSION', 'i386': 'PASS'},
                                'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
@@ -420,7 +423,24 @@ class T(TestBase):
                               })
             },
             {'green': [('old-version', '1'), ('new-version', '2')]}
-        )[0]
+        )
+
+        # should have links to log and history, but no artifacts (as this is
+        # not a PPA)
+        self.assertEqual(exc['green']['tests']['autopkgtest']['lightgreen 1']['amd64'][:4],
+                ['REGRESSION',
+                 'http://localhost:18085/autopkgtest-series/series/amd64/l/lightgreen/20150101_100101@/log.gz',
+                 'http://autopkgtest.ubuntu.com/packages/l/lightgreen/series/amd64',
+                 None])
+
+        # should have retry link for the regressions (not a stable URL, test
+        # seaprately)
+        link = urllib.parse.urlparse(exc['green']['tests']['autopkgtest']['lightgreen 1']['amd64'][4])
+        self.assertEqual(link.netloc, 'autopkgtest.ubuntu.com')
+        self.assertEqual(link.path, '/retry.cgi')
+        self.assertEqual(urllib.parse.parse_qs(link.query),
+                         {'release': ['series'], 'arch': ['amd64'],
+                          'package': ['lightgreen'], 'trigger': ['green/2']})
 
         # we already had all results before the run, so this should not trigger
         # any new requests
@@ -1575,9 +1595,11 @@ class T(TestBase):
                 'amd64': ['RUNNING-ALWAYSFAIL',
                           'http://autopkgtest.ubuntu.com/running.shtml',
                           None,
+                          None,
                           None],
                 'i386': ['RUNNING-ALWAYSFAIL',
                          'http://autopkgtest.ubuntu.com/running.shtml',
+                         None,
                          None,
                          None]}
             }})
@@ -1603,11 +1625,13 @@ class T(TestBase):
                 'amd64': ['PASS',
                           'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/amd64/l/lightgreen/20150101_100101@/log.gz',
                           None,
-                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/amd64/l/lightgreen/20150101_100101@/artifacts.tar.gz'],
+                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/amd64/l/lightgreen/20150101_100101@/artifacts.tar.gz',
+                          None],
                 'i386': ['PASS',
                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/log.gz',
                          None,
-                         'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz']}
+                         'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz',
+                         None]}
             }})
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})

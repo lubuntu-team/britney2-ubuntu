@@ -182,13 +182,18 @@ class Excuse(object):
             for pkg in sorted(self.tests[testtype]):
                 archmsg = []
                 for arch in sorted(self.tests[testtype][pkg]):
-                    status, log_url, history_url, artifact_url = self.tests[testtype][pkg][arch]
+                    status, log_url, history_url, artifact_url, retry_url = self.tests[testtype][pkg][arch]
                     label = EXCUSES_LABELS[status]
-                    message = '<a href="{history_url}">{arch}</a>' if history_url else '{arch}'
-                    message += ': <a href="{log_url}">{label}</a>'
+                    if history_url:
+                        message = '<a href="%s">%s</a>' % (history_url, arch)
+                    else:
+                        message = arch
+                    message += ': <a href="%s">%s</a>' % (log_url, label)
+                    if retry_url:
+                        message += ' <a href="%s" style="text-decoration: none;">♻ </a> ' % retry_url
                     if artifact_url:
-                        message += ' <a href="{artifact_url}">[artifacts]</a>'
-                    archmsg.append(message.format(**locals()))
+                        message += ' <a href="%s">[artifacts]</a>' % artifact_url
+                    archmsg.append(message)
                 res = res + ("<li>%s for %s: %s</li>\n" % (testtype, pkg, ', '.join(archmsg)))
 
         for x in self.htmlline:
@@ -219,9 +224,10 @@ class Excuse(object):
         """"adding reason"""
         self.reason[reason] = 1
 
-    def addtest(self, type_, package, arch, state, log_url, history_url=None, artifact_url=None):
+    def addtest(self, type_, package, arch, state, log_url, history_url=None,
+                artifact_url=None, retry_url=None):
         """Add test result"""
-        self.tests.setdefault(type_, {}).setdefault(package, {})[arch] = [state, log_url, history_url, artifact_url]
+        self.tests.setdefault(type_, {}).setdefault(package, {})[arch] = [state, log_url, history_url, artifact_url, retry_url]
 
     # TODO merge with html()
     def text(self):
