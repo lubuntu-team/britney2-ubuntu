@@ -139,6 +139,7 @@ class TestBase(unittest.TestCase):
 
     def setUp(self):
         super(TestBase, self).setUp()
+        self.maxDiff = None
         self.data = TestData()
         self.britney = os.path.join(PROJECT_DIR, 'britney.py')
         # create temporary config so that tests can hack it
