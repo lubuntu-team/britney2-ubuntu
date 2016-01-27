@@ -1216,6 +1216,22 @@ class T(TestBase):
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
         )
 
+    def test_nbs(self):
+        '''source-less binaries do not cause harm'''
+
+        # NBS in testing
+        self.data.add('liboldgreen0', False, add_src=False)
+        # NBS in unstable
+        self.data.add('liboldgreen1', True, add_src=False)
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green'}, 'autopkgtest')],
+            {'green': (True, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]})
+
     ################################################################
     # Tests for hint processing
     ################################################################

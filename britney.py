@@ -781,7 +781,11 @@ class Britney(object):
             # that have built on this architecture.
             if value[SOURCE] not in oodsrcs:
                 source_version = source_sources[value[SOURCE]][VERSION]
-                target_version = target_sources[value[SOURCE]][VERSION]
+                try:
+                    target_version = target_sources[value[SOURCE]][VERSION]
+                except KeyError:
+                    self.__log("merge_binaries: pkg %s has no source, NBS?" % pkg)
+                    continue
                 if source_version != target_version:
                     current_arch = value[ARCHITECTURE]
                     built = False
