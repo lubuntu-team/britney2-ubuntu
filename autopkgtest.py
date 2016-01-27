@@ -76,7 +76,10 @@ class AutoPackageTest(object):
         #   This is also used for tracking the latest seen time stamp for
         #   requesting only newer results.
         self.test_results = {}
-        self.results_cache_file = os.path.join(self.test_state_dir, 'results.cache')
+        if self.britney.options.adt_shared_results_cache:
+            self.results_cache_file = self.britney.options.adt_shared_results_cache
+        else:
+            self.results_cache_file = os.path.join(self.test_state_dir, 'results.cache')
 
         self.swift_container = 'autopkgtest-' + self.series
         if self.britney.options.adt_ppas:
@@ -528,11 +531,12 @@ class AutoPackageTest(object):
                 for (testsrc, _) in self.tests_for_source(src, ver, arch):
                     self.pkg_test_request(testsrc, arch, src + '/' + ver)
 
-        # update the results on-disk cache
-        self.log_verbose('Updating results cache')
-        with open(self.results_cache_file + '.new', 'w') as f:
-            json.dump(self.test_results, f, indent=2)
-        os.rename(self.results_cache_file + '.new', self.results_cache_file)
+        # update the results on-disk cache, unless we are using a r/o shared one
+        if not self.britney.options.adt_shared_results_cache:
+            self.log_verbose('Updating results cache')
+            with open(self.results_cache_file + '.new', 'w') as f:
+                json.dump(self.test_results, f, indent=2)
+            os.rename(self.results_cache_file + '.new', self.results_cache_file)
 
         # update the pending tests on-disk cache
         self.log_verbose('Updated pending requested tests in %s' % self.pending_tests_file)

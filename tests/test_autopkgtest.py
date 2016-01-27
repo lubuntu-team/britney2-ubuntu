@@ -1663,6 +1663,51 @@ class T(TestBase):
 
         self.assertFalse(os.path.exists(os.path.join(self.data.path, 'output', 'series', 'output.txt')))
 
+    def test_shared_results_cache(self):
+        '''Run with shared r/o results.cache'''
+
+        # first run to create results.cache
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        self.do_test(
+            [('lightgreen', {'Version': '2', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (True, {'lightgreen 2': {'i386': 'PASS', 'amd64': 'PASS'}})},
+            )
+
+        # move and remember original contents
+        local_path = os.path.join(self.data.path, 'data/series-proposed/autopkgtest/results.cache')
+        shared_path = os.path.join(self.data.path, 'shared_results.cache')
+        os.rename(local_path, shared_path)
+        with open(shared_path) as f:
+            orig_contents = f.read()
+
+        # enable shared cache
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if 'ADT_SHARED_RESULTS_CACHE' in line:
+                print('ADT_SHARED_RESULTS_CACHE = %s' % shared_path)
+            else:
+                sys.stdout.write(line)
+
+        # second run, should now not update cache
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 3', tr('lightgreen/3')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+        self.data.remove_all(True)
+        self.do_test(
+            [('lightgreen', {'Version': '3', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (True, {'lightgreen 3': {'i386': 'PASS', 'amd64': 'PASS'}})},
+            )
+
+        # leaves results.cache untouched
+        self.assertFalse(os.path.exists(local_path))
+        with open(shared_path) as f:
+            self.assertEqual(orig_contents, f.read())
+
 
 if __name__ == '__main__':
     unittest.main()
