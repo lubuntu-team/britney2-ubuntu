@@ -60,7 +60,6 @@ class Excuse(object):
         self._dontinvalidate = False
         self.forced = False
         self.run_autopkgtest = False
-        self.run_boottest = False
         self.distribution = "ubuntu"
 
         self.invalid_deps = []

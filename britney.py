@@ -213,7 +213,6 @@ from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
                    SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
                    PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH, ESSENTIAL)
 from autopkgtest import AutoPackageTest, srchash
-from boottest import BootTest
 
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
@@ -1454,7 +1453,6 @@ class Britney(object):
         # the starting point is that we will update the candidate and run autopkgtests
         update_candidate = True
         run_autopkgtest = True
-        run_boottest = True
         
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u[VERSION], source_t[VERSION]) < 0:
@@ -1468,7 +1466,6 @@ class Britney(object):
             excuse.addhtml("%s source package doesn't exist" % (src))
             update_candidate = False
             run_autopkgtest = False
-            run_boottest = False
 
         # retrieve the urgency for the upload, ignoring it if this is a NEW package (not present in testing)
         urgency = self.urgencies.get(src, self.options.default_urgency)
@@ -1487,7 +1484,6 @@ class Britney(object):
                 excuse.addreason("remove")
                 update_candidate = False
                 run_autopkgtest = False
-                run_boottest = False
 
         # check if there is a `block' or `block-udeb' hint for this package, or a `block-all source' hint
         blocked = {}
@@ -1570,7 +1566,6 @@ class Britney(object):
                 else:
                     update_candidate = False
                     run_autopkgtest = False
-                    run_boottest = False
                     excuse.addreason("age")
 
         if suite in ['pu', 'tpu']:
@@ -1606,8 +1601,6 @@ class Britney(object):
                     update_candidate = False
                     if arch in self.options.adt_arches:
                         run_autopkgtest = False
-                    if arch in self.options.boottest_arches.split():
-                        run_boottest = False
                     excuse.addreason("arch")
                     excuse.addreason("arch-%s" % arch)
                     excuse.addreason("build-arch")
@@ -1650,8 +1643,6 @@ class Britney(object):
                         update_candidate = False
                         if arch in self.options.adt_arches:
                             run_autopkgtest = False
-                        if arch in self.options.boottest_arches.split():
-                            run_boottest = False
 
             # if there are out-of-date packages, warn about them in the excuse and set update_candidate
             # to False to block the update; if the architecture where the package is out-of-date is
@@ -1678,8 +1669,6 @@ class Britney(object):
                     update_candidate = False
                     if arch in self.options.adt_arches:
                         run_autopkgtest = False
-                    if arch in self.options.boottest_arches.split():
-                        run_boottest = False
                     excuse.addreason("arch")
                     excuse.addreason("arch-%s" % arch)
                     if uptodatebins:
@@ -1697,13 +1686,11 @@ class Britney(object):
             excuse.addreason("no-binaries")
             update_candidate = False
             run_autopkgtest = False
-            run_boottest = False
         elif not built_anywhere:
             excuse.addhtml("%s has no up-to-date binaries on any arch" % src)
             excuse.addreason("no-binaries")
             update_candidate = False
             run_autopkgtest = False
-            run_boottest = False
 
         # if the suite is unstable, then we have to check the release-critical bug lists before
         # updating testing; if the unstable package has RC bugs that do not apply to the testing
@@ -1736,7 +1723,6 @@ class Britney(object):
                         ["<a href=\"http://bugs.debian.org/%s\">#%s</a>" % (quote(a), a) for a in new_bugs])))
                     update_candidate = False
                     run_autopkgtest = False
-                    run_boottest = False
                     excuse.addreason("buggy")
 
                 if len(old_bugs) > 0:
@@ -1755,7 +1741,6 @@ class Britney(object):
             excuse.force()
             update_candidate = True
             run_autopkgtest = True
-            run_boottest = True
 
         # if the package can be updated, it is a valid candidate
         if update_candidate:
@@ -1765,7 +1750,6 @@ class Britney(object):
             # TODO
             excuse.addhtml("Not considered")
         excuse.run_autopkgtest = run_autopkgtest
-        excuse.run_boottest = run_boottest
 
         self.excuses.append(excuse)
         return update_candidate
@@ -2009,90 +1993,6 @@ class Britney(object):
                     e.addhtml("Not considered")
                     e.addreason("autopkgtest")
                     e.is_valid = False
-
-        if (getattr(self.options, "boottest_enable", "no") == "yes" and
-            self.options.series):
-            # trigger 'boottest'ing for valid candidates.
-            boottest_debug = getattr(
-                self.options, "boottest_debug", "no") == "yes"
-            boottest = BootTest(
-                self, self.options.distribution, self.options.series,
-                debug=boottest_debug)
-            boottest_excuses = []
-            for excuse in self.excuses:
-                # Skip already invalid excuses.
-                if not excuse.run_boottest:
-                    continue
-                # Also skip removals, binary-only candidates, proposed-updates
-                # and unknown versions.
-                if (excuse.name.startswith("-") or
-                    "/" in excuse.name or
-                    "_" in excuse.name or
-                    excuse.ver[1] == "-"):
-                    continue
-                # Allows hints to skip boottest attempts
-                hints = self.hints.search(
-                    'force-skiptest', package=excuse.name)
-                forces = [x for x in hints
-                          if same_source(excuse.ver[1], x.version)]
-                if forces:
-                    excuse.addhtml(
-                        "boottest skipped from hints by %s" % forces[0].user)
-                    continue
-                # Only sources whitelisted in the boottest context should
-                # be tested (currently only sources building phone binaries).
-                if not boottest.needs_test(excuse.name, excuse.ver[1]):
-                    # Silently skipping.
-                    continue
-                # Okay, aggregate required boottests requests.
-                boottest_excuses.append(excuse)
-            boottest.request([(e.name, e.ver[1]) for e in boottest_excuses])
-            # Dry-run avoids data exchange with external systems.
-            if not self.options.dry_run:
-                boottest.submit()
-                boottest.collect()
-            # Boottest Jenkins views location.
-            jenkins_public = "https://jenkins.qa.ubuntu.com/job"
-            jenkins_private = (
-                "http://d-jenkins.ubuntu-ci:8080/view/%s/view/BootTest/job" %
-                self.options.series.title())
-            # Update excuses from the boottest context.
-            for excuse in boottest_excuses:
-                status = boottest.get_status(excuse.name, excuse.ver[1])
-                label = BootTest.EXCUSE_LABELS.get(status, 'UNKNOWN STATUS')
-                public_url = "%s/%s-boottest-%s/lastBuild" % (
-                    jenkins_public, self.options.series,
-                    excuse.name.replace("+", "-"))
-                private_url = "%s/%s-boottest-%s/lastBuild" % (
-                    jenkins_private, self.options.series,
-                    excuse.name.replace("+", "-"))
-                excuse.addhtml(
-                    "Boottest result: %s (Jenkins: <a href=\"%s\">public</a>"
-                    ", <a href=\"%s\">private</a>)" % (
-                        label, public_url, private_url))
-                # Allows hints to force boottest failures/attempts
-                # to be ignored.
-                hints = self.hints.search('force', package=excuse.name)
-                hints.extend(
-                    self.hints.search('force-badtest', package=excuse.name))
-                forces = [x for x in hints
-                          if same_source(excuse.ver[1], x.version)]
-                if forces:
-                    excuse.addhtml(
-                        "Should wait for %s %s boottest, but forced by "
-                        "%s" % (excuse.name, excuse.ver[1],
-                                forces[0].user))
-                    continue
-                # Block promotion if the excuse is still valid (adt tests
-                # passed) but the boottests attempt has failed or still in
-                # progress.
-                if status not in BootTest.VALID_STATUSES:
-                    excuse.addreason("boottest")
-                    if excuse.is_valid:
-                        excuse.is_valid = False
-                        excuse.addhtml("Not considered")
-                        upgrade_me.remove(excuse.name)
-                        unconsidered.append(excuse.name)
 
         # invalidate impossible excuses
         for e in self.excuses:

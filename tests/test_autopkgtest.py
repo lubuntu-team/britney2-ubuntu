@@ -41,11 +41,9 @@ class T(TestBase):
         super().setUp()
         self.fake_amqp = os.path.join(self.data.path, 'amqp')
 
-        # Disable boottests and set fake AMQP and Swift server
+        # Set fake AMQP and Swift server
         for line in fileinput.input(self.britney_conf, inplace=True):
-            if 'BOOTTEST_ENABLE' in line:
-                print('BOOTTEST_ENABLE   = no')
-            elif 'ADT_AMQP' in line:
+            if 'ADT_AMQP' in line:
                 print('ADT_AMQP = file://%s' % self.fake_amqp)
             elif 'ADT_SWIFT_URL' in line:
                 print('ADT_SWIFT_URL = http://localhost:18085')
