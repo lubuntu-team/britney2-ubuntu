@@ -312,6 +312,8 @@ class AutoPackageTest(object):
         # run, as this is expensive
         done_entry = src + '/' + arch
         if done_entry in self.fetch_swift_results._done:
+            self.log_verbose('fetch_swift_results: Already fetched results for %s in this run, ignoring' %
+                             done_entry)
             return
         self.fetch_swift_results._done.add(done_entry)
 
@@ -332,6 +334,7 @@ class AutoPackageTest(object):
         url += '?' + urllib.parse.urlencode(query)
         try:
             f = urlopen(url)
+            self.log_verbose('fetch_swift_results: %s result %i' % (url, f.getcode()))
             if f.getcode() == 200:
                 result_paths = f.read().decode().strip().splitlines()
             elif f.getcode() == 204:  # No content
@@ -479,8 +482,10 @@ class AutoPackageTest(object):
             # do we have one now?
             try:
                 self.test_results[trigger][src][arch]
+                self.log_verbose('%s/%s triggered by %s: now have a result after fetching again' % (src, arch, trigger))
                 return
             except KeyError:
+                self.log_verbose('%s/%s triggered by %s: still no result after fetching again' % (src, arch, trigger))
                 pass
 
         # Don't re-request if it's already pending
