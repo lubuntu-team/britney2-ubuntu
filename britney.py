@@ -1959,12 +1959,13 @@ class Britney(object):
                             kwargs['history_url'] = cloud_url % {
                                 'h': srchash(adtsrc), 's': adtsrc,
                                 'r': self.options.series, 'a': arch}
-                            if status == 'REGRESSION':
-                                kwargs['retry_url'] = 'https://autopkgtest.ubuntu.com/retry.cgi?' + \
-                                        urlencode({'release': self.options.series,
-                                                   'arch': arch,
-                                                   'package': adtsrc,
-                                                   'trigger': '%s/%s' % (e.name, e.ver[1])})
+                        if status == 'REGRESSION':
+                            kwargs['retry_url'] = 'https://autopkgtest.ubuntu.com/retry.cgi?' + \
+                                    urlencode([('release', self.options.series),
+                                               ('arch', arch),
+                                               ('package', adtsrc),
+                                               ('trigger', '%s/%s' % (e.name, e.ver[1]))] +
+                                              [('ppa', p) for p in self.options.adt_ppas])
                         e.addtest('autopkgtest', '%s %s' % (adtsrc, adtver),
                                   arch, status, log_url, **kwargs)
 

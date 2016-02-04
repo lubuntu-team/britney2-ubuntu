@@ -1625,13 +1625,14 @@ class T(TestBase):
 
         # add results to PPA specific swift container
         self.swift.set_results({'autopkgtest-series-awesome-developers-staging': {
-            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'series/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
+            'series/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 2', tr('lightgreen/2')),
             'series/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
         }})
 
         exc = self.do_test(
             [],
-            {'lightgreen': (True, {'lightgreen 2': {'i386': 'PASS', 'amd64': 'PASS'}})},
+            {'lightgreen': (False, {'lightgreen 2': {'i386': 'REGRESSION', 'amd64': 'PASS'}})},
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
         )[1]
         self.assertEqual(exc['lightgreen']['tests'], {'autopkgtest':
@@ -1641,11 +1642,11 @@ class T(TestBase):
                           None,
                           'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/amd64/l/lightgreen/20150101_100101@/artifacts.tar.gz',
                           None],
-                'i386': ['PASS',
+                'i386': ['REGRESSION',
                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/log.gz',
                          None,
                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz',
-                         None]}
+                         'https://autopkgtest.ubuntu.com/retry.cgi?release=series&arch=i386&package=lightgreen&trigger=lightgreen%2F2&ppa=joe%2Ffoo&ppa=awesome-developers%2Fstaging']}
             }})
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})
