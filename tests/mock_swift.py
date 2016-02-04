@@ -84,7 +84,7 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
         try:
             objs = set(['%s/result.tar' % r for r in self.results[container]])
         except KeyError:
-            self.send_error(404, 'Container does not exist')
+            self.send_error(401, 'Container does not exist')
             return
         if 'prefix' in query:
             p = query['prefix'][-1]
