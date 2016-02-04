@@ -22,6 +22,7 @@ import json
 import tarfile
 import io
 import re
+import sys
 import urllib.parse
 from urllib.request import urlopen
 
@@ -340,14 +341,23 @@ class AutoPackageTest(object):
             elif f.getcode() == 204:  # No content
                 result_paths = []
             else:
-                self.log_error('Failure to fetch swift results from %s: %u' %
-                               (url, f.getcode()))
-                f.close()
-                return
+                # we should not ever end up here as we expect a HTTPError in
+                # other cases; e. g. 3XX is something that tells us to adjust
+                # our URLS, so fail hard on those
+                raise NotImplementedError('fetch_swift_results(%s): cannot handle HTTP code %i' %
+                                          (url, f.getcode()))
             f.close()
         except IOError as e:
-            self.log_error('Failure to fetch swift results from %s: %s' % (url, str(e)))
-            return
+            # 401 "Unauthorized" is swift's way of saying "container does not exist"
+            if hasattr(e, 'code') and e.code == 401:
+                self.log_verbose('fetch_swift_results: %s does not exist yet or is inaccessible' % url)
+                return
+            # Other status codes are usually a transient
+            # network/infrastructure failure. Ignoring this can lead to
+            # re-requesting tests which we already have results for, so
+            # fail hard on this and let the next run retry.
+            self.log_error('FATAL: Failure to fetch swift results from %s: %s' % (url, str(e)))
+            sys.exit(1)
 
         for p in result_paths:
             self.fetch_one_result(
@@ -366,11 +376,11 @@ class AutoPackageTest(object):
                 tar_bytes = io.BytesIO(f.read())
                 f.close()
             else:
-                self.log_error('Failure to fetch %s: %u' % (url, f.getcode()))
-                return
+                raise NotImplementedError('fetch_one_result(%s): cannot handle HTTP code %i' %
+                                          (url, f.getcode()))
         except IOError as e:
-            self.log_error('Failure to fetch %s: %s' % (url, str(e)))
-            return
+            self.log_error('FATAL: Failure to fetch %s: %s' % (url, str(e)))
+            sys.exit(1)
 
         try:
             with tarfile.open(None, 'r', tar_bytes) as tar:
