@@ -324,9 +324,10 @@ class AutoPackageTest(object):
                  'prefix': '%s/%s/%s/%s/' % (self.series, arch, srchash(src), src)}
 
         # determine latest run_id from results
-        latest_run_id = self.latest_run_for_package(src, arch)
-        if latest_run_id:
-            query['marker'] = query['prefix'] + latest_run_id
+        if not self.britney.options.adt_shared_results_cache:
+            latest_run_id = self.latest_run_for_package(src, arch)
+            if latest_run_id:
+                query['marker'] = query['prefix'] + latest_run_id
 
         # request new results from swift
         url = os.path.join(swift_url, self.swift_container)
