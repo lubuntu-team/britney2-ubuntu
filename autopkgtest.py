@@ -156,9 +156,10 @@ class AutoPackageTest(object):
 
         tests = []
 
-        # hack for vivid's gccgo-5
-        if src == 'gccgo-5':
-            for test in ['juju', 'juju-core', 'juju-mongodb', 'mongodb']:
+        # hack for vivid's gccgo-5 and xenial's gccgo-6; these build libgcc1
+        # too, so test some Go and some libgcc1 consumers
+        if src in ['gccgo-5', 'gccgo-6']:
+            for test in ['juju', 'juju-core', 'juju-mongodb', 'mongodb', 'libreoffice']:
                 try:
                     tests.append((test, self.britney.sources['testing'][test][VERSION]))
                 except KeyError:
