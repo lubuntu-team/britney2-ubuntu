@@ -39,6 +39,7 @@ def parse_args():
                         'from a test request. '
                         'Can be specified multiple times.')
     parser.add_argument('--test-git',
+                        metavar='URL [branchname]',
                         help='A single URL or URL branchname. '
                         'The test will be git cloned from that URL and ran '
                         'from the checkout. This will not build binary '
@@ -47,6 +48,11 @@ def parse_args():
                         'archive, or PPA if given. In this case the '
                         'srcpkgname will only be used for the result path in '
                         'swift and be irrelevant for the actual test.')
+    parser.add_argument('--build-git',
+                        metavar='URL [branchname]',
+                        help='A single URL or URL branchname. '
+                        'Like --test-git`, but will first build binary '
+                        'packages from the branch and run tests against those.')
     parser.add_argument('--test-bzr',
                         help='A single URL. '
                         'The test will be checked out with bzr from that URL. '
@@ -102,6 +108,8 @@ if __name__ == '__main__':
         params['env'] = args.env
     if args.test_git:
         params['test-git'] = args.test_git
+    elif args.build_git:
+        params['build-git'] = args.build_git
     if args.test_bzr:
         params['test-bzr'] = args.test_bzr
     params = '\n' + json.dumps(params)
