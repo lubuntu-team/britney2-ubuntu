@@ -435,7 +435,7 @@ class T(TestBase):
         # seaprately)
         link = urllib.parse.urlparse(exc['green']['tests']['autopkgtest']['lightgreen 1']['amd64'][4])
         self.assertEqual(link.netloc, 'autopkgtest.ubuntu.com')
-        self.assertEqual(link.path, '/retry.cgi')
+        self.assertEqual(link.path, '/request.cgi')
         self.assertEqual(urllib.parse.parse_qs(link.query),
                          {'release': ['series'], 'arch': ['amd64'],
                           'package': ['lightgreen'], 'trigger': ['green/2']})
@@ -1646,7 +1646,7 @@ class T(TestBase):
                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/log.gz',
                          None,
                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz',
-                         'https://autopkgtest.ubuntu.com/retry.cgi?release=series&arch=i386&package=lightgreen&trigger=lightgreen%2F2&ppa=joe%2Ffoo&ppa=awesome-developers%2Fstaging']}
+                         'https://autopkgtest.ubuntu.com/request.cgi?release=series&arch=i386&package=lightgreen&trigger=lightgreen%2F2&ppa=joe%2Ffoo&ppa=awesome-developers%2Fstaging']}
             }})
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})

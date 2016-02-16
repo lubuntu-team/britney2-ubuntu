@@ -1960,7 +1960,7 @@ class Britney(object):
                                 'h': srchash(adtsrc), 's': adtsrc,
                                 'r': self.options.series, 'a': arch}
                         if status == 'REGRESSION':
-                            kwargs['retry_url'] = 'https://autopkgtest.ubuntu.com/retry.cgi?' + \
+                            kwargs['retry_url'] = 'https://autopkgtest.ubuntu.com/request.cgi?' + \
                                     urlencode([('release', self.options.series),
                                                ('arch', arch),
                                                ('package', adtsrc),
