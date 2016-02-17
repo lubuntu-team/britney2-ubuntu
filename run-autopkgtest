@@ -57,6 +57,8 @@ def parse_args():
                         help='A single URL. '
                         'The test will be checked out with bzr from that URL. '
                         'Otherwise this has the same behaviour as test-git.')
+    parser.add_argument('--all-proposed', action='store_true',
+                        help='Disable apt pinning and use all of -proposed')
     parser.add_argument('package', nargs='+',
                         help='Source package name(s) whose tests to run.')
     args = parser.parse_args()
@@ -112,6 +114,8 @@ if __name__ == '__main__':
         params['build-git'] = args.build_git
     if args.test_bzr:
         params['test-bzr'] = args.test_bzr
+    if args.all_proposed:
+        params['all-proposed'] = True
     params = '\n' + json.dumps(params)
 
     creds = urllib.parse.urlsplit(config.adt_amqp, allow_fragments=False)
