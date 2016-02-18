@@ -35,7 +35,7 @@ from migrationitem import MigrationItem, UnversionnedMigrationItem
 from consts import (VERSION, BINARIES, PROVIDES, DEPENDS, CONFLICTS,
                     RDEPENDS, RCONFLICTS, ARCHITECTURE, SECTION,
                     SOURCE, SOURCEVER, MAINTAINER, MULTIARCH,
-                    ESSENTIAL)
+                    ESSENTIAL, MAIN, RESTRICTED, UNIVERSE, MULTIVERSE)
 
 binnmu_re = re.compile(r'^(.*)\+b\d+$')
 
@@ -620,3 +620,34 @@ def clone_nuninst(nuninst, packages_s, architectures):
         clone[arch] = set(x for x in nuninst[arch] if x in packages_s[arch][0])
         clone[arch + "+all"] = set(x for x in nuninst[arch + "+all"] if x in packages_s[arch][0])
     return clone
+
+
+def get_component(section):
+    """Parse section and return component
+
+    Given a section, return component. Packages in MAIN have no
+    prefix, all others have <component>/ prefix.
+    """
+    name2component = {
+        "restricted": RESTRICTED,
+        "universe": UNIVERSE,
+        "multiverse": MULTIVERSE
+    }
+
+    if '/' in section:
+        return name2component[section.split('/', 1)[0]]
+
+    return MAIN
+
+
+def allowed_component(me, dep):
+    """Check if I can depend on the other component"""
+
+    component_dependencies = {
+        MAIN: [MAIN],
+        RESTRICTED: [MAIN, RESTRICTED],
+        UNIVERSE: [MAIN, UNIVERSE],
+        MULTIVERSE: [MAIN, RESTRICTED, UNIVERSE, MULTIVERSE],
+    }
+
+    return dep in component_dependencies[me]
