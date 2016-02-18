@@ -38,6 +38,7 @@ from britney2.consts import (VERSION, PROVIDES, DEPENDS, CONFLICTS,
                              ARCHITECTURE, SECTION,
                              SOURCE, MAINTAINER, MULTIARCH,
                              ESSENTIAL)
+from britney2.consts import (MAIN, RESTRICTED, UNIVERSE, MULTIVERSE)
 from britney2.migrationitem import MigrationItem, UnversionnedMigrationItem
 
 
@@ -745,12 +746,16 @@ def read_sources_file(filename, sources=None, intern=sys.intern):
     return sources
 
 
-def get_dependency_solvers(block, binaries_s_a, provides_s_a, *, empty_set=frozenset()):
+def get_dependency_solvers(block, binaries_s_a, provides_s_a, *, empty_set=frozenset(), component=None):
     """Find the packages which satisfy a dependency block
 
     This method returns the list of packages which satisfy a dependency
     block (as returned by apt_pkg.parse_depends) in a package table
     for a given suite and architecture (a la self.binaries[suite][arch])
+
+    If component was not specified, use all available (multiverse). This is to
+    avoid britney pretending that a bunch of things are non-installable in
+    release pocket, and start trading components-mismatches things.
 
     :param block: The dependency block as parsed by apt_pkg.parse_depends
     :param binaries_s_a: A dict mapping package names to the relevant BinaryPackage
@@ -774,7 +779,8 @@ def get_dependency_solvers(block, binaries_s_a, provides_s_a, *, empty_set=froze
             # (if present)
             if (op == '' and version == '') or apt_pkg.check_dep(package.version, op, version):
                 if archqual is None or (archqual == 'any' and package.multi_arch == 'allowed'):
-                    packages.append(name)
+                    if component is None or allowed_component(component, get_component(package.section)):
+                        packages.append(name)
 
         # look for the package in the virtual packages list and loop on them
         for prov, prov_version in provides_s_a.get(name, empty_set):
@@ -865,3 +871,34 @@ def compile_nuninst(binaries_t, inst_tester, architectures, nobreakall_arches):
                     nuninst[arch].remove(pkg_name)
 
     return nuninst
+
+
+def get_component(section):
+    """Parse section and return component
+
+    Given a section, return component. Packages in MAIN have no
+    prefix, all others have <component>/ prefix.
+    """
+    name2component = {
+        "restricted": RESTRICTED,
+        "universe": UNIVERSE,
+        "multiverse": MULTIVERSE
+    }
+
+    if '/' in section:
+        return name2component[section.split('/', 1)[0]]
+
+    return MAIN
+
+
+def allowed_component(me, dep):
+    """Check if I can depend on the other component"""
+
+    component_dependencies = {
+        MAIN: [MAIN],
+        RESTRICTED: [MAIN, RESTRICTED],
+        UNIVERSE: [MAIN, UNIVERSE],
+        MULTIVERSE: [MAIN, RESTRICTED, UNIVERSE, MULTIVERSE],
+    }
+
+    return dep in component_dependencies[me]

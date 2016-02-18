@@ -213,7 +213,7 @@ from britney2.utils import (old_libraries_format, undo_changes,
                             create_provides_map, read_release_file,
                             read_sources_file, get_dependency_solvers,
                             invalidate_excuses, compile_nuninst,
-                            ensuredir,
+                            ensuredir, get_component, allowed_component,
                             )
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
@@ -1102,11 +1102,16 @@ class Britney(object):
             return True
         is_all_ok = True
 
+        # Don't check components when testing PPAs, as they do not have this concept
+        if self.options.adt_ppas:
+            component = None
+        else:
+            component = get_component(binary_u.section)
 
         # for every dependency block (formed as conjunction of disjunction)
         for block, block_txt in zip(parse_depends(deps), deps.split(',')):
             # if the block is satisfied in testing, then skip the block
-            packages = get_dependency_solvers(block, binaries_t_a, provides_t_a)
+            packages = get_dependency_solvers(block, binaries_t_a, provides_t_a, component=component)
             if packages:
                 for p in packages:
                     if p not in binaries_s_a:
@@ -1115,7 +1120,7 @@ class Britney(object):
                 continue
 
             # check if the block can be satisfied in the source suite, and list the solving packages
-            packages = get_dependency_solvers(block, binaries_s_a, provides_s_a)
+            packages = get_dependency_solvers(block, binaries_s_a, provides_s_a, component=component)
             packages = [binaries_s_a[p].source for p in packages]
 
             # if the dependency can be satisfied by the same source package, skip the block:
