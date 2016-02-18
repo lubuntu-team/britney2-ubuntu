@@ -210,13 +210,13 @@ from britney_util import (old_libraries_format, undo_changes,
                           old_libraries, is_nuninst_asgood_generous,
                           clone_nuninst, check_installability,
                           create_provides_map,
-                          ensuredir,
+                          ensuredir, get_component, allowed_component,
                           )
 from policies.policy import AgePolicy, RCBugPolicy, LPBlockBugPolicy, PolicyVerdict
 
 # Check the "check_field_name" reflection before removing an import here.
 from consts import (SOURCE, SOURCEVER, ARCHITECTURE, CONFLICTS, DEPENDS,
-                   PROVIDES, MULTIARCH)
+                   PROVIDES, MULTIARCH, MULTIVERSE)
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
 __version__ = '2.0'
@@ -1207,7 +1207,7 @@ class Britney(object):
     # Utility methods for package analysis
     # ------------------------------------
 
-    def get_dependency_solvers(self, block, packages_s_a, empty_set=frozenset()):
+    def get_dependency_solvers(self, block, packages_s_a, empty_set=frozenset(), component=MULTIVERSE):
         """Find the packages which satisfy a dependency block
 
         This method returns the list of packages which satisfy a dependency
@@ -1217,6 +1217,12 @@ class Britney(object):
         It returns a tuple with two items: the first is a boolean which is
         True if the dependency is satisfied, the second is the list of the
         solving packages.
+
+        If component was not specified, use all availalbe
+        (multiverse). This is to avoid britney pretending that a bunch
+        of things are non-installable in release pocket, and start
+        trading components-missmatches things.
+
         """
         packages = []
         binaries_s_a, provides_s_a = packages_s_a
@@ -1235,7 +1241,9 @@ class Britney(object):
                 # (if present)
                 if (op == '' and version == '') or apt_pkg.check_dep(package.version, op, version):
                     if archqual is None or (archqual == 'any' and package.multi_arch == 'allowed'):
-                        packages.append(name)
+                        # Don't check components when testing PPAs, as they do not have this concept
+                        if self.options.adt_ppas or allowed_component(component, get_component(package.section)):
+                            packages.append(name)
 
             # look for the package in the virtual packages list and loop on them
             for prov, prov_version in provides_s_a.get(name, empty_set):
@@ -1280,11 +1288,12 @@ class Britney(object):
             return True
         is_all_ok = True
 
+        component = get_component(binary_u.section)
 
         # for every dependency block (formed as conjunction of disjunction)
         for block, block_txt in zip(parse_depends(deps), deps.split(',')):
             # if the block is satisfied in testing, then skip the block
-            packages = get_dependency_solvers(block, packages_t_a)
+            packages = get_dependency_solvers(block, packages_t_a, frozenset(), component)
             if packages:
                 for p in packages:
                     if p not in binaries_s_a:
@@ -1293,7 +1302,7 @@ class Britney(object):
                 continue
 
             # check if the block can be satisfied in the source suite, and list the solving packages
-            packages = get_dependency_solvers(block, packages_s_a)
+            packages = get_dependency_solvers(block, packages_s_a, frozenset(), component)
             packages = [packages_s_a[0][p].source for p in packages]
 
             # if the dependency can be satisfied by the same source package, skip the block:

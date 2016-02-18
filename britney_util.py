@@ -35,7 +35,7 @@ from migrationitem import MigrationItem, UnversionnedMigrationItem
 from consts import (VERSION, PROVIDES, DEPENDS, CONFLICTS,
                     ARCHITECTURE, SECTION,
                     SOURCE, MAINTAINER, MULTIARCH,
-                    ESSENTIAL)
+                    ESSENTIAL, MAIN, RESTRICTED, UNIVERSE, MULTIVERSE)
 
 
 def ifilter_except(container, iterable=None):
@@ -684,3 +684,34 @@ def create_provides_map(packages):
             provides[provided_pkg].add((pkg, provided_version))
 
     return provides
+
+
+def get_component(section):
+    """Parse section and return component
+
+    Given a section, return component. Packages in MAIN have no
+    prefix, all others have <component>/ prefix.
+    """
+    name2component = {
+        "restricted": RESTRICTED,
+        "universe": UNIVERSE,
+        "multiverse": MULTIVERSE
+    }
+
+    if '/' in section:
+        return name2component[section.split('/', 1)[0]]
+
+    return MAIN
+
+
+def allowed_component(me, dep):
+    """Check if I can depend on the other component"""
+
+    component_dependencies = {
+        MAIN: [MAIN],
+        RESTRICTED: [MAIN, RESTRICTED],
+        UNIVERSE: [MAIN, UNIVERSE],
+        MULTIVERSE: [MAIN, RESTRICTED, UNIVERSE, MULTIVERSE],
+    }
+
+    return dep in component_dependencies[me]
