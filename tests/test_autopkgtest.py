@@ -1262,6 +1262,47 @@ class T(TestBase):
             {'green': [('old-version', '1'), ('new-version', '2')]
             })
 
+    def test_hint_force_badtest_multi_version(self):
+        '''force-badtest hint'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+        }})
+
+        self.create_hint('pitti', 'force-badtest lightgreen/1')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                               'lightgreen 1': {'i386': 'IGNORE-FAIL'},
+                               'lightgreen 2': {'amd64': 'REGRESSION',},
+                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                              }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]
+            })
+
+        # hint the version on amd64 too
+        self.create_hint('pitti', 'force-badtest lightgreen/2')
+
+        self.do_test(
+            [],
+            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'lightgreen 1': {'i386': 'IGNORE-FAIL'},
+                              'lightgreen 2': {'amd64': 'IGNORE-FAIL',},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]
+            })
+
     def test_hint_force_badtest_different_version(self):
         '''force-badtest hint with non-matching version'''
 

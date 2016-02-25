@@ -592,15 +592,18 @@ class AutoPackageTest(object):
                             ever_passed = False
 
                         if ever_passed:
+                            result = 'REGRESSION'
+
                             # do we have a force{,-badtest} hint?
                             hints = self.britney.hints.search('force-badtest', package=testsrc)
                             hints.extend(self.britney.hints.search('force', package=testsrc))
-                            for h in hints:
-                                if same_source(h.version, testver):
-                                    result = 'IGNORE-FAIL'
-                                    break
-                            else:
-                                result = 'REGRESSION'
+                            if hints:
+                                self.log_verbose('Checking hints for %s/%s/%s: %s' % (testsrc, testver, arch, [str(h) for h in hints]))
+                                for hint in hints:
+                                    if [mi for mi in hint.packages if mi.architecture in ['source', arch] and
+                                            same_source(mi.version, testver)]:
+                                        result = 'IGNORE-FAIL'
+                                        break
                         else:
                             result = 'ALWAYSFAIL'
 

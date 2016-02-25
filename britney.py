@@ -1061,7 +1061,7 @@ class Britney(object):
                             self.__log("Ignoring %s[%s] = ('%s', '%s'), ('%s', '%s') is higher or equal" %
                                (x, package, hint.version, hint.user, hint2.version, hint2.user), type="W")
                             hint.set_active(False)
-                    else:
+                    elif x not in ["force-badtest", "force-skiptest"]:
                         self.__log("Overriding %s[%s] = ('%s', '%s', '%s') with ('%s', '%s', '%s')" %
                            (x, package, hint2.version, hint2.user, hint2.days,
                             hint.version, hint.user, hint.days), type="W")

@@ -181,5 +181,6 @@ class TestBase(unittest.TestCase):
 
         hints_path = os.path.join(
             self.data.path, 'data', self.data.series + '-proposed', 'Hints', username)
-        with open(hints_path, 'w') as fd:
+        with open(hints_path, 'a') as fd:
             fd.write(content)
+            fd.write('\n')
