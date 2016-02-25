@@ -1027,6 +1027,40 @@ class T(TestBase):
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})
 
+    def test_different_versions_on_arches(self):
+        '''different tested package versions on different architectures'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('passedbefore/1')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('passedbefore/1')),
+        }})
+
+        # first run: no results yet
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green'}, 'autopkgtest')],
+            {'green': (False, {'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
+
+        # second run: i386 result has version 1.1
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 1.1', tr('green/2'))
+        }})
+        self.do_test(
+            [],
+            {'green': (False, {'darkgreen 1': {'amd64': 'RUNNING'},
+                               'darkgreen 1.1': {'i386': 'PASS'},
+                              })})
+
+        # third run: amd64 result has version 1.2
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 1.2', tr('green/2')),
+        }})
+        self.do_test(
+            [],
+            {'green': (True, {'darkgreen 1.2': {'amd64': 'PASS'},
+                              'darkgreen 1.1': {'i386': 'PASS'},
+                             })})
+
+
     def test_tmpfail(self):
         '''tmpfail results'''
 
