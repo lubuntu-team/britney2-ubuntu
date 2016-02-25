@@ -1255,13 +1255,11 @@ class T(TestBase):
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
-                              'lightgreen 1': {'amd64': 'REGRESSION', 'i386': 'REGRESSION'},
+                              'lightgreen 1': {'amd64': 'IGNORE-FAIL', 'i386': 'IGNORE-FAIL'},
                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
                              }),
             },
-            {'green': [('old-version', '1'), ('new-version', '2'),
-                       ('forced-reason', 'badtest lightgreen 1'),
-                       ('excuses', 'Should wait for lightgreen 1 test, but forced by pitti')]
+            {'green': [('old-version', '1'), ('new-version', '2')]
             })
 
     def test_hint_force_badtest_different_version(self):

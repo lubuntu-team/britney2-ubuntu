@@ -1968,24 +1968,6 @@ class Britney(object):
                                               [('ppa', p) for p in self.options.adt_ppas])
                         e.addtest('autopkgtest', '%s %s' % (adtsrc, adtver),
                                   arch, status, log_url, **kwargs)
-
-                    # hints can override failures
-                    if not passed:
-                        hints = self.hints.search(
-                            'force-badtest', package=adtsrc)
-                        hints.extend(
-                            self.hints.search('force', package=adtsrc))
-                        forces = [
-                            x for x in hints
-                            if same_source(adtver, x.version) ]
-                        if forces:
-                            e.force()
-                            e.addreason('badtest %s %s' % (adtsrc, adtver))
-                            e.addhtml(
-                                "Should wait for %s %s test, but forced by "
-                                "%s" % (adtsrc, adtver, forces[0].user))
-                            passed = True
-
                     if not passed:
                         adtpass = False
 

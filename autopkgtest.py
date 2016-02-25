@@ -29,6 +29,8 @@ from urllib.request import urlopen
 import apt_pkg
 import amqplib.client_0_8 as amqp
 
+from britney_util import same_source
+
 from consts import (AUTOPKGTEST, BINARIES, DEPENDS, RDEPENDS, SOURCE, VERSION)
 
 
@@ -560,7 +562,7 @@ class AutoPackageTest(object):
         '''Return test results for triggering package
 
         Return (passed, src, ver, arch ->
-                (ALWAYSFAIL|PASS|REGRESSION|RUNNING|RUNNING-ALWAYSFAIL, log_url))
+                (ALWAYSFAIL|PASS|REGRESSION|IGNORE-FAIL|RUNNING|RUNNING-ALWAYSFAIL, log_url))
         iterable for all package tests that got triggered by trigsrc/trigver.
         '''
         # (src, ver) -> arch -> ALWAYSFAIL|PASS|REGRESSION|RUNNING|RUNNING-ALWAYSFAIL
@@ -589,7 +591,19 @@ class AutoPackageTest(object):
                         if trigsrc.startswith('linux-meta') or trigsrc == 'linux':
                             ever_passed = False
 
-                        result = ever_passed and 'REGRESSION' or 'ALWAYSFAIL'
+                        if ever_passed:
+                            # do we have a force{,-badtest} hint?
+                            hints = self.britney.hints.search('force-badtest', package=testsrc)
+                            hints.extend(self.britney.hints.search('force', package=testsrc))
+                            for h in hints:
+                                if same_source(h.version, testver):
+                                    result = 'IGNORE-FAIL'
+                                    break
+                            else:
+                                result = 'REGRESSION'
+                        else:
+                            result = 'ALWAYSFAIL'
+
                     url = os.path.join(self.britney.options.adt_swift_url,
                                        self.swift_container,
                                        self.series,
