@@ -1330,6 +1330,45 @@ class T(TestBase):
         )[1]
         self.assertNotIn('forced-reason', exc['green'])
 
+    def test_hint_force_badtest_arch(self):
+        '''force-badtest hint for architecture instead of version'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+        }})
+
+        self.create_hint('pitti', 'force-badtest lightgreen/amd64/all')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'lightgreen 1': {'amd64': 'IGNORE-FAIL', 'i386': 'REGRESSION'},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]
+            })
+
+        # hint i386 too, then it should become valid
+        self.create_hint('pitti', 'force-badtest lightgreen/i386/all')
+
+        self.do_test(
+            [],
+            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'lightgreen 1': {'amd64': 'IGNORE-FAIL', 'i386': 'IGNORE-FAIL'},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]
+            })
+
     def test_hint_force_skiptest(self):
         '''force-skiptest hint'''
 
