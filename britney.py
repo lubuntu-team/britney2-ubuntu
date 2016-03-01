@@ -208,10 +208,11 @@ from britney_util import (old_libraries_format, same_source, undo_changes,
                           eval_uninst, newly_uninst, make_migrationitem,
                           write_excuses, write_heidi_delta, write_controlfiles,
                           old_libraries, is_nuninst_asgood_generous, ensuredir,
-                          clone_nuninst)
+                          clone_nuninst, get_component, allowed_component)
 from consts import (VERSION, SECTION, BINARIES, MAINTAINER, FAKESRC,
-                   SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
-                   PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH, ESSENTIAL)
+                    SOURCE, SOURCEVER, ARCHITECTURE, DEPENDS, CONFLICTS,
+                    PROVIDES, RDEPENDS, RCONFLICTS, MULTIARCH, ESSENTIAL,
+                    COMPONENT, MULTIVERSE)
 from autopkgtest import AutoPackageTest, srchash
 
 
@@ -710,6 +711,7 @@ class Britney(object):
                     [],
                     [],
                     ess,
+                    get_component(get_field('Section'))
                    ]
 
             # retrieve the name and the version of the source package
@@ -1105,7 +1107,7 @@ class Britney(object):
     # Utility methods for package analysis
     # ------------------------------------
 
-    def get_dependency_solvers(self, block, arch, distribution):
+    def get_dependency_solvers(self, block, arch, distribution, component=MULTIVERSE):
         """Find the packages which satisfy a dependency block
 
         This method returns the list of packages which satisfy a dependency
@@ -1115,6 +1117,12 @@ class Britney(object):
         It returns a tuple with two items: the first is a boolean which is
         True if the dependency is satisfied, the second is the list of the
         solving packages.
+
+        If component was not specified, use all availalbe
+        (multiverse). This is to avoid britney pretending that a bunch
+        of things are non-installable in release pocket, and start
+        trading components-missmatches things.
+
         """
 
         packages = []
@@ -1136,7 +1144,8 @@ class Britney(object):
                 # (if present)
                 if (op == '' and version == '') or apt_pkg.check_dep(package[VERSION], op, version):
                     if archqual is None or (archqual == 'any' and package[MULTIARCH] == 'allowed'):
-                        packages.append(name)
+                        if allowed_component(component, package[COMPONENT]):
+                            packages.append(name)
 
             # look for the package in the virtual packages list and loop on them
             for prov in binaries[1].get(name, []):
@@ -1193,12 +1202,14 @@ class Britney(object):
             return True
         deps = binary_u[DEPENDS]
 
+        component = binary_u[COMPONENT]
+
         all_satisfiable = True
 
         # for every dependency block (formed as conjunction of disjunction)
         for block, block_txt in zip(parse_depends(deps, False), deps.split(',')):
             # if the block is satisfied in testing, then skip the block
-            packages = get_dependency_solvers(block, arch, 'testing')
+            packages = get_dependency_solvers(block, arch, 'testing', component)
             if packages:
                 for p in packages:
                     if p not in self.binaries[suite][arch][0]: continue
@@ -1206,7 +1217,7 @@ class Britney(object):
                 continue
 
             # check if the block can be satisfied in unstable, and list the solving packages
-            packages = get_dependency_solvers(block, arch, suite)
+            packages = get_dependency_solvers(block, arch, suite, component)
             packages = [self.binaries[suite][arch][0][p][SOURCE] for p in packages]
 
             # if the dependency can be satisfied by the same source package, skip the block:
