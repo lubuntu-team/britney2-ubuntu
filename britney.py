@@ -1144,7 +1144,7 @@ class Britney(object):
                 # (if present)
                 if (op == '' and version == '') or apt_pkg.check_dep(package[VERSION], op, version):
                     if archqual is None or (archqual == 'any' and package[MULTIARCH] == 'allowed'):
-                        if allowed_component(component, package[COMPONENT]):
+                        if self.options.adt_ppas or allowed_component(component, package[COMPONENT]):
                             packages.append(name)
 
             # look for the package in the virtual packages list and loop on them
