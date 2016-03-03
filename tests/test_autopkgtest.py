@@ -1731,8 +1731,9 @@ class T(TestBase):
             }})
 
         for arch in ['i386', 'amd64']:
-            self.assertTrue('debci-series-%s:lightgreen {"triggers": ["lightgreen/2"], "ppas": ["joe/foo", "awesome-developers/staging"]}' % arch in self.amqp_requests or
-                            'debci-series-%s:lightgreen {"ppas": ["joe/foo", "awesome-developers/staging"], "triggers": ["lightgreen/2"]}' % arch in self.amqp_requests)
+            self.assertTrue('debci-ppa-series-%s:lightgreen {"triggers": ["lightgreen/2"], "ppas": ["joe/foo", "awesome-developers/staging"]}' % arch in self.amqp_requests or
+                            'debci-ppa-series-%s:lightgreen {"ppas": ["joe/foo", "awesome-developers/staging"], "triggers": ["lightgreen/2"]}' % arch in self.amqp_requests,
+                            self.amqp_requests)
         self.assertEqual(len(self.amqp_requests), 2)
 
         # add results to PPA specific swift container

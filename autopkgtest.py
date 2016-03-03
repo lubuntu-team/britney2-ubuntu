@@ -458,8 +458,10 @@ class AutoPackageTest(object):
         params = {'triggers': [trigger]}
         if self.britney.options.adt_ppas:
             params['ppas'] = self.britney.options.adt_ppas
+            qname = 'debci-ppa-%s-%s' % (self.series, arch)
+        else:
+            qname = 'debci-%s-%s' % (self.series, arch)
         params = json.dumps(params)
-        qname = 'debci-%s-%s' % (self.series, arch)
 
         if self.amqp_channel:
             self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params), routing_key=qname)
