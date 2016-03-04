@@ -101,19 +101,24 @@ if __name__ == '__main__':
     if not args.architecture:
         args.architecture = config.adt_arches.split()
 
+    context = ''
     params = {}
     if args.trigger:
         params['triggers'] = args.trigger
     if args.ppa:
         params['ppas'] = args.ppa
+        context = 'ppa-'
     if args.env:
         params['env'] = args.env
     if args.test_git:
         params['test-git'] = args.test_git
+        context = 'upstream-'
     elif args.build_git:
         params['build-git'] = args.build_git
+        context = 'upstream-'
     if args.test_bzr:
         params['test-bzr'] = args.test_bzr
+        context = 'upstream-'
     if args.all_proposed:
         params['all-proposed'] = True
     params = '\n' + json.dumps(params)
@@ -125,7 +130,7 @@ if __name__ == '__main__':
                          password=creds.password) as amqp_con:
         with amqp_con.channel() as ch:
             for arch in args.architecture:
-                queue = 'debci-%s-%s' % (args.series, arch)
+                queue = 'debci-%s%s-%s' % (context, args.series, arch)
                 for pkg in args.package:
                     ch.basic_publish(amqp.Message(pkg + params),
                                      routing_key=queue)
