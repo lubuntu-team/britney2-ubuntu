@@ -380,7 +380,11 @@ class AutoPackageTest(object):
                 raise NotImplementedError('fetch_one_result(%s): cannot handle HTTP code %i' %
                                           (url, f.getcode()))
         except IOError as e:
-            self.log_error('FATAL: Failure to fetch %s: %s' % (url, str(e)))
+            self.log_error('Failure to fetch %s: %s' % (url, str(e)))
+            # we tolerate "not found" (something went wrong on uploading the
+            # result), but other things indicate infrastructure problems
+            if hasattr(e, 'code') and e.code == 404:
+                return
             sys.exit(1)
 
         try:
