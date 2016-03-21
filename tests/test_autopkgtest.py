@@ -1408,23 +1408,24 @@ class T(TestBase):
 
         self.create_hint('pitti', 'force-skiptest green/2')
 
-        # green has passed before on i386 only, therefore ALWAYSFAIL on amd64
+        # regression of green, darkgreen ok, lightgreen running
         self.swift.set_results({'autopkgtest-series': {
             'series/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
+            'series/i386/g/green/20150101_100200@': (4, 'green 2', tr('green/2')),
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
         }})
-
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (True, {}),
+            {'green': (True, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'REGRESSION'},
+                              'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                             }),
             },
             {'green': [('old-version', '1'), ('new-version', '2'),
                        ('forced-reason', 'skiptest'),
                        ('excuses', 'Should wait for tests relating to green 2, but forced by pitti')]
             })
-
-        # should not issue test requests as it's hinted anyway
-        self.assertEqual(self.amqp_requests, set())
-        self.assertEqual(self.pending_requests, {})
 
     def test_hint_force_skiptest_different_version(self):
         '''force-skiptest hint with non-matching version'''

@@ -1931,33 +1931,10 @@ class Britney(object):
                 if e.ver[1] == "-":
                     continue
                 autopkgtest_excuses.append(e)
-
-                # don't request tests if we have a force-skiptest hint
-                hints = self.hints.search('force-skiptest', package=e.name)
-                hints.extend(self.hints.search('force', package=e.name))
-                forces = [
-                    x for x in hints
-                    if same_source(e.ver[1], x.version) ]
-                if not forces:
-                    autopkgtest_packages.append((e.name, e.ver[1]))
+                autopkgtest_packages.append((e.name, e.ver[1]))
             autopkgtest.request(autopkgtest_packages, autopkgtest_excludes)
             cloud_url = "http://autopkgtest.ubuntu.com/packages/%(h)s/%(s)s/%(r)s/%(a)s"
             for e in autopkgtest_excuses:
-                # do we skip autopkgtests altogether?
-                hints = self.hints.search('force-skiptest', package=e.name)
-                hints.extend(self.hints.search('force', package=e.name))
-                forces = [
-                    x for x in hints
-                    if same_source(e.ver[1], x.version) ]
-                if forces:
-                    e.force()
-                    e.addreason('skiptest')
-                    e.addhtml(
-                        "Should wait for tests relating to %s %s, but "
-                        "forced by %s" %
-                        (e.name, e.ver[1], forces[0].user))
-                    continue
-
                 adtpass = True
                 for passed, adtsrc, adtver, arch_status in autopkgtest.results(
                         e.name, e.ver[1]):
@@ -1982,15 +1959,25 @@ class Britney(object):
                     if not passed:
                         adtpass = False
 
-                if not adtpass:
-                    try:
+                if not adtpass and e.is_valid:
+                    hints = self.hints.search('force-skiptest', package=e.name)
+                    hints.extend(self.hints.search('force', package=e.name))
+                    forces = [
+                        x for x in hints
+                        if same_source(e.ver[1], x.version) ]
+                    if forces:
+                        e.force()
+                        e.addreason('skiptest')
+                        e.addhtml(
+                            "Should wait for tests relating to %s %s, but "
+                            "forced by %s" %
+                            (e.name, e.ver[1], forces[0].user))
+                    else:
                         upgrade_me.remove(e.name)
                         unconsidered.append(e.name)
-                    except ValueError:
-                        pass
-                    e.addhtml("Not considered")
-                    e.addreason("autopkgtest")
-                    e.is_valid = False
+                        e.addhtml("Not considered")
+                        e.addreason("autopkgtest")
+                        e.is_valid = False
 
         # invalidate impossible excuses
         for e in self.excuses:
