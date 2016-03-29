@@ -1268,6 +1268,23 @@ class T(TestBase):
             },
             {'green': [('old-version', '1'), ('new-version', '2')]})
 
+    def test_newer_version_in_testing(self):
+        '''Testing version is newer than in unstable'''
+
+        exc = self.do_test(
+            [('lightgreen', {'Version': '0.9~beta'}, 'autopkgtest')],
+            {'lightgreen': (False, {})},
+            {'lightgreen': [('old-version', '1'), ('new-version', '0.9~beta'),
+                            ('reason', 'newerintesting'),
+                            ('excuses', 'ALERT: lightgreen is newer in testing (1 0.9~beta)')
+                           ]
+            })[1]
+
+        # autopkgtest should not be triggered
+        self.assertEqual(exc['lightgreen']['tests'], {})
+        self.assertEqual(self.pending_requests, {})
+        self.assertEqual(self.amqp_requests, set())
+
     ################################################################
     # Tests for hint processing
     ################################################################
