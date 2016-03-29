@@ -185,7 +185,8 @@ class T(TestBase):
         exc = self.do_test(
             [('darkgreen', {'Version': '2'}, 'autopkgtest')],
             {'darkgreen': (True, {'darkgreen 2': {'i386': 'RUNNING-ALWAYSFAIL',
-                                                  'amd64': 'RUNNING-ALWAYSFAIL'}})}
+                                                  'amd64': 'RUNNING-ALWAYSFAIL'}})},
+            {'darkgreen': [('excuses', 'Valid candidate')]}
         )[1]
 
         # the test should still be triggered though
@@ -230,7 +231,8 @@ class T(TestBase):
                                'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               })
             },
-            {'green': [('old-version', '1'), ('new-version', '2')]})
+            {'green': [('old-version', '1'), ('new-version', '2'),
+                       ('excuses', 'Not considered')]})
 
         # we expect the package's and its reverse dependencies' tests to get
         # triggered
