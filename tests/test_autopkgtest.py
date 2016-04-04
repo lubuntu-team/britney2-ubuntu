@@ -184,14 +184,13 @@ class T(TestBase):
 
         exc = self.do_test(
             [('darkgreen', {'Version': '2'}, 'autopkgtest')],
-            {'darkgreen': (True, {'darkgreen 2': {'i386': 'RUNNING-ALWAYSFAIL',
-                                                  'amd64': 'RUNNING-ALWAYSFAIL'}})},
+            {'darkgreen': (True, {'darkgreen': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}})},
             {'darkgreen': [('excuses', 'Valid candidate')]}
         )[1]
 
         # the test should still be triggered though
         self.assertEqual(exc['darkgreen']['tests'], {'autopkgtest':
-            {'darkgreen 2': {
+            {'darkgreen': {
                 'amd64': ['RUNNING-ALWAYSFAIL',
                           'http://autopkgtest.ubuntu.com/running.shtml',
                           'http://autopkgtest.ubuntu.com/packages/d/darkgreen/series/amd64',
@@ -226,9 +225,9 @@ class T(TestBase):
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'green': (False, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               })
             },
             {'green': [('old-version', '1'), ('new-version', '2'),
@@ -268,9 +267,9 @@ class T(TestBase):
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'green': (False, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               })
             },
             {'green': [('old-version', '1'), ('new-version', '2')]})
@@ -339,9 +338,9 @@ class T(TestBase):
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'green': (False, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               })
             },
             {'green': [('old-version', '1'), ('new-version', '2')]})
@@ -388,9 +387,9 @@ class T(TestBase):
         # none of the above results should be accepted
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'green': (False, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               })
             })
 
@@ -524,10 +523,10 @@ class T(TestBase):
         # first run requests tests and marks them as pending
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'green64 1': {'amd64': 'RUNNING'},
+            {'green': (False, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'green64': {'amd64': 'RUNNING'},
                               })
             })
 
@@ -780,9 +779,9 @@ class T(TestBase):
         self.data.add_src('lightgreen', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'green': (False, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               }),
              'lightgreen': (False, {}),
             },
@@ -836,11 +835,11 @@ class T(TestBase):
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
              ('lightgreen', {'Version': '2', 'Depends': 'libgreen1 (>= 2)'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                               'lightgreen 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'green': (False, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               }),
-             'lightgreen': (False, {'lightgreen 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}}),
+             'lightgreen': (False, {'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}}),
             },
             {'green': [('old-version', '1'), ('new-version', '2')],
              'lightgreen': [('old-version', '1'), ('new-version', '2')],
@@ -871,9 +870,9 @@ class T(TestBase):
 
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'newgreen', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'newgreen': (True, {'newgreen 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                                 'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                                 'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'newgreen': (True, {'newgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                 'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                 'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                                  }),
             },
             {'newgreen': [('old-version', '-'), ('new-version', '2')]})
@@ -922,7 +921,7 @@ class T(TestBase):
 
         self.do_test(
             [('darkgreen', {'Version': '2', 'Depends': 'libc6 (>= 0.9), libgreen1'}, 'autopkgtest')],
-            {'darkgreen': (False, {'darkgreen 2': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
+            {'darkgreen': (False, {'darkgreen': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
 
         self.assertEqual(
             self.amqp_requests,
@@ -946,7 +945,7 @@ class T(TestBase):
         self.data.remove_all(True)
         self.do_test(
             [('darkgreen', {'Version': '3', 'Depends': 'libc6 (>= 0.9), libgreen1'}, 'autopkgtest')],
-            {'darkgreen': (False, {'darkgreen 3': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
+            {'darkgreen': (False, {'darkgreen': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
         self.assertEqual(
             self.amqp_requests,
             set(['debci-series-i386:darkgreen {"triggers": ["darkgreen/3"]}',
@@ -983,9 +982,9 @@ class T(TestBase):
         # second run: new version re-triggers all tests
         self.do_test(
             [('libgreen1', {'Version': '3', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 3': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+            {'green': (False, {'green': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'lightgreen': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'darkgreen': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
                               }),
             })
 
@@ -1007,7 +1006,7 @@ class T(TestBase):
             [],
             {'green': (False, {'green 3': {'amd64': 'PASS', 'i386': 'PASS'},
                                'lightgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
-                               'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
+                               'darkgreen': {'amd64': 'RUNNING', 'i386': 'RUNNING'},
                               }),
             })
         self.assertEqual(self.amqp_requests, set())
@@ -1040,7 +1039,7 @@ class T(TestBase):
         # first run: no results yet
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green'}, 'autopkgtest')],
-            {'green': (False, {'darkgreen 1': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
+            {'green': (False, {'darkgreen': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
 
         # second run: i386 result has version 1.1
         self.swift.set_results({'autopkgtest-series': {
@@ -1048,7 +1047,7 @@ class T(TestBase):
         }})
         self.do_test(
             [],
-            {'green': (False, {'darkgreen 1': {'amd64': 'RUNNING'},
+            {'green': (False, {'darkgreen': {'amd64': 'RUNNING'},
                                'darkgreen 1.1': {'i386': 'PASS'},
                               })})
 
@@ -1061,7 +1060,6 @@ class T(TestBase):
             {'green': (True, {'darkgreen 1.2': {'amd64': 'PASS'},
                               'darkgreen 1.1': {'i386': 'PASS'},
                              })})
-
 
     def test_tmpfail(self):
         '''tmpfail results'''
@@ -1245,8 +1243,8 @@ class T(TestBase):
 
         self.do_test(
             [('lightgreen', {'Version': '2'}, 'autopkgtest')],
-            {'lightgreen': (False, {'lightgreen 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                                    'rainbow 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'lightgreen': (False, {'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                                    'rainbow': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                                    }),
             },
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
@@ -1261,9 +1259,9 @@ class T(TestBase):
         self.data.add('liboldgreen1', True, add_src=False)
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green'}, 'autopkgtest')],
-            {'green': (True, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                              'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                              'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'green': (True, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                              }),
             },
             {'green': [('old-version', '1'), ('new-version', '2')]})
@@ -1437,7 +1435,7 @@ class T(TestBase):
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             {'green': (True, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'REGRESSION'},
-                              'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
                              }),
             },
@@ -1457,9 +1455,9 @@ class T(TestBase):
         self.create_hint('pitti', 'force-skiptest green/1')
         exc = self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
-            {'green': (False, {'green 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                               'lightgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                               'darkgreen 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'green': (False, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                               'darkgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                               }),
             },
             {'green': [('reason', 'autopkgtest')]}
@@ -1482,7 +1480,7 @@ class T(TestBase):
 
         self.do_test(
             [('dkms', {'Version': '2'}, None)],
-            {'dkms': (False, {'fancy 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'}})},
+            {'dkms': (False, {'fancy': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'}})},
             {'dkms': [('old-version', '1'), ('new-version', '2')]})
 
     def test_kernel_triggers_dkms(self):
@@ -1496,9 +1494,9 @@ class T(TestBase):
              ('linux-image-grumpy-generic', {'Source': 'linux-meta-lts-grumpy'}, None),
              ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
             ],
-            {'linux-meta': (True, {'fancy 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}}),
-             'linux-meta-lts-grumpy': (True, {'fancy 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}}),
-             'linux-meta-64only': (True, {'fancy 1': {'amd64': 'RUNNING-ALWAYSFAIL'}}),
+            {'linux-meta': (True, {'fancy': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}}),
+             'linux-meta-lts-grumpy': (True, {'fancy': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}}),
+             'linux-meta-64only': (True, {'fancy': {'amd64': 'RUNNING-ALWAYSFAIL'}}),
             })
 
         # one separate test should be triggered for each kernel
@@ -1602,12 +1600,12 @@ class T(TestBase):
              ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
              ('linux-libc-dev', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
             ],
-            {'linux-meta': (False, {'lxc 1': {'amd64': 'RUNNING', 'i386': 'RUNNING-ALWAYSFAIL'},
-                                    'glibc 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                                    'linux 2': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-                                    'systemd 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+            {'linux-meta': (False, {'lxc': {'amd64': 'RUNNING', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                    'glibc': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                    'linux': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                    'systemd': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                                    }),
-             'linux-meta-64only': (False, {'lxc 1': {'amd64': 'RUNNING'}}),
+             'linux-meta-64only': (False, {'lxc': {'amd64': 'RUNNING'}}),
              'linux': (False, {}),
             })[1]
         # the kernel itself should not trigger tests; we want to trigger
@@ -1636,7 +1634,7 @@ class T(TestBase):
              ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
              ('linux-firmware', {'Version': '2', 'Source': 'linux-firmware'}, 'autopkgtest'),
             ],
-            {'linux-meta': (False, {'fancy 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+            {'linux-meta': (False, {'fancy': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
                                     'linux 2': {'amd64': 'PASS', 'i386': 'PASS'}
                                    }),
              # no tests, but should wait on linux-meta
@@ -1683,8 +1681,8 @@ class T(TestBase):
 
         exc = self.do_test(
             [('libgcc1', {'Source': 'gcc-5', 'Version': '2'}, None)],
-            {'gcc-5': (False, {'binutils 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-                               'linux 1': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}})})[1]
+            {'gcc-5': (False, {'binutils': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'linux': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}})})[1]
         self.assertNotIn('notme 1', exc['gcc-5']['tests']['autopkgtest'])
 
     def test_alternative_gcc(self):
@@ -1733,11 +1731,11 @@ class T(TestBase):
 
         exc = self.do_test(
             [('lightgreen', {'Version': '2'}, 'autopkgtest')],
-            {'lightgreen': (True, {'lightgreen 2': {'amd64': 'RUNNING-ALWAYSFAIL'}})},
+            {'lightgreen': (True, {'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL'}})},
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
         )[1]
         self.assertEqual(exc['lightgreen']['tests'], {'autopkgtest':
-            {'lightgreen 2': {
+            {'lightgreen': {
                 'amd64': ['RUNNING-ALWAYSFAIL',
                           'http://autopkgtest.ubuntu.com/running.shtml',
                           None,

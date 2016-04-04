@@ -570,6 +570,9 @@ class AutoPackageTest(object):
         Return (passed, src, ver, arch ->
                 (ALWAYSFAIL|PASS|REGRESSION|IGNORE-FAIL|RUNNING|RUNNING-ALWAYSFAIL, log_url))
         iterable for all package tests that got triggered by trigsrc/trigver.
+
+        ver is None if tests are still running on all architectures, otherwise
+        the actually tested version of src.
         '''
         # (src, ver) -> arch -> ALWAYSFAIL|PASS|REGRESSION|RUNNING|RUNNING-ALWAYSFAIL
         pkg_arch_result = {}
@@ -637,6 +640,9 @@ class AutoPackageTest(object):
                 pkg_arch_result.setdefault((testsrc, testver), {})[arch] = (result, url)
 
         for ((testsrc, testver), arch_results) in pkg_arch_result.items():
-            r = [v[0] for v in arch_results.values()]
+            r = set([v[0] for v in arch_results.values()])
             passed = 'REGRESSION' not in r and 'RUNNING' not in r
+            # skip version if still running on all arches
+            if not r - {'RUNNING', 'RUNNING-ALWAYSFAIL'}:
+                testver = None
             yield (passed, testsrc, testver, arch_results)

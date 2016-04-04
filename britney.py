@@ -1954,7 +1954,11 @@ class Britney(object):
                                                ('package', adtsrc),
                                                ('trigger', '%s/%s' % (e.name, e.ver[1]))] +
                                               [('ppa', p) for p in self.options.adt_ppas])
-                        e.addtest('autopkgtest', '%s %s' % (adtsrc, adtver),
+                        if adtver:
+                            testname = '%s %s' % (adtsrc, adtver)
+                        else:
+                            testname = adtsrc
+                        e.addtest('autopkgtest', testname,
                                   arch, status, log_url, **kwargs)
                     if not passed:
                         adtpass = False
