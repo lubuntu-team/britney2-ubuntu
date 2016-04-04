@@ -427,10 +427,10 @@ class T(TestBase):
         # should have links to log and history, but no artifacts (as this is
         # not a PPA)
         self.assertEqual(exc['green']['tests']['autopkgtest']['lightgreen 1']['amd64'][:4],
-                ['REGRESSION',
-                 'http://localhost:18085/autopkgtest-series/series/amd64/l/lightgreen/20150101_100101@/log.gz',
-                 'http://autopkgtest.ubuntu.com/packages/l/lightgreen/series/amd64',
-                 None])
+                         ['REGRESSION',
+                          'http://localhost:18085/autopkgtest-series/series/amd64/l/lightgreen/20150101_100101@/log.gz',
+                          'http://autopkgtest.ubuntu.com/packages/l/lightgreen/series/amd64',
+                          None])
 
         # should have retry link for the regressions (not a stable URL, test
         # seaprately)
@@ -1333,7 +1333,7 @@ class T(TestBase):
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             {'green': (False, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
                                'lightgreen 1': {'i386': 'IGNORE-FAIL'},
-                               'lightgreen 2': {'amd64': 'REGRESSION',},
+                               'lightgreen 2': {'amd64': 'REGRESSION'},
                                'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
                               }),
             },
@@ -1347,7 +1347,7 @@ class T(TestBase):
             [],
             {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
                               'lightgreen 1': {'i386': 'IGNORE-FAIL'},
-                              'lightgreen 2': {'amd64': 'IGNORE-FAIL',},
+                              'lightgreen 2': {'amd64': 'IGNORE-FAIL'},
                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
                              }),
             },
@@ -1400,9 +1400,9 @@ class T(TestBase):
         self.do_test(
             [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
             {'green': (False, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
-                              'lightgreen 1': {'amd64': 'IGNORE-FAIL', 'i386': 'REGRESSION'},
-                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
-                             }),
+                               'lightgreen 1': {'amd64': 'IGNORE-FAIL', 'i386': 'REGRESSION'},
+                               'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                              }),
             },
             {'green': [('old-version', '1'), ('new-version', '2')]
             })
@@ -1777,7 +1777,8 @@ class T(TestBase):
                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/log.gz',
                          None,
                          'http://localhost:18085/autopkgtest-series-awesome-developers-staging/series/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz',
-                         'https://autopkgtest.ubuntu.com/request.cgi?release=series&arch=i386&package=lightgreen&trigger=lightgreen%2F2&ppa=joe%2Ffoo&ppa=awesome-developers%2Fstaging']}
+                         'https://autopkgtest.ubuntu.com/request.cgi?release=series&arch=i386&package=lightgreen&'
+                         'trigger=lightgreen%2F2&ppa=joe%2Ffoo&ppa=awesome-developers%2Fstaging']}
             }})
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})
@@ -1807,7 +1808,7 @@ class T(TestBase):
         self.do_test(
             [('lightgreen', {'Version': '2', 'Depends': 'libc6'}, 'autopkgtest')],
             {'lightgreen': (True, {'lightgreen 2': {'i386': 'PASS', 'amd64': 'PASS'}})},
-            )
+        )
 
         # move and remember original contents
         local_path = os.path.join(self.data.path, 'data/series-proposed/autopkgtest/results.cache')
@@ -1833,7 +1834,7 @@ class T(TestBase):
         self.do_test(
             [('lightgreen', {'Version': '3', 'Depends': 'libc6'}, 'autopkgtest')],
             {'lightgreen': (True, {'lightgreen 3': {'i386': 'PASS', 'amd64': 'PASS'}})},
-            )
+        )
 
         # leaves results.cache untouched
         self.assertFalse(os.path.exists(local_path))
