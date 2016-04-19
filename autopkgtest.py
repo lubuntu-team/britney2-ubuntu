@@ -247,7 +247,7 @@ class AutoPackageTest(object):
         # Hardcode linux-meta →  linux, lxc, glibc, systemd triggers until we get a more flexible
         # implementation: https://bugs.debian.org/779559
         if src.startswith('linux-meta'):
-            for pkg in ['lxc', 'glibc', src.replace('linux-meta', 'linux'), 'systemd']:
+            for pkg in ['lxc', 'lxd', 'glibc', src.replace('linux-meta', 'linux'), 'systemd']:
                 if pkg not in reported_pkgs:
                     # does this have any image on this arch?
                     for b in srcinfo[BINARIES]:
