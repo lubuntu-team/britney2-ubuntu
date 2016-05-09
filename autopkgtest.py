@@ -610,7 +610,7 @@ class AutoPackageTest(object):
                                 self.log_verbose('Checking hints for %s/%s/%s: %s' % (testsrc, testver, arch, [str(h) for h in hints]))
                                 for hint in hints:
                                     if [mi for mi in hint.packages if mi.architecture in ['source', arch] and
-                                            (mi.version == 'all' or same_source(mi.version, testver))]:
+                                            (mi.version == 'all' or apt_pkg.version_compare(testver, mi.version) <= 0)]:
                                         result = 'IGNORE-FAIL'
                                         break
                         else:

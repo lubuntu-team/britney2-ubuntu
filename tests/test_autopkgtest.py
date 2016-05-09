@@ -1368,6 +1368,7 @@ class T(TestBase):
             'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
         }})
 
+        # lower hint version should not apply
         self.create_hint('pitti', 'force-badtest lightgreen/0.1')
 
         exc = self.do_test(
@@ -1380,6 +1381,18 @@ class T(TestBase):
             {'green': [('reason', 'autopkgtest')]}
         )[1]
         self.assertNotIn('forced-reason', exc['green'])
+
+        # higher hint version should apply
+        self.create_hint('pitti', 'force-badtest lightgreen/3')
+        self.do_test(
+            [],
+            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'lightgreen 1': {'amd64': 'IGNORE-FAIL', 'i386': 'IGNORE-FAIL'},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                             }),
+            },
+            {}
+        )
 
     def test_hint_force_badtest_arch(self):
         '''force-badtest hint for architecture instead of version'''
