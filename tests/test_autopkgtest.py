@@ -1433,6 +1433,30 @@ class T(TestBase):
             {'green': [('old-version', '1'), ('new-version', '2')]
             })
 
+    def test_hint_force_badtest_running(self):
+        '''force-badtest hint on running test'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+            'series/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+            'series/amd64/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
+        }})
+
+        self.create_hint('pitti', 'force-badtest lightgreen/1')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {'green 2': {'amd64': 'PASS', 'i386': 'PASS'},
+                              'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'darkgreen 1': {'amd64': 'PASS', 'i386': 'PASS'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]
+            })
+
     def test_hint_force_skiptest(self):
         '''force-skiptest hint'''
 

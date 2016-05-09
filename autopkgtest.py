@@ -29,8 +29,6 @@ from urllib.request import urlopen
 import apt_pkg
 import amqplib.client_0_8 as amqp
 
-from britney_util import same_source
-
 from consts import (AUTOPKGTEST, BINARIES, DEPENDS, RDEPENDS, SOURCE, VERSION)
 
 
@@ -527,6 +525,20 @@ class AutoPackageTest(object):
                 pass
         return False
 
+    def has_force_badtest(self, src, ver, arch):
+        '''Check if src/ver/arch has a force-badtest hint'''
+
+        hints = self.britney.hints.search('force-badtest', package=src)
+        hints.extend(self.britney.hints.search('force', package=src))
+        if hints:
+            self.log_verbose('Checking hints for %s/%s/%s: %s' % (src, ver, arch, [str(h) for h in hints]))
+            for hint in hints:
+                if [mi for mi in hint.packages if mi.architecture in ['source', arch] and
+                        (mi.version == 'all' or apt_pkg.version_compare(ver, mi.version) <= 0)]:
+                    return True
+
+        return False
+
     #
     # Public API
     #
@@ -601,18 +613,10 @@ class AutoPackageTest(object):
                             ever_passed = False
 
                         if ever_passed:
-                            result = 'REGRESSION'
-
-                            # do we have a force{,-badtest} hint?
-                            hints = self.britney.hints.search('force-badtest', package=testsrc)
-                            hints.extend(self.britney.hints.search('force', package=testsrc))
-                            if hints:
-                                self.log_verbose('Checking hints for %s/%s/%s: %s' % (testsrc, testver, arch, [str(h) for h in hints]))
-                                for hint in hints:
-                                    if [mi for mi in hint.packages if mi.architecture in ['source', arch] and
-                                            (mi.version == 'all' or apt_pkg.version_compare(testver, mi.version) <= 0)]:
-                                        result = 'IGNORE-FAIL'
-                                        break
+                            if self.has_force_badtest(testsrc, testver, arch):
+                                result = 'IGNORE-FAIL'
+                            else:
+                                result = 'REGRESSION'
                         else:
                             result = 'ALWAYSFAIL'
 
@@ -627,7 +631,10 @@ class AutoPackageTest(object):
                 except KeyError:
                     # no result for testsrc/arch; still running?
                     if arch in self.pending_tests.get(trigger, {}).get(testsrc, []):
-                        result = ever_passed and 'RUNNING' or 'RUNNING-ALWAYSFAIL'
+                        if ever_passed and not self.has_force_badtest(testsrc, testver, arch):
+                            result = 'RUNNING'
+                        else:
+                            result = 'RUNNING-ALWAYSFAIL'
                         url = 'http://autopkgtest.ubuntu.com/running.shtml'
                     else:
                         # ignore if adt or swift results are disabled,
