@@ -147,6 +147,10 @@ class HintParser(object):
             'unblock': (1, split_into_one_hint_per_package),
             'unblock-udeb': (1, split_into_one_hint_per_package),
 
+            # test related hints
+            'force-badtest': (1, split_into_one_hint_per_package),
+            'force-skiptest': (1, split_into_one_hint_per_package),
+
             # Other
             'remove': (1, split_into_one_hint_per_package),
             'force': (1, split_into_one_hint_per_package),

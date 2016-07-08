@@ -196,7 +196,7 @@ from functools import reduce
 from itertools import product
 from operator import attrgetter
 
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from installability.builder import InstallabilityTesterBuilder
 from excuse import Excuse
@@ -217,6 +217,7 @@ from policies.policy import AgePolicy, RCBugPolicy, LPBlockBugPolicy, PolicyVerd
 # Check the "check_field_name" reflection before removing an import here.
 from consts import (SOURCE, SOURCEVER, ARCHITECTURE, CONFLICTS, DEPENDS,
                    PROVIDES, MULTIARCH, MULTIVERSE)
+from autopkgtest import AutoPackageTest, srchash
 
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
 __version__ = '2.0'
@@ -238,16 +239,17 @@ check_fields = sorted(check_field_name)
 class SourcePackage(object):
 
     __slots__ = ['version', 'section', 'binaries', 'maintainer', 'is_fakesrc',
-                'testsuite']
+                'testsuite', 'testsuite_triggers']
 
     def __init__(self, version, section, binaries, maintainer, is_fakesrc,
-                 testsuite):
+                 testsuite, testsuite_triggers):
         self.version = version
         self.section = section
         self.binaries = binaries
         self.maintainer = maintainer
         self.is_fakesrc = is_fakesrc
         self.testsuite = testsuite
+        self.testsuite_triggers = testsuite_triggers
 
     def __getitem__(self, item):
         return getattr(self, self.__slots__[item])
@@ -287,7 +289,7 @@ class Britney(object):
     HINTS_HELPERS = ("easy", "hint", "remove", "block", "block-udeb", "unblock", "unblock-udeb", "approve", "remark")
     HINTS_STANDARD = ("urgent", "age-days") + HINTS_HELPERS
     # ALL = {"force", "force-hint", "block-all"} | HINTS_STANDARD | registered policy hints (not covered above)
-    HINTS_ALL = ('ALL')
+    HINTS_ALL = ('ALL', "force-badtest", "force-skiptest")
 
     def __init__(self):
         """Class constructor
@@ -337,6 +339,14 @@ class Britney(object):
         self.binaries['unstable'] = {}
         self.binaries['tpu'] = {}
         self.binaries['pu'] = {}
+
+        # compute inverse Testsuite-Triggers: map, unifying all series
+        self.log('Building inverse testsuite_triggers map')
+        self.testsuite_triggers = {}
+        for suitemap in self.sources.values():
+            for src, data in suitemap.items():
+                for trigger in data.testsuite_triggers:
+                    self.testsuite_triggers.setdefault(trigger, set()).add(src)
 
         self.binaries['unstable'] = self.read_binaries(self.options.unstable, "unstable", self.options.architectures)
         for suite in ('tpu', 'pu'):
@@ -529,6 +539,19 @@ class Britney(object):
             self.options.ignore_cruft == "0":
             self.options.ignore_cruft = False
 
+        # restrict adt_arches to architectures we actually run for
+        adt_arches = []
+        for arch in self.options.adt_arches.split():
+            if arch in self.options.architectures:
+                adt_arches.append(arch)
+            else:
+                self.log("Ignoring ADT_ARCHES %s as it is not in architectures list" % arch)
+        self.options.adt_arches = adt_arches
+        try:
+            self.options.adt_ppas = self.options.adt_ppas.strip().split()
+        except AttributeError:
+            self.options.adt_ppas = []
+
         self.policies.append(AgePolicy(self.options, MINDAYS))
         self.policies.append(RCBugPolicy(self.options))
         self.policies.append(LPBlockBugPolicy(self.options))
@@ -589,6 +612,7 @@ class Britney(object):
                         [],
                         None,
                         True,
+                        [],
                         [],
                         )
 
@@ -664,6 +688,7 @@ class Britney(object):
                         [],
                         None,
                         True,
+                        [],
                         [],
                         )
             self.sources['testing'][pkg_name] = src_data
@@ -847,6 +872,7 @@ class Britney(object):
                             maint,
                             False,
                             get_field('Testsuite', '').split(),
+                            get_field('Testsuite-Triggers', '').replace(',', '').split(),
                             )
         return sources
 
@@ -996,7 +1022,7 @@ class Britney(object):
                     srcdist[source].binaries.append(pkg_id)
             # if the source package doesn't exist, create a fake one
             else:
-                srcdist[source] = SourcePackage(source_version, 'faux', [pkg_id], None, True, [])
+                srcdist[source] = SourcePackage(source_version, 'faux', [pkg_id], None, True, [], [])
 
             # add the resulting dictionary to the package list
             packages[pkg] = dpkg
@@ -1173,7 +1199,7 @@ class Britney(object):
 
         hints = self._hint_parser.hints
 
-        for x in ["block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "urgent", "remove", "age-days"]:
+        for x in ["block", "block-all", "block-udeb", "unblock", "unblock-udeb", "force", "force-badtest", "force-skiptest", "urgent", "remove", "age-days"]:
             z = {}
             for hint in hints[x]:
                 package = hint.package
@@ -1191,7 +1217,7 @@ class Britney(object):
                             self.log("Ignoring %s[%s] = ('%s', '%s'), ('%s', '%s') is higher or equal" %
                                (x, package, hint.version, hint.user, hint2.version, hint2.user), type="W")
                             hint.set_active(False)
-                    else:
+                    elif x not in ["force-badtest", "force-skiptest"]:
                         self.log("Overriding %s[%s] = ('%s', '%s', '%s') with ('%s', '%s', '%s')" %
                            (x, package, hint2.version, hint2.user, hint2.days,
                             hint.version, hint.user, hint.days), type="W")
@@ -1572,7 +1598,7 @@ class Britney(object):
         source_u.section and excuse.set_section(source_u.section)
         excuse.set_distribution(self.options.distribution)
 
-        # the starting point is that we will update the candidate
+        # the starting point is that we will update the candidate and run autopkgtests
         update_candidate = True
         
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
@@ -1980,6 +2006,76 @@ class Britney(object):
 
         # extract the not considered packages, which are in the excuses but not in upgrade_me
         unconsidered = [ename for ename in excuses if ename not in upgrade_me]
+
+        if getattr(self.options, "adt_enable", "no") == "yes" and \
+           self.options.series:
+            # trigger autopkgtests for valid candidates
+            adt_debug = getattr(self.options, "adt_debug", "no") == "yes"
+            autopkgtest = AutoPackageTest(
+                self, self.options.distribution, self.options.series,
+                debug=adt_debug)
+            autopkgtest_packages = []
+            autopkgtest_excuses = []
+            autopkgtest_excludes = []
+            for e in self.excuses.values():
+                # we still want to run tests if the only invalid reason is that
+                # it's blocked
+                if not e.is_valid and (list(e.reason) != ['block'] or e.missing_builds):
+                    autopkgtest_excludes.append(e.name)
+                    continue
+                # skip removals, binary-only candidates, and proposed-updates
+                if e.name.startswith("-") or "/" in e.name or "_" in e.name:
+                    continue
+                if e.ver[1] == "-":
+                    continue
+                autopkgtest_excuses.append(e)
+                autopkgtest_packages.append((e.name, e.ver[1]))
+            autopkgtest.request(autopkgtest_packages, autopkgtest_excludes)
+            cloud_url = "http://autopkgtest.ubuntu.com/packages/%(h)s/%(s)s/%(r)s/%(a)s"
+            for e in autopkgtest_excuses:
+                adtpass = True
+                for passed, adtsrc, adtver, arch_status in autopkgtest.results(
+                        e.name, e.ver[1]):
+                    for arch, (status, log_url) in arch_status.items():
+                        kwargs = {}
+                        if self.options.adt_ppas:
+                            if log_url.endswith('log.gz'):
+                                kwargs['artifact_url'] = log_url.replace('log.gz', 'artifacts.tar.gz')
+                        else:
+                            kwargs['history_url'] = cloud_url % {
+                                'h': srchash(adtsrc), 's': adtsrc,
+                                'r': self.options.series, 'a': arch}
+                        if status == 'REGRESSION':
+                            kwargs['retry_url'] = 'https://autopkgtest.ubuntu.com/request.cgi?' + \
+                                    urlencode([('release', self.options.series),
+                                               ('arch', arch),
+                                               ('package', adtsrc),
+                                               ('trigger', '%s/%s' % (e.name, e.ver[1]))] +
+                                              [('ppa', p) for p in self.options.adt_ppas])
+                        if adtver:
+                            testname = '%s/%s' % (adtsrc, adtver)
+                        else:
+                            testname = adtsrc
+                        e.addtest('autopkgtest', testname,
+                                  arch, status, log_url, **kwargs)
+                    if not passed:
+                        adtpass = False
+
+                if not adtpass and e.is_valid:
+                    hints = self.hints.search('force-skiptest', package=e.name)
+                    hints.extend(self.hints.search('force', package=e.name))
+                    forces = [x for x in hints if e.ver[1] == x.version]
+                    if forces:
+                        e.force()
+                        e.addreason('skiptest')
+                        e.addhtml("Should wait for tests relating to %s %s, but forced by %s" %
+                                  (e.name, e.ver[1], forces[0].user))
+                    else:
+                        upgrade_me.remove(e.name)
+                        unconsidered.append(e.name)
+                        e.addhtml("Not considered")
+                        e.addreason("autopkgtest")
+                        e.is_valid = False
 
         # invalidate impossible excuses
         for e in excuses.values():

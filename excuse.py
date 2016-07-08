@@ -17,6 +17,16 @@
 from collections import defaultdict
 import re
 
+EXCUSES_LABELS = {
+    "PASS": '<span style="background:#87d96c">Pass</span>',
+    "FAIL": '<span style="background:#ff6666">Failed</span>',
+    "ALWAYSFAIL": '<span style="background:#e5c545">Always failed</span>',
+    "REGRESSION": '<span style="background:#ff6666">Regression</span>',
+    "IGNORE-FAIL": '<span style="background:#e5c545">Ignored failure</span>',
+    "RUNNING": '<span style="background:#99ddff">Test in progress</span>',
+    "RUNNING-ALWAYSFAIL": '<span style="background:#99ddff">Test in progress (always failed)</span>',
+}
+
 
 class Excuse(object):
     """Excuse class
@@ -68,6 +78,9 @@ class Excuse(object):
         self.missing_builds_ood_arch = set()
         self.old_binaries = defaultdict(set)
         self.policy_info = {}
+        # type (e. g. "autopkgtest") -> package (e. g. "foo/2-1") -> arch ->
+        #   ['PASS'|'ALWAYSFAIL'|'REGRESSION'|'RUNNING'|'RUNNING-ALWAYSFAIL', log_url, history_url]
+        self.tests = {}
 
     def sortkey(self):
         if self.daysold == None:
@@ -186,6 +199,24 @@ class Excuse(object):
             else:
                 res = res + ("<li>%d days old (needed %d days)\n" %
                 (self.daysold, self.mindays))
+        for testtype in sorted(self.tests):
+            for pkg in sorted(self.tests[testtype]):
+                archmsg = []
+                for arch in sorted(self.tests[testtype][pkg]):
+                    status, log_url, history_url, artifact_url, retry_url = self.tests[testtype][pkg][arch]
+                    label = EXCUSES_LABELS[status]
+                    if history_url:
+                        message = '<a href="%s">%s</a>' % (history_url, arch)
+                    else:
+                        message = arch
+                    message += ': <a href="%s">%s</a>' % (log_url, label)
+                    if retry_url:
+                        message += ' <a href="%s" style="text-decoration: none;">♻ </a> ' % retry_url
+                    if artifact_url:
+                        message += ' <a href="%s">[artifacts]</a>' % artifact_url
+                    archmsg.append(message)
+                res = res + ("<li>%s for %s: %s</li>\n" % (testtype, pkg, ', '.join(archmsg)))
+
         for x in self.htmlline:
             res = res + "<li>" + x + "\n"
         lastdep = ""
@@ -215,6 +246,11 @@ class Excuse(object):
     def addreason(self, reason):
         """"adding reason"""
         self.reason[reason] = 1
+
+    def addtest(self, type_, package, arch, state, log_url, history_url=None,
+                artifact_url=None, retry_url=None):
+        """Add test result"""
+        self.tests.setdefault(type_, {}).setdefault(package, {})[arch] = [state, log_url, history_url, artifact_url, retry_url]
 
     # TODO: remove
     def _text(self):
@@ -281,5 +317,6 @@ class Excuse(object):
         else:
             excusedata["reason"] = sorted(list(self.reason.keys()))
         excusedata["is-candidate"] = self.is_valid
+        excusedata["tests"] = self.tests
         return excusedata
 
