@@ -203,6 +203,7 @@ from britney2.installability.builder import build_installability_tester, ma_pars
 from britney2.migrationitem import MigrationItem
 from britney2.policies.policy import AgePolicy, RCBugPolicy, PiupartsPolicy, PolicyVerdict
 from britney2.policies.policy import LPBlockBugPolicy
+from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.utils import (old_libraries_format, undo_changes,
                             compute_reverse_tree, possibly_compressed,
                             read_nuninst, write_nuninst, write_heidi,
@@ -531,6 +532,8 @@ class Britney(object):
         self.policies.append(RCBugPolicy(self.options, self.suite_info))
         self.policies.append(PiupartsPolicy(self.options, self.suite_info))
         self.policies.append(LPBlockBugPolicy(self.options, self.suite_info))
+        if getattr(self.options, 'adt_enable') == 'yes':
+            self.policies.append(AutopkgtestPolicy(self.options, self.suite_info))
 
         for policy in self.policies:
             policy.register_hints(self._hint_parser)
