@@ -214,6 +214,7 @@ from britney_util import (old_libraries_format, undo_changes,
                           ensuredir, get_component, allowed_component,
                           )
 from policies.policy import AgePolicy, RCBugPolicy, LPBlockBugPolicy, PolicyVerdict
+from policies.autopkgtest import AutopkgtestPolicy
 
 # Check the "check_field_name" reflection before removing an import here.
 from consts import (SOURCE, SOURCEVER, ARCHITECTURE, CONFLICTS, DEPENDS,
@@ -542,6 +543,8 @@ class Britney(object):
         self.policies.append(AgePolicy(self.options, MINDAYS))
         self.policies.append(RCBugPolicy(self.options))
         self.policies.append(LPBlockBugPolicy(self.options))
+        if getattr(self.options, 'adt_enable') == 'yes':
+            self.policies.append(AutopkgtestPolicy(self.options))
 
         for policy in self.policies:
             policy.register_hints(self._hint_parser)
