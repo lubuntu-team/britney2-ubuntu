@@ -281,10 +281,5 @@ class Excuse(object):
         else:
             excusedata["reason"] = sorted(list(self.reason.keys()))
         excusedata["is-candidate"] = self.is_valid
-        # TODO: backwards compatible excuses entry -- drop after porting bileto
-        # and kernel matrix
-        excusedata["tests"] = {}
-        if self.policy_info.get('autopkgtest'):
-            excusedata["tests"]["autopkgtest"] = self.policy_info["autopkgtest"]
         return excusedata
 

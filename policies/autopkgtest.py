@@ -183,7 +183,8 @@ class AutopkgtestPolicy(BasePolicy):
         # add test result details to Excuse
         verdict = PolicyVerdict.PASS
         cloud_url = "http://autopkgtest.ubuntu.com/packages/%(h)s/%(s)s/%(r)s/%(a)s"
-        for ((testsrc, testver), arch_results) in pkg_arch_result.items():
+        for (testsrc, testver) in sorted(pkg_arch_result):
+            arch_results = pkg_arch_result[(testsrc, testver)]
             r = set([v[0] for v in arch_results.values()])
             if 'REGRESSION' in r:
                 verdict = PolicyVerdict.REJECTED_PERMANENTLY
@@ -194,7 +195,8 @@ class AutopkgtestPolicy(BasePolicy):
                 testver = None
 
             html_archmsg = []
-            for arch, (status, log_url) in arch_results.items():
+            for arch in sorted(arch_results):
+                (status, log_url) = arch_results[arch]
                 artifact_url = None
                 retry_url = None
                 history_url = None

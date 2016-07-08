@@ -1956,7 +1956,7 @@ class T(TestBase):
         '''Run without second stage upgrade tester'''
 
         for line in fileinput.input(self.britney_conf, inplace=True):
-            if not line.startswith('UPGRADE_OUTPUT'):
+            if not line.startswith('UPGRADE_OUTPUT') or line.startswith('HEIDI_OUTPUT'):
                 sys.stdout.write(line)
 
         self.do_test(
@@ -1964,6 +1964,11 @@ class T(TestBase):
             {})[1]
 
         self.assertFalse(os.path.exists(os.path.join(self.data.path, 'output', 'series', 'output.txt')))
+        self.assertNotEqual(self.amqp_requests, set())
+        # must still record pending tests
+        self.assertEqual(self.pending_requests, {'green/2': {'green': ['amd64', 'i386'],
+                                                             'darkgreen': ['amd64', 'i386'],
+                                                             'lightgreen': ['amd64', 'i386']}})
 
     def test_shared_results_cache(self):
         '''Run with shared r/o results.cache'''
