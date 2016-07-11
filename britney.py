@@ -1665,7 +1665,7 @@ class Britney(object):
                 # find unsatisfied dependencies for the binary package
                 if binary_u.architecture != 'all' or arch in self.options.nobreakall_arches:
                     is_valid = self.excuse_unsat_deps(pkg, src, arch, suite, excuse)
-                    if not is_valid and not source_t:
+                    if not is_valid:
                         update_candidate = False
 
             # if there are out-of-date packages, warn about them in the excuse and set update_candidate
