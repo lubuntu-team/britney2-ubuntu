@@ -2713,7 +2713,7 @@ class Britney(object):
                         self.output_write("  most: (%d) .. %s\n" % (len(selected), " ".join(x.uvname for x in selected[-20:])))
                     nuninst_last_accepted = nuninst_after
                     rescheduled_packages.extend(maybe_rescheduled_packages)
-                    maybe_rescheduled_packages.clear()
+                    maybe_rescheduled_packages = []
                 else:
                     broken = sorted(b for b in nuninst_after[failed_arch]
                                     if b not in nuninst_last_accepted[failed_arch])
