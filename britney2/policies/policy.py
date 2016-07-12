@@ -2,7 +2,6 @@ import json
 import os
 import time
 from abc import abstractmethod
-from enum import Enum, unique
 from urllib.parse import quote
 
 import apt_pkg
@@ -11,8 +10,7 @@ from britney2.hints import Hint, split_into_one_hint_per_package
 from britney2.utils import ensuredir
 
 
-@unique
-class PolicyVerdict(Enum):
+class PolicyVerdict:
     """"""
     """
     The migration item passed the policy.
@@ -612,7 +610,7 @@ class PiupartsPolicy(BasePolicy):
             piuparts_info['piuparts-test-url'] = url
         excuse.addhtml(msg)
 
-        if result.is_rejected:
+        if result in [PolicyVerdict.REJECTED_PERMANENTLY, PolicyVerdict.REJECTED_TEMPORARILY]:
             for ignore_hint in self.hints.search('ignore-piuparts',
                                                  package=source_name,
                                                  version=source_data_srcdist.version):
