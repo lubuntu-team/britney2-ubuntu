@@ -711,10 +711,10 @@ class Britney(object):
 
                 # We do not differentiate between depends and pre-depends
                 if pkgdata.depends:
-                    depends.extend(apt_pkg.parse_depends(pkgdata.depends, False))
+                    depends.extend(self._parse_depends(pkgdata.depends))
 
                 if pkgdata.conflicts:
-                    conflicts = apt_pkg.parse_depends(pkgdata.conflicts, False)
+                    conflicts = self._parse_depends(pkgdata.conflicts)
 
                 with builder.relation_builder(pkg_id) as relations:
 
@@ -779,6 +779,19 @@ class Britney(object):
     # Data reading/writing methods
     # ----------------------------
 
+    def _parse_depends(self, dep_str):
+        """Parse a dependency string into a list of triples
+
+        This is like apt_pkg.parse_depends but filters out :any and :native
+        Multi-Arch prefixes. We don't use apt_pkg.parse_depends(dep_str, True)
+        as that would also filter out arch specific dependencies like :amd64.
+        """
+        res = apt_pkg.parse_depends(dep_str, False)
+        filtered = []
+        for or_clause in res:
+            filtered.append([(p.replace(':any', '').replace(':native', ''), v, r) for (p, v, r) in or_clause])
+        return filtered
+
     def _read_sources_file(self, filename, sources=None, intern=sys.intern):
         if sources is None:
             sources = {}
@@ -840,7 +853,7 @@ class Britney(object):
         return sources
 
     def _parse_provides(self, pkg_id, provides_raw):
-        parts = apt_pkg.parse_depends(provides_raw, False)
+        parts = self._parse_depends(provides_raw)
         nprov = []
         for or_clause in parts:
             if len(or_clause) != 1:
@@ -1118,7 +1131,7 @@ class Britney(object):
         """Find the packages which satisfy a dependency block
 
         This method returns the list of packages which satisfy a dependency
-        block (as returned by apt_pkg.parse_depends) in a package table
+        block (as returned by self._parse_depends) in a package table
         for a given suite and architecture (a la self.binaries[suite][arch])
 
         It returns a tuple with two items: the first is a boolean which is
@@ -1178,7 +1191,7 @@ class Britney(object):
         binary_u = binaries_s_a[pkg]
 
         # local copies for better performance
-        parse_depends = apt_pkg.parse_depends
+        parse_depends = self._parse_depends
         get_dependency_solvers = self.get_dependency_solvers
 
         # analyze the dependency fields (if present)
@@ -1189,7 +1202,7 @@ class Britney(object):
 
 
         # for every dependency block (formed as conjunction of disjunction)
-        for block, block_txt in zip(parse_depends(deps, False), deps.split(',')):
+        for block, block_txt in zip(parse_depends(deps), deps.split(',')):
             # if the block is satisfied in testing, then skip the block
             packages = get_dependency_solvers(block, packages_t_a)
             if packages:
