@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from enum import Enum, unique
 import apt_pkg
 import os
 import time
@@ -8,8 +7,7 @@ from hints import Hint, split_into_one_hint_per_package
 from britney_util import ensuredir
 
 
-@unique
-class PolicyVerdict(Enum):
+class PolicyVerdict:
     """"""
     """
     The migration item passed the policy.

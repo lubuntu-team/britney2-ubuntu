@@ -1683,10 +1683,10 @@ class Britney(object):
         for policy in self.policies:
             if suite in policy.applicable_suites:
                 v = policy.apply_policy(policy_info, suite, src, source_t, source_u)
-                if v.value > policy_verdict.value:
+                if v > policy_verdict:
                     policy_verdict = v
 
-        if policy_verdict.is_rejected:
+        if policy_verdict in [PolicyVerdict.REJECTED_PERMANENTLY, PolicyVerdict.REJECTED_TEMPORARILY]:
             update_candidate = False
 
         # Joggle some things into excuses
