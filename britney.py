@@ -195,7 +195,7 @@ from britney2 import SuiteInfo, SourcePackage, BinaryPackageId, BinaryPackage
 from britney2.consts import (SOURCE, SOURCEVER, ARCHITECTURE, CONFLICTS, DEPENDS, PROVIDES, MULTIARCH)
 from britney2.excuse import Excuse
 from britney2.hints import HintParser
-from britney2.installability.builder import build_installability_tester
+from britney2.installability.builder import build_installability_tester, ma_parse_depends
 from britney2.migrationitem import MigrationItem
 from britney2.policies.policy import AgePolicy, RCBugPolicy, PiupartsPolicy, PolicyVerdict
 from britney2.utils import (old_libraries_format, undo_changes,
@@ -711,7 +711,7 @@ class Britney(object):
         return sources
 
     def _parse_provides(self, pkg_id, provides_raw):
-        parts = apt_pkg.parse_depends(provides_raw, False)
+        parts = ma_parse_depends(provides_raw)
         nprov = []
         for or_clause in parts:
             if len(or_clause) != 1:  # pragma: no cover
@@ -1004,7 +1004,7 @@ class Britney(object):
         binary_u = binaries_s_a[pkg]
 
         # local copies for better performance
-        parse_depends = apt_pkg.parse_depends
+        parse_depends = ma_parse_depends
 
         # analyze the dependency fields (if present)
         deps = binary_u.depends
@@ -1014,7 +1014,7 @@ class Britney(object):
 
 
         # for every dependency block (formed as conjunction of disjunction)
-        for block, block_txt in zip(parse_depends(deps, False), deps.split(',')):
+        for block, block_txt in zip(parse_depends(deps), deps.split(',')):
             # if the block is satisfied in testing, then skip the block
             packages = get_dependency_solvers(block, binaries_t_a, provides_t_a)
             if packages:

@@ -21,6 +21,20 @@ from britney2.utils import ifilter_except, iter_except, get_dependency_solvers
 from britney2.installability.solver import InstallabilitySolver
 
 
+def ma_parse_depends(dep_str):
+    """Parse a dependency string into a list of triples
+
+    This is like apt_pkg.parse_depends but filters out :any and :native
+    Multi-Arch prefixes. We don't use apt_pkg.parse_depends(dep_str, True)
+    as that would also filter out arch specific dependencies like :amd64.
+    """
+    res = apt_pkg.parse_depends(dep_str, False)
+    filtered = []
+    for or_clause in res:
+        filtered.append([(p.replace(':any', '').replace(':native', ''), v, r) for (p, v, r) in or_clause])
+    return filtered
+
+
 def build_installability_tester(binaries, archs):
     """Create the installability tester"""
 
@@ -43,10 +57,10 @@ def build_installability_tester(binaries, archs):
 
             # We do not differentiate between depends and pre-depends
             if pkgdata.depends:
-                depends.extend(apt_pkg.parse_depends(pkgdata.depends, False))
+                depends.extend(ma_parse_depends(pkgdata.depends))
 
             if pkgdata.conflicts:
-                conflicts = apt_pkg.parse_depends(pkgdata.conflicts, False)
+                conflicts = ma_parse_depends(pkgdata.conflicts)
 
             with builder.relation_builder(pkg_id) as relations:
 
