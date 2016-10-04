@@ -72,6 +72,19 @@ class T(TestBase):
                                       'Conflicts': 'green'},
                       testsuite='specialtest')
 
+        # Set up sourceppa cache for testing
+        self.sourceppa_cache = {
+            'gcc-5': {'2': ''},
+            'gcc-snapshot': {'2': ''},
+            'green': {'2': '', '1.1': '', '3': ''},
+            'lightgreen': {'2': '', '1.1~beta': '', '3': ''},
+            'linux-meta-64only': {'1': ''},
+            'linux-meta-lts-grumpy': {'1': ''},
+            'linux-meta': {'0.2': '', '1': '', '2': ''},
+            'linux': {'2': ''},
+            'newgreen': {'2': ''},
+        }
+
         # create mock Swift server (but don't start it yet, as tests first need
         # to poke in results)
         self.swift = mock_swift.AutoPkgTestSwiftServer(port=18085)
@@ -96,6 +109,16 @@ class T(TestBase):
         '''
         for (pkg, fields, testsuite) in unstable_add:
             self.data.add(pkg, True, fields, True, testsuite)
+            self.sourceppa_cache.setdefault(pkg, {})
+            if fields['Version'] not in self.sourceppa_cache[pkg]:
+                self.sourceppa_cache[pkg][fields['Version']] = ''
+
+        # Set up sourceppa cache for testing
+        sourceppa_path = os.path.join(self.data.dirs[True], 'SourcePPA')
+        with open(sourceppa_path, 'w', encoding='utf-8') as sourceppa:
+            sourceppa.write(json.dumps(self.sourceppa_cache))
+        # with open(sourceppa_path, encoding='utf-8') as data:
+        #     print(data.read())
 
         self.swift.start()
         (excuses_yaml, excuses_html, out) = self.run_britney()
@@ -2014,6 +2037,26 @@ class T(TestBase):
         self.assertFalse(os.path.exists(local_path))
         with open(shared_path) as f:
             self.assertEqual(orig_contents, f.read())
+
+    ################################################################
+    # Tests for source ppa grouping
+    ################################################################
+
+    def test_sourceppa(self):
+        '''Packages from same source PPA should be grouped.'''
+        self.sourceppa_cache['green'] = {'2': 'team/ubuntu/ppa'}
+        self.sourceppa_cache['red'] = {'2': 'team/ubuntu/ppa'}
+        with open(os.path.join(self.data.path, 'data/series-proposed/Blocks'), 'w') as f:
+            f.write('green 12345 1471505000\ndarkgreen 98765 1471500000\n')
+
+        exc = self.do_test(
+            [('green', {'Version': '2'}, 'autopkgtest'),
+             ('red', {'Version': '2'}, 'autopkgtest')],
+            {'green': (False, {'green': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}})},
+            {'green': [('is-candidate', False)],
+             'red': [('is-candidate', False)]}
+        )[1]
+        self.assertEqual(exc['red']['policy_info']['source-ppa'], {'red': 'team/ubuntu/ppa', 'green': 'team/ubuntu/ppa'})
 
 
 if __name__ == '__main__':

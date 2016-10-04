@@ -1,0 +1,7 @@
+{
+    "pal": {"2.0": "https://api.launchpad.net/1.0/team/ubuntu/ppa"},
+    "buddy": {"2.0": "https://api.launchpad.net/1.0/team/ubuntu/ppa"},
+    "friend": {"2.0": "https://api.launchpad.net/1.0/team/ubuntu/ppa"},
+    "noppa": {"2.0": ""},
+    "unused": {"2.0": ""}
+}
