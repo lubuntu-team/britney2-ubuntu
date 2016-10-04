@@ -2262,61 +2262,6 @@ class AT(TestAutopkgtestBase):
         with open(shared_path) as f:
             self.assertEqual(orig_contents, f.read())
 
-    ################################################################
-    # Tests for source ppa grouping
-    ################################################################
-
-# #    def test_sourceppa_policy(self):
-# #        '''Packages from same source PPA get rejected for failed peer policy'''
-# #
-# #        self.data.add_default_packages(green=False)
-# #
-# #        ppa = 'devel/~ci-train-ppa-service/+archive/NNNN'
-# #        self.sourceppa_cache['green'] = {'2': ppa}
-# #        self.sourceppa_cache['red'] = {'2': ppa}
-# #        with open(os.path.join(self.data.path, 'data/unstable/Blocks'), 'w') as f:
-# #            f.write('green 12345 1471505000\ndarkgreen 98765 1471500000\n')
-# #
-# #        exc = self.run_it(
-# #            [('green', {'Version': '2'}, 'autopkgtest'),
-# #             ('red', {'Version': '2'}, 'autopkgtest'),
-# #             ('gcc-5', {}, 'autopkgtest')],
-# #            {'green': (False, {'green': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}}),
-# #             'red': (False, {'red': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}}),
-# #             'gcc-5': (True, {}),
-# #            },
-# #            {'green': [('reason', 'block')],
-# #             'red': [('reason', 'source-ppa')]}
-# #        )[1]
-# #        self.assertEqual(exc['red']['policy_info']['source-ppa'], {'red': ppa, 'green': ppa})
-# #
-# #        with open(os.path.join(self.data.path, 'data/unstable/SourcePPA')) as f:
-# #            res = json.load(f)
-# #            self.assertEqual(res, {'red': {'2': ppa},
-# #                                   'green': {'2': ppa},
-# #                                   'gcc-5': {'1': ''}})
-
-# #    def test_sourceppa_missingbuild(self):
-# #        '''Packages from same source PPA get rejected for failed peer FTBFS'''
-# #
-# #        self.data.add_default_packages(green=False)
-# #
-# #        ppa = 'devel/~ci-train-ppa-service/+archive/ZZZZ'
-# #        self.sourceppa_cache['green'] = {'2': ppa}
-# #        self.sourceppa_cache['red'] = {'2': ppa}
-# #
-# #        self.data.add_src('green', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
-# #        self.data.add('libgreen1', True, {'Version': '2', 'Source': 'green', 'Architecture': 'i386'}, add_src=False)
-# #        self.data.add('green', True, {'Version': '2', 'Source': 'green'}, add_src=False)
-# #
-# #        exc = self.run_it(
-# #            [('red', {'Version': '2'}, 'autopkgtest')],
-# #            {'green': (False, {}), 'red': (False, {})},
-# #            {'green': [('missing-builds', {'on-architectures': ['amd64', 'arm64', 'armhf', 'powerpc', 'ppc64el'],
-# #                                           'on-unimportant-architectures': []})],
-# #             'red': [('reason', 'source-ppa')]}
-# #        )[1]
-# #        self.assertEqual(exc['red']['policy_info']['source-ppa'], {'red': ppa, 'green': ppa})
 
     def test_swift_url_is_file(self):
         '''Run without swift but with debci file (as Debian does)'''
