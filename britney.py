@@ -188,6 +188,7 @@ import os
 import sys
 import time
 import optparse
+import copy
 
 import apt_pkg
 
@@ -1040,9 +1041,11 @@ class Britney(object):
         """Merge sources from `source' into partial suite `target'."""
         source_sources = self.sources[source]
         target_sources = self.sources[target]
+        # we need complete copies here, as we might later find some binaries
+        # which are only in unstable
         for pkg, value in source_sources.items():
             if pkg not in target_sources:
-                target_sources[pkg] = value
+                target_sources[pkg] = copy.deepcopy(value)
 
     def merge_binaries(self, source, target, arch):
         """Merge `arch' binaries from `source' into partial suite `target'."""

@@ -873,6 +873,21 @@ class T(TestBase):
         self.assertEqual(self.pending_requests, {})
         self.assertEqual(self.amqp_requests, set())
 
+    def test_same_version_binary_in_unstable(self):
+        '''binary from new architecture in unstable with testing version'''
+
+        # i386 is in testing already, but amd64 just recently built and is in unstable
+        self.data.add_src('brown', False, {'Testsuite': 'autopkgtest'})
+        self.data.add('brown', False, {'Architecture': 'i386'}, add_src=False)
+        self.data.add('brown', True, {'Architecture': 'amd64'}, add_src=False)
+
+        exc = self.do_test(
+            # we need some other package to create unstable Sources
+            [('lightgreen', {'Version': '2'}, 'autopkgtest')],
+            {'brown': (True, {})}
+            )[1]
+        self.assertEqual(exc['brown']['item-name'], 'brown/amd64')
+
     def test_package_pair_running(self):
         '''Two packages in unstable that need to go in together (running)'''
 
