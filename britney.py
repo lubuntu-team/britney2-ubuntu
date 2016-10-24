@@ -297,6 +297,14 @@ class Britney(object):
         self.binaries['tpu'] = {}
         self.binaries['pu'] = {}
 
+        # compute inverse Testsuite-Triggers: map, unifying all series
+        self.log('Building inverse testsuite_triggers map')
+        self.testsuite_triggers = {}
+        for suitemap in self.sources.values():
+            for src, data in suitemap.items():
+                for trigger in data.testsuite_triggers:
+                    self.testsuite_triggers.setdefault(trigger, set()).add(src)
+
         self.binaries['unstable'] = self.read_binaries(self.suite_info['unstable'].path, "unstable", self.options.architectures)
         for suite in ('tpu', 'pu'):
             if suite in self.suite_info:
@@ -576,6 +584,7 @@ class Britney(object):
                         None,
                         True,
                         [],
+                        [],
                         )
 
             self.sources['testing'][pkg_name] = src_data
@@ -650,6 +659,7 @@ class Britney(object):
                         [],
                         None,
                         True,
+                        [],
                         [],
                         )
             self.sources['testing'][pkg_name] = src_data
@@ -852,7 +862,7 @@ class Britney(object):
                     srcdist[source].binaries.append(pkg_id)
             # if the source package doesn't exist, create a fake one
             else:
-                srcdist[source] = SourcePackage(source_version, 'faux', [pkg_id], None, True, [])
+                srcdist[source] = SourcePackage(source_version, 'faux', [pkg_id], None, True, [], [])
 
             # add the resulting dictionary to the package list
             packages[pkg] = dpkg
