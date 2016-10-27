@@ -2743,9 +2743,6 @@ class Britney(object):
                 write_controlfiles(self.sources, self.binaries,
                                    'testing', self.options.testing)
 
-            for policy in self.policies:
-                policy.save_state(self)
-
             # write HeidiResult
             self.log("Writing Heidi results to %s" % self.options.heidi_output)
             write_heidi(self.options.heidi_output, self.sources["testing"],
@@ -2998,6 +2995,9 @@ class Britney(object):
         # otherwise, use the actions provided by the command line
         else:
             self.upgrade_me = self.options.actions.split()
+
+        for policy in self.policies:
+            policy.save_state(self)
 
         with open(self.options.upgrade_output, 'w', encoding='utf-8') as f:
             self.__output = f
