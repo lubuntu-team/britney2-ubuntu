@@ -2042,8 +2042,9 @@ class T(TestBase):
     # Tests for source ppa grouping
     ################################################################
 
-    def test_sourceppa(self):
-        '''Packages from same source PPA should be grouped.'''
+    def test_sourceppa_policy(self):
+        '''Packages from same source PPA get rejected for failed peer policy'''
+
         self.sourceppa_cache['green'] = {'2': 'team/ubuntu/ppa'}
         self.sourceppa_cache['red'] = {'2': 'team/ubuntu/ppa'}
         with open(os.path.join(self.data.path, 'data/series-proposed/Blocks'), 'w') as f:
@@ -2052,12 +2053,30 @@ class T(TestBase):
         exc = self.do_test(
             [('green', {'Version': '2'}, 'autopkgtest'),
              ('red', {'Version': '2'}, 'autopkgtest')],
-            {'green': (False, {'green': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}})},
-            {'green': [('is-candidate', False)],
-             'red': [('is-candidate', False)]}
+            {'green': (False, {'green': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}}),
+             'red': (False, {'red': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}})},
+            {'green': [('reason', 'block')],
+             'red': [('reason', 'source-ppa')]}
         )[1]
         self.assertEqual(exc['red']['policy_info']['source-ppa'], {'red': 'team/ubuntu/ppa', 'green': 'team/ubuntu/ppa'})
 
+    def test_sourceppa_missingbuild(self):
+        '''Packages from same source PPA get rejected for failed peer FTBFS'''
+
+        self.sourceppa_cache['green'] = {'2': 'team/ubuntu/ppa'}
+        self.sourceppa_cache['red'] = {'2': 'team/ubuntu/ppa'}
+
+        self.data.add_src('green', True, {'Version': '2', 'Testsuite': 'autopkgtest'})
+        self.data.add('libgreen1', True, {'Version': '2', 'Source': 'green', 'Architecture': 'i386'}, add_src=False)
+
+        exc = self.do_test(
+            [('red', {'Version': '2'}, 'autopkgtest')],
+            {'green': (False, {}), 'red': (False, {})},
+            {'green': [('missing-builds', {'on-architectures': ['amd64', 'arm64', 'armhf', 'powerpc', 'ppc64el'],
+                                           'on-unimportant-architectures': []})],
+             'red': [('reason', 'source-ppa')]}
+        )[1]
+        self.assertEqual(exc['red']['policy_info']['source-ppa'], {'red': 'team/ubuntu/ppa', 'green': 'team/ubuntu/ppa'})
 
 if __name__ == '__main__':
     unittest.main()

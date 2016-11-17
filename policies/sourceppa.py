@@ -70,16 +70,14 @@ class SourcePPAPolicy(BasePolicy):
             return ''
 
     def initialise(self, britney):
-        """Load and discover all source ppa data"""
+        """Load cached source ppa data"""
         super().initialise(britney)
         self.britney = britney
 
-        try:
+        if os.path.exists(self.filename):
             with open(self.filename, encoding='utf-8') as data:
                 self.cache = json.load(data)
             self.log("Loaded cached source ppa data from %s" % self.filename)
-        except FileNotFoundError:
-            pass
 
     def apply_policy_impl(self, sourceppa_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
         """Reject package if any other package copied from same PPA is invalid"""
@@ -87,22 +85,30 @@ class SourcePPAPolicy(BasePolicy):
         britney_excuses = self.britney.excuses
         version = source_data_srcdist.version
         sourceppa = self.lp_get_source_ppa(source_name, version)
+        if not sourceppa:
+            return PolicyVerdict.PASS
+
+        shortppa = sourceppa.replace(LAUNCHPAD_URL, '')
         self.source_ppas_by_pkg[source_name][version] = sourceppa
-        if sourceppa:
-            # Check for other packages that might invalidate this one
-            for friend in self.pkgs_by_source_ppa[sourceppa]:
-                if not britney_excuses[friend].is_valid:
-                    accept = False
-            self.pkgs_by_source_ppa[sourceppa].add(source_name)
+        sourceppa_info[source_name] = shortppa
+        # Check for other packages that might invalidate this one
+        for friend in self.pkgs_by_source_ppa[sourceppa]:
+            sourceppa_info[friend] = shortppa
+            if not britney_excuses[friend].is_valid:
+                accept = False
+        self.pkgs_by_source_ppa[sourceppa].add(source_name)
+
         if not accept:
             # Invalidate all packages in this source ppa
-            shortppa = sourceppa.replace(LAUNCHPAD_URL, '')
             for friend in self.pkgs_by_source_ppa[sourceppa]:
                 friend_exc = britney_excuses.get(friend, excuse)
-                friend_exc.is_valid = False
-                friend_exc.addreason('source-ppa')
-                self.log("Blocking %s because %s from %s" % (friend, source_name, shortppa))
-                sourceppa_info[friend] = shortppa
+                if friend_exc.is_valid:
+                    friend_exc.is_valid = False
+                    friend_exc.addreason('source-ppa')
+                    friend_exc.policy_info['source-ppa'] = sourceppa_info
+                    self.log("Blocking %s because %s from %s" % (friend, source_name, shortppa))
+                    friend_exc.addhtml("Blocking because %s from the same PPA %s is invalid" %
+                                       (friend, shortppa))
             return PolicyVerdict.REJECTED_PERMANENTLY
         return PolicyVerdict.PASS
 

@@ -31,8 +31,12 @@ class FakeOptions:
 class FakeExcuse:
     ver = ('1.0', '2.0')
     is_valid = True
+    policy_info = {}
 
     def addreason(self, reason):
+        """Ignore reasons."""
+
+    def addhtml(self, reason):
         """Ignore reasons."""
 
 
@@ -96,13 +100,14 @@ class T(unittest.TestCase):
 
     def test_approve_ppa(self):
         """Approve packages by their PPA."""
+        shortppa = 'team/ubuntu/ppa'
         pol = SourcePPAPolicy(FakeOptions)
         pol.filename = CACHE_FILE
         pol.initialise(FakeBritney())
         output = {}
         for pkg in ('pal', 'buddy', 'friend', 'noppa'):
             self.assertEqual(pol.apply_policy_impl(output, None, pkg, None, FakeData, FakeExcuse), PolicyVerdict.PASS)
-        self.assertEqual(output, {})
+        self.assertEqual(output, dict(pal=shortppa, buddy=shortppa, friend=shortppa))
 
     def test_reject_ppa(self):
         """Reject packages by their PPA."""
