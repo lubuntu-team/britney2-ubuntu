@@ -10,6 +10,11 @@ from policies.policy import BasePolicy, PolicyVerdict
 
 LAUNCHPAD_URL = 'https://api.launchpad.net/1.0/'
 PRIMARY = LAUNCHPAD_URL + 'ubuntu/+archive/primary'
+IGNORE = [
+    '',
+    'https://api.launchpad.net/1.0/ubuntu/+archive/primary',
+    'https://api.launchpad.net/1.0/debian/+archive/primary',
+]
 
 
 def query_lp_rest_api(obj, query):
@@ -86,7 +91,7 @@ class SourcePPAPolicy(BasePolicy):
         version = source_data_srcdist.version
         sourceppa = self.lp_get_source_ppa(source_name, version)
         self.source_ppas_by_pkg[source_name][version] = sourceppa
-        if not sourceppa:
+        if sourceppa in IGNORE:
             return PolicyVerdict.PASS
 
         shortppa = sourceppa.replace(LAUNCHPAD_URL, '')
