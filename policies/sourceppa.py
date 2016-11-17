@@ -22,7 +22,7 @@ def query_lp_rest_api(obj, query):
     transient failures connecting to launchpad.
     """
     url = '%s%s?%s' % (LAUNCHPAD_URL, obj, urllib.parse.urlencode(query))
-    with urllib.request.urlopen(url, timeout=10) as req:
+    with urllib.request.urlopen(url, timeout=30) as req:
         code = req.getcode()
         if 200 <= code < 300:
             return json.loads(req.read().decode('UTF-8'))
