@@ -2052,13 +2052,22 @@ class T(TestBase):
 
         exc = self.do_test(
             [('green', {'Version': '2'}, 'autopkgtest'),
-             ('red', {'Version': '2'}, 'autopkgtest')],
+             ('red', {'Version': '2'}, 'autopkgtest'),
+             ('gcc-5', {}, 'autopkgtest')],
             {'green': (False, {'green': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}}),
-             'red': (False, {'red': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}})},
+             'red': (False, {'red': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}}),
+             'gcc-5': (True, {}),
+            },
             {'green': [('reason', 'block')],
              'red': [('reason', 'source-ppa')]}
         )[1]
         self.assertEqual(exc['red']['policy_info']['source-ppa'], {'red': 'team/ubuntu/ppa', 'green': 'team/ubuntu/ppa'})
+
+        with open(os.path.join(self.data.path, 'data/series-proposed/SourcePPA')) as f:
+            res = json.load(f)
+            self.assertEqual(res, {'red': {'2': 'team/ubuntu/ppa'},
+                                   'green': {'2': 'team/ubuntu/ppa'},
+                                   'gcc-5': {'1': ''}})
 
     def test_sourceppa_missingbuild(self):
         '''Packages from same source PPA get rejected for failed peer FTBFS'''

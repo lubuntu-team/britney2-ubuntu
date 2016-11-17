@@ -85,11 +85,11 @@ class SourcePPAPolicy(BasePolicy):
         britney_excuses = self.britney.excuses
         version = source_data_srcdist.version
         sourceppa = self.lp_get_source_ppa(source_name, version)
+        self.source_ppas_by_pkg[source_name][version] = sourceppa
         if not sourceppa:
             return PolicyVerdict.PASS
 
         shortppa = sourceppa.replace(LAUNCHPAD_URL, '')
-        self.source_ppas_by_pkg[source_name][version] = sourceppa
         sourceppa_info[source_name] = shortppa
         # Check for other packages that might invalidate this one
         for friend in self.pkgs_by_source_ppa[sourceppa]:
