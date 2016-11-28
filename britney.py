@@ -2926,7 +2926,7 @@ class Britney(object):
         while True:
             # read the command from the command line
             try:
-                user_input = input('britney> ').lower().split()
+                user_input = input('britney> ').split()
             except EOFError:
                 print("")
                 break
