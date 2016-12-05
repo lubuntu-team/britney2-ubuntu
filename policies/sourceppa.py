@@ -11,9 +11,11 @@ from policies.policy import BasePolicy, PolicyVerdict
 LAUNCHPAD_URL = 'https://api.launchpad.net/1.0/'
 PRIMARY = LAUNCHPAD_URL + 'ubuntu/+archive/primary'
 IGNORE = [
+    None,
     '',
-    'https://api.launchpad.net/1.0/ubuntu/+archive/primary',
-    'https://api.launchpad.net/1.0/debian/+archive/primary',
+    'IndexError',
+    LAUNCHPAD_URL + 'ubuntu/+archive/primary',
+    LAUNCHPAD_URL + 'debian/+archive/primary',
 ]
 
 
@@ -68,11 +70,12 @@ class SourcePPAPolicy(BasePolicy):
             'exact_match': 'true',
         })
         try:
-            return data['entries'][0]['copy_source_archive_link'] or ''
+            return data['entries'][0]['copy_source_archive_link']
         # IndexError means no packages in -proposed matched this name/version,
         # which is expected to happen when bileto runs britney.
         except IndexError:
-            return ''
+            self.log('SourcePPA getPackageUploads IndexError (%s %s)' % (pkg, version))
+            return 'IndexError'
 
     def initialise(self, britney):
         """Load cached source ppa data"""

@@ -63,7 +63,7 @@ class T(unittest.TestCase):
         context.getcode.return_value = 200
         context.read.return_value = b'{"entries": []}'
         pol = SourcePPAPolicy(FakeOptions)
-        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), '')
+        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), 'IndexError')
 
     @patch('policies.sourceppa.urllib.request.urlopen')
     def test_lp_rest_api_no_source_ppa(self, urlopen):
@@ -72,7 +72,7 @@ class T(unittest.TestCase):
         context.getcode.return_value = 200
         context.read.return_value = b'{"entries": [{"copy_source_archive_link": null, "other_stuff": "ignored"}]}'
         pol = SourcePPAPolicy(FakeOptions)
-        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), '')
+        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), None)
 
     @patch('policies.sourceppa.urllib.request.urlopen')
     def test_lp_rest_api_with_source_ppa(self, urlopen):
