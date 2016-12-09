@@ -62,7 +62,7 @@ class SourcePPAPolicy(BasePolicy):
             if retries > 1:
                 self.log("Timeout downloading '%s', will retry %d more times."
                          % (url, retries))
-                self.query_lp_rest_api(obj, query, retries - 1)
+                return self.query_lp_rest_api(obj, query, retries - 1)
             else:
                 raise
 
