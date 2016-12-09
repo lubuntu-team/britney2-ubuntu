@@ -1,5 +1,6 @@
 import os
 import json
+import socket
 import urllib.request
 import urllib.parse
 
@@ -17,23 +18,6 @@ IGNORE = [
     LAUNCHPAD_URL + 'ubuntu/+archive/primary',
     LAUNCHPAD_URL + 'debian/+archive/primary',
 ]
-
-
-def query_lp_rest_api(obj, query):
-    """Do a Launchpad REST request
-
-    Request <LAUNCHPAD_URL><obj>?<query>.
-
-    Returns dict of parsed json result from launchpad.
-    Raises HTTPError, ValueError, or ConnectionError based on different
-    transient failures connecting to launchpad.
-    """
-    url = '%s%s?%s' % (LAUNCHPAD_URL, obj, urllib.parse.urlencode(query))
-    with urllib.request.urlopen(url, timeout=30) as req:
-        code = req.getcode()
-        if 200 <= code < 300:
-            return json.loads(req.read().decode('UTF-8'))
-        raise ConnectionError('Failed to reach launchpad, HTTP %s' % code)
 
 
 class SourcePPAPolicy(BasePolicy):
@@ -55,13 +39,40 @@ class SourcePPAPolicy(BasePolicy):
         # self.cache contains self.source_ppas_by_pkg from previous run
         self.cache = {}
 
+    def query_lp_rest_api(self, obj, query, retries=5):
+        """Do a Launchpad REST request
+
+        Request <LAUNCHPAD_URL><obj>?<query>.
+
+        Returns dict of parsed json result from launchpad.
+        Raises HTTPError, ValueError, or ConnectionError based on different
+        transient failures connecting to launchpad.
+        """
+        assert retries > 0
+
+        url = '%s%s?%s' % (LAUNCHPAD_URL, obj, urllib.parse.urlencode(query))
+        try:
+            with urllib.request.urlopen(url, timeout=30) as req:
+                code = req.getcode()
+                if 200 <= code < 300:
+                    return json.loads(req.read().decode('UTF-8'))
+                raise ConnectionError('Failed to reach launchpad, HTTP %s'
+                                      % code)
+        except socket.timeout:
+            if retries > 1:
+                self.log("Timeout downloading '%s', will retry %d more times."
+                         % (url, retries))
+                self.query_lp_rest_api(obj, query, retries - 1)
+            else:
+                raise
+
     def lp_get_source_ppa(self, pkg, version):
         """Ask LP what source PPA pkg was copied from"""
         cached = self.cache.get(pkg, {}).get(version)
         if cached is not None:
             return cached
 
-        data = query_lp_rest_api('%s/%s' % (self.options.distribution, self.options.series), {
+        data = self.query_lp_rest_api('%s/%s' % (self.options.distribution, self.options.series), {
             'ws.op': 'getPackageUploads',
             'archive': PRIMARY,
             'pocket': 'Proposed',

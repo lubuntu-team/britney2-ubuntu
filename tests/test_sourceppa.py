@@ -98,6 +98,17 @@ class T(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Expecting value'):
             pol.lp_get_source_ppa('hello', '1.0')
 
+    @patch('policies.sourceppa.urllib.request.urlopen')
+    def test_lp_rest_api_timeout(self, urlopen):
+        """If we get a timeout connecting to LP, we try 5 times"""
+        import socket
+        # test that we're retried 5 times on timeout
+        urlopen.side_effect = socket.timeout
+        pol = SourcePPAPolicy(FakeOptions)
+        with self.assertRaises(socket.timeout):
+            pol.lp_get_source_ppa('hello', '1.0')
+        self.assertEqual(urlopen.call_count, 5)
+
     def test_approve_ppa(self):
         """Approve packages by their PPA."""
         shortppa = 'team/ubuntu/ppa'
