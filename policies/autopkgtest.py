@@ -175,8 +175,10 @@ class AutopkgtestPolicy(BasePolicy):
         pkg_arch_result = {}
         for arch in self.adt_arches:
             # request tests (unless they were already requested earlier or have a result)
-            for (testsrc, testver) in self.tests_for_source(source_name, source_data_srcdist.version, arch):
-                self.pkg_test_request(testsrc, arch, trigger)
+            tests = self.tests_for_source(source_name, source_data_srcdist.version, arch)
+            is_huge = len(tests) > 20
+            for (testsrc, testver) in tests:
+                self.pkg_test_request(testsrc, arch, trigger, huge=is_huge)
                 (result, real_ver, url) = self.pkg_test_result(testsrc, testver, arch, trigger)
                 pkg_arch_result.setdefault((testsrc, real_ver), {})[arch] = (result, url)
 
@@ -574,9 +576,12 @@ class AutopkgtestPolicy(BasePolicy):
                 result[1] = ver
                 result[2] = stamp
 
-    def send_test_request(self, src, arch, trigger):
-        '''Send out AMQP request for testing src/arch for trigger'''
+    def send_test_request(self, src, arch, trigger, huge=False):
+        '''Send out AMQP request for testing src/arch for trigger
 
+        If huge is true, then the request will be put into the -huge instead of
+        normal queue.
+        '''
         if self.options.dry_run:
             return
 
@@ -584,6 +589,8 @@ class AutopkgtestPolicy(BasePolicy):
         if self.options.adt_ppas:
             params['ppas'] = self.options.adt_ppas
             qname = 'debci-ppa-%s-%s' % (self.options.series, arch)
+        elif huge:
+            qname = 'debci-huge-%s-%s' % (self.options.series, arch)
         else:
             qname = 'debci-%s-%s' % (self.options.series, arch)
         params = json.dumps(params)
@@ -595,11 +602,12 @@ class AutopkgtestPolicy(BasePolicy):
             with open(self.amqp_file, 'a') as f:
                 f.write('%s:%s %s\n' % (qname, src, params))
 
-    def pkg_test_request(self, src, arch, trigger):
+    def pkg_test_request(self, src, arch, trigger, huge=False):
         '''Request one package test for one particular trigger
 
         trigger is "pkgname/version" of the package that triggers the testing
-        of src.
+        of src. If huge is true, then the request will be put into the -huge
+        instead of normal queue.
 
         This will only be done if that test wasn't already requested in a
         previous run (i. e. not already in self.pending_tests) or there already
@@ -634,7 +642,7 @@ class AutopkgtestPolicy(BasePolicy):
                              (src, arch, trigger))
             arch_list.append(arch)
             arch_list.sort()
-            self.send_test_request(src, arch, trigger)
+            self.send_test_request(src, arch, trigger, huge=huge)
 
     def check_ever_passed(self, src, arch):
         '''Check if tests for src ever passed on arch'''

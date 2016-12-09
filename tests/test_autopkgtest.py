@@ -1388,6 +1388,27 @@ class T(TestBase):
             }
         )
 
+    def test_huge_number_of_tests(self):
+        '''package triggers huge number of tests'''
+
+        for i in range(30):
+            self.data.add('green%i' % i, False, {'Depends': 'libgreen1'}, testsuite='autopkgtest')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green'}, 'autopkgtest')],
+            {'green': (True, {'green': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'green0': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                              'green29': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                             })
+            },
+            )
+
+        # requests should all go into the -huge queues
+        self.assertEqual([x for x in self.amqp_requests if 'huge' not in x], [])
+        for i in range(30):
+            for arch in ['i386', 'amd64']:
+                self.assertIn('debci-huge-series-%s:green%i {"triggers": ["green/2"]}' %
+                              (arch, i), self.amqp_requests)
 
     ################################################################
     # Tests for hint processing
