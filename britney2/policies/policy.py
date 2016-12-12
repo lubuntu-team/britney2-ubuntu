@@ -758,6 +758,11 @@ class PiupartsPolicy(BasePolicy):
 
     def _read_piuparts_summary(self, filename, keep_url=True):
         summary = {}
+
+        if not os.path.exists(filename):
+            self.logger.info("%s missing; skipping piuparts processing" % filename)
+            return summary
+
         self.logger.info("Loading piuparts report from %s", filename)
         with open(filename) as fd:
             if os.fstat(fd.fileno()).st_size < 1:
