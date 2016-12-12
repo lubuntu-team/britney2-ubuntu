@@ -320,7 +320,7 @@ class AgePolicy(BasePolicy):
                         dates[l[0]] = (l[1], int(l[2]))
                     except ValueError:
                         pass
-        except FileNotFoundError:
+        except IOError:
             if not using_new_name:
                 # If we using the legacy name, then just give up
                 raise

@@ -660,7 +660,7 @@ def possibly_compressed(path, permitted_compressesion=None):
         cpath = "%s.%s" % (path, ext)
         if os.path.exists(cpath):
             return cpath
-    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
+    raise OSError(errno.ENOENT, os.strerror(errno.ENOENT), path)
 
 
 def create_provides_map(packages):

@@ -480,7 +480,7 @@ class Britney(object):
         try:
             release_file = read_release_file(self.suite_info['testing'].path)
             self.log("Found a Release file in testing - using that for defaults")
-        except FileNotFoundError:
+        except IOError:
             self.log("Testing does not have a Release file.")
             release_file = None
 
