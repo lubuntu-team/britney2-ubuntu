@@ -352,6 +352,11 @@ class AutopkgtestPolicy(BasePolicy):
             for rdep in rdeps:
                 try:
                     rdep_src = binaries_info[rdep.package_name].source
+                    # Don't re-trigger the package itself here; this should
+                    # have been done above if the package still continues to
+                    # have an autopkgtest in unstable.
+                    if rdep_src == src:
+                        continue
                 except KeyError:
                     self.log('%s on %s has no source (NBS?)' % (rdep.package_name, arch))
                     continue

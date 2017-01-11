@@ -244,6 +244,37 @@ class T(TestBase):
         self.assertIn('accepted: darkgreen', upgrade_out)
         self.assertIn('SUCCESS (1/0)', upgrade_out)
 
+    def test_dropped_test_not_run(self):
+        '''New version of a package drops its autopkgtest'''
+
+        # green has passed on amd64 before
+        # lightgreen has passed on i386, therefore we should block on it returning
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/g/green/20150101_100000@': (0, 'green 4', tr('green/1')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
+        }})
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green'}, None)],
+            {'green': (False, {'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'}})
+            },
+            {'green': [('old-version', '1'), ('new-version', '2'),
+                       ('reason', 'autopkgtest')]})
+
+        # we expect the package's reverse dependencies' tests to get triggered,
+        # but *not* the package itself since it has no autopkgtest any more
+        self.assertEqual(
+            self.amqp_requests,
+            set(['debci-series-i386:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:lightgreen {"triggers": ["green/2"]}',
+                 'debci-series-i386:darkgreen {"triggers": ["green/2"]}',
+                 'debci-series-amd64:darkgreen {"triggers": ["green/2"]}']))
+
+        # ... and that they get recorded as pending
+        expected_pending = {'green/2': {'darkgreen': ['amd64', 'i386'],
+                                        'lightgreen': ['amd64', 'i386']}}
+        self.assertEqual(self.pending_requests, expected_pending)
+
     def test_multi_rdepends_with_tests_all_running(self):
         '''Multiple reverse dependencies with tests (all running)'''
 
