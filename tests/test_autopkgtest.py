@@ -71,6 +71,10 @@ class T(TestBase):
         self.data.add('blue', False, {'Depends': 'libc6 (>= 0.9)',
                                       'Conflicts': 'green'},
                       testsuite='specialtest')
+        self.data.add('black', False, {},
+                      testsuite='autopkgtest')
+        self.data.add('grey', False, {},
+                      testsuite='autopkgtest')
 
         # Set up sourceppa cache for testing
         self.sourceppa_cache = {
@@ -970,6 +974,36 @@ class T(TestBase):
                                          'green': ['amd64', 'i386'],
                                          'lightgreen': ['amd64', 'i386'],
                                          'newgreen': ['amd64', 'i386']}})
+
+    def test_blacklisted_fail(self):
+        '''blacklisted packages return exit code 99 and version all, check they
+        are handled correctly'''
+
+        self.data.add('brown', False, {'Depends': 'grey'}, testsuite='autopkgtest')
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/b/black/20150101_100000@': (0, 'black 1', tr('black/1')),
+            'series/amd64/b/black/20150102_100000@': (99, 'black all', tr('black/2')),
+            'series/amd64/g/grey/20150101_100000@': (99, 'grey all', tr('grey/1')),
+            'series/amd64/b/brown/20150101_100000@': (99, 'brown all', tr('grey/2')),
+        }})
+
+        self.do_test(
+            [('black', {'Version': '2'}, 'autopkgtest'),
+             ('grey', {'Version': '2'}, 'autopkgtest')],
+            {'black': (False, {'black/all': {'amd64': 'REGRESSION'},
+                               'black': {'i386': 'RUNNING-ALWAYSFAIL'}}),
+             'grey': (True, {'grey': {'amd64': 'RUNNING-ALWAYSFAIL'},
+                             'brown/all': {'amd64': 'ALWAYSFAIL'},
+                             'brown': {'i386': 'RUNNING-ALWAYSFAIL'}})
+            },
+            {})
+
+        self.assertEqual(len(self.amqp_requests), 4)
+        self.assertEqual(self.pending_requests,
+                         {'black/2': {'black': ['i386']},
+                          'grey/2': {'grey': ['amd64', 'i386'],
+                                     'brown': ['i386']}})
 
     def test_binary_from_new_source_package_pass(self):
         '''building an existing binary for a new source package (pass)'''
