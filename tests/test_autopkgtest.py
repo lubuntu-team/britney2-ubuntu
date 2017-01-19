@@ -1004,6 +1004,28 @@ class T(TestBase):
                           'grey/2': {'grey': ['amd64', 'i386'],
                                      'brown': ['i386']}})
 
+    def test_blacklisted_force(self):
+        '''blacklisted packages return exit code 99 and version all, check they
+        are handled correctly'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/b/black/20150101_100000@': (0, 'black 1', tr('black/1')),
+            'series/amd64/b/black/20150102_100000@': (99, 'black blacklisted', tr('black/2')),
+            'series/i386/b/black/20150101_100000@': (0, 'black 1', tr('black/1')),
+            'series/i386/b/black/20150102_100000@': (99, 'black blacklisted', tr('black/2')),
+        }})
+
+        self.create_hint('pitti', 'force-badtest black/blacklisted')
+
+        self.do_test(
+            [('black', {'Version': '2'}, 'autopkgtest')],
+            {'black': (True, {'black/blacklisted': {'amd64': 'IGNORE-FAIL',
+                                             'i386': 'IGNORE-FAIL'}})
+            },
+            {'black': [('old-version', '1'), ('new-version', '2')]})
+
+        self.assertEqual(len(self.amqp_requests), 0)
+
     def test_binary_from_new_source_package_pass(self):
         '''building an existing binary for a new source package (pass)'''
 
