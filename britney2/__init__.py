@@ -11,7 +11,7 @@ class SourcePackage(object):
 
     __slots__ = ['version', 'section', 'binaries', 'maintainer', 'is_fakesrc', 'testsuite', 'testsuite_triggers']
 
-    def __init__(self, version, section, binaries, maintainer, is_fakesrc, testsuite, testsuite_triggers):
+    def __init__(self, version, section, binaries, maintainer, is_fakesrc, testsuite=None, testsuite_triggers=None):
         self.version = version
         self.section = section
         self.binaries = binaries
