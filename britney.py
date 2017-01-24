@@ -531,7 +531,8 @@ class Britney(object):
 
         self.policies.append(AgePolicy(self.options, self.suite_info, MINDAYS))
         self.policies.append(RCBugPolicy(self.options, self.suite_info))
-        self.policies.append(PiupartsPolicy(self.options, self.suite_info))
+        # Piuparts is noisy & not used by Ubuntu (LP: #1651537)
+        # self.policies.append(PiupartsPolicy(self.options, self.suite_info))
         self.policies.append(LPBlockBugPolicy(self.options, self.suite_info))
         if getattr(self.options, 'adt_enable') == 'yes':
             self.policies.append(AutopkgtestPolicy(self.options, self.suite_info))
