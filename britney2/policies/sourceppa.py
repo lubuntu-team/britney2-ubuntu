@@ -7,6 +7,7 @@ import urllib.parse
 from collections import defaultdict
 from urllib.error import HTTPError
 
+from britney2.policies.rest import Rest
 from britney2.policies.policy import BasePolicy, PolicyVerdict
 
 
@@ -21,7 +22,7 @@ IGNORE = [
 ]
 
 
-class SourcePPAPolicy(BasePolicy):
+class SourcePPAPolicy(BasePolicy, Rest):
     """Migrate packages copied from same source PPA together
 
     This policy will query launchpad to determine what source PPA packages
@@ -39,38 +40,6 @@ class SourcePPAPolicy(BasePolicy):
         self.britney = None
         # self.cache contains self.source_ppas_by_pkg from previous run
         self.cache = {}
-
-    def query_lp_rest_api(self, obj, query):
-        """Do a Launchpad REST request
-
-        Request <LAUNCHPAD_URL><obj>?<query>.
-
-        Returns dict of parsed json result from launchpad.
-        Raises HTTPError, ValueError, or ConnectionError based on different
-        transient failures connecting to launchpad.
-        """
-
-        for retry in range(5):
-            url = '%s%s?%s' % (LAUNCHPAD_URL, obj, urllib.parse.urlencode(query))
-            try:
-                with urllib.request.urlopen(url, timeout=30) as req:
-                    code = req.getcode()
-                    if 200 <= code < 300:
-                        return json.loads(req.read().decode('UTF-8'))
-                    raise ConnectionError('Failed to reach launchpad, HTTP %s'
-                                          % code)
-            except socket.timeout as e:
-                self.log("Timeout downloading '%s', will retry %d more times."
-                         % (url, 5 - retry - 1))
-                exc = e
-            except HTTPError as e:
-                if e.code != 503:
-                    raise
-                self.log("Caught error 503 downloading '%s', will retry %d more times."
-                         % (url, 5 - retry - 1))
-                exc = e
-        else:
-            raise exc
 
     def lp_get_source_ppa(self, pkg, version):
         """Ask LP what source PPA pkg was copied from"""

@@ -89,6 +89,12 @@ class T(TestBase):
             'newgreen': {'2': ''},
         }
 
+        self.email_cache = {}
+        for pkg, vals in self.sourceppa_cache.items():
+            for version, empty in vals.items():
+                self.email_cache.setdefault(pkg, {})
+                self.email_cache[pkg][version] = True
+
         # create mock Swift server (but don't start it yet, as tests first need
         # to poke in results)
         self.swift = mock_swift.AutoPkgTestSwiftServer(port=18085)
@@ -116,13 +122,17 @@ class T(TestBase):
             self.sourceppa_cache.setdefault(pkg, {})
             if fields['Version'] not in self.sourceppa_cache[pkg]:
                 self.sourceppa_cache[pkg][fields['Version']] = ''
+            self.email_cache.setdefault(pkg, {})
+            self.email_cache[pkg][fields['Version']] = True
 
         # Set up sourceppa cache for testing
         sourceppa_path = os.path.join(self.data.dirs[True], 'SourcePPA')
         with open(sourceppa_path, 'w', encoding='utf-8') as sourceppa:
             sourceppa.write(json.dumps(self.sourceppa_cache))
-        # with open(sourceppa_path, encoding='utf-8') as data:
-        #     print(data.read())
+
+        email_path = os.path.join(self.data.dirs[True], 'EmailCache')
+        with open(email_path, 'w', encoding='utf-8') as email:
+            email.write(json.dumps(self.email_cache))
 
         self.swift.start()
         (excuses_yaml, excuses_html, out) = self.run_britney()

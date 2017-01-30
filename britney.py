@@ -205,6 +205,7 @@ from britney2.policies.policy import AgePolicy, RCBugPolicy, PiupartsPolicy, Pol
 from britney2.policies.policy import LPBlockBugPolicy
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.policies.sourceppa import SourcePPAPolicy
+from britney2.policies.email import EmailPolicy
 from britney2.utils import (old_libraries_format, undo_changes,
                             compute_reverse_tree, possibly_compressed,
                             read_nuninst, write_nuninst, write_heidi,
@@ -537,6 +538,7 @@ class Britney(object):
         if getattr(self.options, 'adt_enable') == 'yes':
             self.policies.append(AutopkgtestPolicy(self.options, self.suite_info))
         self.policies.append(SourcePPAPolicy(self.options, self.suite_info))
+        self.policies.append(EmailPolicy(self.options, self.suite_info))
 
         for policy in self.policies:
             policy.register_hints(self._hint_parser)
