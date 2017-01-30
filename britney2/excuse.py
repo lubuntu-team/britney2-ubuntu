@@ -219,6 +219,19 @@ class Excuse(object):
             value = PolicyVerdict.PASS_HINTED
         self._policy_verdict = value
 
+    @property
+    def tentative_policy_verdict(self):
+        """If we've not finished running all of the policies, we can find out
+        what all of the policies that have run so far said."""
+        all_verdicts = {
+            info["verdict"]
+            if isinstance(info["verdict"], PolicyVerdict)
+            else PolicyVerdict[info["verdict"]]
+            for info in self.policy_info.values()
+        }
+
+        return max(all_verdicts)
+
     def set_vers(self, tver, uver):
         """Set the versions of the item from target and source suite"""
         if tver and uver:
