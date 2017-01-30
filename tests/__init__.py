@@ -402,6 +402,8 @@ ADT_SUCCESS_BOUNTY     =
 ADT_REGRESSION_PENALTY =
 ADT_BASELINE           =
 ADT_RETRY_OLDER_THAN   =
+
+EMAIL_ENABLE = yes
 ''')
         assert os.path.exists(self.britney)
 
