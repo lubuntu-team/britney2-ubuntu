@@ -217,6 +217,7 @@ from britney2.policies.policy import (AgePolicy,
                                       )
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.policies.sourceppa import SourcePPAPolicy
+from britney2.policies.email import EmailPolicy
 from britney2.utils import (log_and_format_old_libraries,
                             read_nuninst, write_nuninst, write_heidi,
                             format_and_log_uninst, newly_uninst,
@@ -525,6 +526,11 @@ class Britney(object):
             self._policy_engine.add_policy(BuiltOnBuilddPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(LPBlockBugPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(SourcePPAPolicy(self.options, self.suite_info))
+        add_email_policy = getattr(self.options, 'email_enable', 'no')
+        if add_email_policy in ('yes', 'dry-run'):
+            self._policy_engine.add_policy(EmailPolicy(self.options,
+                                                       self.suite_info,
+                                                       dry_run=add_email_policy == 'dry-run'))
 
     @property
     def hints(self):

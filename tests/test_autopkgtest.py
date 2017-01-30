@@ -71,6 +71,12 @@ class TestAutopkgtestBase(TestBase):
                 self.email_cache.setdefault(pkg, {})
                 self.email_cache[pkg][version] = True
 
+        self.email_cache = {}
+        for pkg, vals in self.sourceppa_cache.items():
+            for version, empty in vals.items():
+                self.email_cache.setdefault(pkg, {})
+                self.email_cache[pkg][version] = True
+
         # create mock Swift server (but don't start it yet, as tests first need
         # to poke in results)
         self.swift = mock_swift.AutoPkgTestSwiftServer(port=18085)
