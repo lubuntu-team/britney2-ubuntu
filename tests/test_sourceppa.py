@@ -109,6 +109,21 @@ class T(unittest.TestCase):
             pol.lp_get_source_ppa('hello', '1.0')
         self.assertEqual(urlopen.call_count, 5)
 
+    @patch('britney2.policies.sourceppa.urllib.request.urlopen')
+    def test_lp_rest_api_unavailable(self, urlopen):
+        """If we get a 503 connecting to LP, we try 5 times"""
+        from urllib.error import HTTPError
+        # test that we're retried 5 times on 503
+        urlopen.side_effect = HTTPError(None,
+                                        503,
+                                        'Service Temporarily Unavailable',
+                                        None,
+                                        None)
+        pol = SourcePPAPolicy(FakeOptions, {})
+        with self.assertRaises(HTTPError):
+            pol.lp_get_source_ppa('hello', '1.0')
+        self.assertEqual(urlopen.call_count, 5)
+
     def test_approve_ppa(self):
         """Approve packages by their PPA."""
         shortppa = 'team/ubuntu/ppa'

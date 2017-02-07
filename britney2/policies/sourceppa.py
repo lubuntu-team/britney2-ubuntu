@@ -5,6 +5,7 @@ import urllib.request
 import urllib.parse
 
 from collections import defaultdict
+from urllib.error import HTTPError
 
 from britney2.policies.policy import BasePolicy, PolicyVerdict
 
@@ -61,6 +62,17 @@ class SourcePPAPolicy(BasePolicy):
         except socket.timeout:
             if retries > 1:
                 self.log("Timeout downloading '%s', will retry %d more times."
+                         % (url, retries))
+                return self.query_lp_rest_api(obj, query, retries - 1)
+            else:
+                raise
+        except HTTPError as e:
+            if e.code != 503:
+                raise
+
+            # 503s are transient
+            if retries > 1:
+                self.log("Caught error 503 downloading '%s', will retry %d more times."
                          % (url, retries))
                 return self.query_lp_rest_api(obj, query, retries - 1)
             else:
