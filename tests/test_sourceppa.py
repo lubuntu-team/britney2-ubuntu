@@ -9,7 +9,7 @@
 import os
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import DEFAULT, patch
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_DIR)
@@ -123,6 +123,30 @@ class T(unittest.TestCase):
         with self.assertRaises(HTTPError):
             pol.lp_get_source_ppa('hello', '1.0')
         self.assertEqual(urlopen.call_count, 5)
+
+    @patch('britney2.policies.sourceppa.urllib.request.urlopen')
+    def test_lp_rest_api_flaky(self, urlopen):
+        """If we get a 503, then a 200, we get the right result"""
+        from urllib.error import HTTPError
+
+        def l():
+            for i in range(3):
+                yield HTTPError(None,
+                                503,
+                                'Service Temporarily Unavailable',
+                                None,
+                                None)
+            while True:
+                yield DEFAULT
+
+        context = urlopen.return_value.__enter__.return_value
+        context.getcode.return_value = 200
+        context.read.return_value = b'{"entries": [{"copy_source_archive_link": "https://api.launchpad.net/1.0/team/ubuntu/ppa", "other_stuff": "ignored"}]}'
+        urlopen.side_effect = l()
+        pol = SourcePPAPolicy(FakeOptions, {})
+        pol.lp_get_source_ppa('hello', '1.0')
+        self.assertEqual(urlopen.call_count, 4)
+        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), 'https://api.launchpad.net/1.0/team/ubuntu/ppa')
 
     def test_approve_ppa(self):
         """Approve packages by their PPA."""

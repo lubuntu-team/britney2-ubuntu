@@ -40,7 +40,7 @@ class SourcePPAPolicy(BasePolicy):
         # self.cache contains self.source_ppas_by_pkg from previous run
         self.cache = {}
 
-    def query_lp_rest_api(self, obj, query, retries=5):
+    def query_lp_rest_api(self, obj, query):
         """Do a Launchpad REST request
 
         Request <LAUNCHPAD_URL><obj>?<query>.
@@ -49,34 +49,28 @@ class SourcePPAPolicy(BasePolicy):
         Raises HTTPError, ValueError, or ConnectionError based on different
         transient failures connecting to launchpad.
         """
-        assert retries > 0
 
-        url = '%s%s?%s' % (LAUNCHPAD_URL, obj, urllib.parse.urlencode(query))
-        try:
-            with urllib.request.urlopen(url, timeout=30) as req:
-                code = req.getcode()
-                if 200 <= code < 300:
-                    return json.loads(req.read().decode('UTF-8'))
-                raise ConnectionError('Failed to reach launchpad, HTTP %s'
-                                      % code)
-        except socket.timeout:
-            if retries > 1:
+        for retry in range(5):
+            url = '%s%s?%s' % (LAUNCHPAD_URL, obj, urllib.parse.urlencode(query))
+            try:
+                with urllib.request.urlopen(url, timeout=30) as req:
+                    code = req.getcode()
+                    if 200 <= code < 300:
+                        return json.loads(req.read().decode('UTF-8'))
+                    raise ConnectionError('Failed to reach launchpad, HTTP %s'
+                                          % code)
+            except socket.timeout as e:
                 self.log("Timeout downloading '%s', will retry %d more times."
-                         % (url, retries))
-                return self.query_lp_rest_api(obj, query, retries - 1)
-            else:
-                raise
-        except HTTPError as e:
-            if e.code != 503:
-                raise
-
-            # 503s are transient
-            if retries > 1:
+                         % (url, 5 - retry - 1))
+                exc = e
+            except HTTPError as e:
+                if e.code != 503:
+                    raise
                 self.log("Caught error 503 downloading '%s', will retry %d more times."
-                         % (url, retries))
-                return self.query_lp_rest_api(obj, query, retries - 1)
-            else:
-                raise
+                         % (url, 5 - retry - 1))
+                exc = e
+        else:
+            raise exc
 
     def lp_get_source_ppa(self, pkg, version):
         """Ask LP what source PPA pkg was copied from"""
