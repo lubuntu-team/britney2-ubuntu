@@ -1875,17 +1875,14 @@ class T(TestBase):
                          {'linux-meta-lts-grumpy/1': {'fancy': ['amd64']}})
 
     def test_kernel_triggered_tests(self):
-        '''linux, lxc, glibc tests get triggered by linux-meta* uploads'''
+        '''linux, lxc, glibc, systemd, snapd tests get triggered by linux-meta* uploads'''
 
         self.data.remove_all(False)
         self.data.add('libc6-dev', False, {'Source': 'glibc', 'Depends': 'linux-libc-dev'},
                       testsuite='autopkgtest')
-        self.data.add('lxc', False, {'Testsuite-Triggers': 'linux-generic'},
-                      testsuite='autopkgtest')
-        self.data.add('systemd', False, {'Testsuite-Triggers': 'linux-generic'},
-                      testsuite='autopkgtest')
-        self.data.add('snapd', False, {'Testsuite-Triggers': 'linux-generic'},
-                      testsuite='autopkgtest')
+        self.data.add('lxc', False, {}, testsuite='autopkgtest')
+        self.data.add('systemd', False, {}, testsuite='autopkgtest')
+        self.data.add('snapd', False, {}, testsuite='autopkgtest')
         self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
