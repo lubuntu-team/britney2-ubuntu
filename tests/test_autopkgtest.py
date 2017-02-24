@@ -1884,7 +1884,7 @@ class T(TestBase):
                       testsuite='autopkgtest')
         self.data.add('systemd', False, {'Testsuite-Triggers': 'linux-generic'},
                       testsuite='autopkgtest')
-        self.data.add('snapd2', False, {'Testsuite-Triggers': 'linux-generic'},
+        self.data.add('snapd', False, {'Testsuite-Triggers': 'linux-generic'},
                       testsuite='autopkgtest')
         self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
