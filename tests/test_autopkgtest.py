@@ -1884,6 +1884,8 @@ class T(TestBase):
                       testsuite='autopkgtest')
         self.data.add('systemd', False, {'Testsuite-Triggers': 'linux-generic'},
                       testsuite='autopkgtest')
+        self.data.add('snapd2', False, {'Testsuite-Triggers': 'linux-generic'},
+                      testsuite='autopkgtest')
         self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
@@ -1902,6 +1904,7 @@ class T(TestBase):
                                     'glibc': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                                     'linux': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                                     'systemd': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                    'snapd': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
                                    }),
              'linux-meta-64only': (False, {'lxc': {'amd64': 'RUNNING'}}),
              'linux': (False, {}),
