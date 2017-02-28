@@ -47,21 +47,28 @@ class SourcePPAPolicy(BasePolicy, Rest):
         if cached is not None:
             return cached
 
-        data = self.query_lp_rest_api('%s/%s' % (self.options.distribution, self.options.series), {
-            'ws.op': 'getPackageUploads',
-            'archive': PRIMARY,
+        data = self.query_lp_rest_api('%s/+archive/primary' % self.options.distribution, {
+            'ws.op': 'getPublishedSources',
             'pocket': 'Proposed',
-            'name': pkg,
+            'source_name': pkg,
             'version': version,
             'exact_match': 'true',
+            'distro_series': '/%s/%s' % (self.options.distribution, self.options.series),
         })
         try:
-            return data['entries'][0]['copy_source_archive_link']
+            sourcepub = data['entries'][0]['self_link']
         # IndexError means no packages in -proposed matched this name/version,
         # which is expected to happen when bileto runs britney.
         except IndexError:
             self.log('SourcePPA getPackageUploads IndexError (%s %s)' % (pkg, version))
             return 'IndexError'
+        data = self.query_lp_rest_api(sourcepub, {'ws.op': 'getPublishedBinaries'})
+        for binary in data['entries']:
+            link = binary['build_link'] or ''
+            if '/+archive/' in link:
+                ppa, _, buildid = link.partition('/+build/')
+                return ppa
+        return ''
 
     def initialise(self, britney):
         """Load cached source ppa data"""
