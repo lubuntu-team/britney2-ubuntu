@@ -665,6 +665,25 @@ class T(TestBase):
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})
 
+    def test_unbuilt_not_in_testing(self):
+        '''Unbuilt package should not trigger tests or get considered (package not in testing)'''
+
+        self.sourceppa_cache['lime'] = {'1': ''}
+
+        self.data.add_src('lime', True, {'Version': '1', 'Testsuite': 'autopkgtest'})
+        exc = self.do_test(
+            # unbuilt unstable version
+            [],
+            {'lime': (False, {})},
+            {'lime': [('old-version', '-'), ('new-version', '1'),
+                      ('reason', 'no-binaries'),
+                      ]
+            })[1]
+        # autopkgtest should not be triggered for unbuilt pkg
+        self.assertEqual(exc['lime']['policy_info']['autopkgtest'], {})
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, {})
+
     def test_partial_unbuilt(self):
         '''Unbuilt package on some arches should not trigger tests'''
 

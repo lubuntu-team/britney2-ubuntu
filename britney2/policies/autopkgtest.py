@@ -161,7 +161,8 @@ class AutopkgtestPolicy(BasePolicy):
 
     def apply_policy_impl(self, tests_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
         # skip/delay autopkgtests until package is built
-        if excuse.missing_builds or 'depends' in excuse.reason:
+        binaries_info = self.britney.sources[suite][source_name]
+        if excuse.missing_builds or not binaries_info.binaries or 'depends' in excuse.reason:
             self.log('%s has missing builds or is uninstallable, skipping autopkgtest policy' % excuse.name)
             return PolicyVerdict.REJECTED_TEMPORARILY
 
