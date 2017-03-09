@@ -127,6 +127,7 @@ class T(unittest.TestCase):
         })
         self.assertEqual(person_chooser(SPONSORED_UPLOAD), {
             'https://api.launchpad.net/1.0/~apw',
+            'https://api.launchpad.net/1.0/~smb'
         })
         self.assertEqual(person_chooser(BILETO), {
             'https://api.launchpad.net/1.0/~dobey',

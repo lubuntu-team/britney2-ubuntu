@@ -38,12 +38,19 @@ If you have any questions about this email, please ask them in #ubuntu-release c
 
 def person_chooser(source):
     """Assign blame for the current source package."""
+    def should_add_package_creator():
+        # things which were copied into unstable by a known bot
+        bot = source['package_signer_link'] in BOTS
+        # direct uploads
+        regular = not source['creator_link'] and not source['sponsor_link']
+        return bot or regular
+
     people = {
         source['package_signer_link'],
         source['sponsor_link'],
         source['creator_link'],
     } - {None} - BOTS
-    if source['package_signer_link'] in BOTS:
+    if should_add_package_creator():
         people.add(source['package_creator_link'])
     return people
 
