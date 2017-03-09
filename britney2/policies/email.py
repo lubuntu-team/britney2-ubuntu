@@ -156,7 +156,7 @@ class EmailPolicy(BasePolicy, Rest):
                      (source_name, version, "stuck" if stuck else "not stuck"))
             if stuck:
                 self.log("[email dry run] Age %d >= threshold %d: would email: %s" %
-                         (excuse.daysold or 0, max_age, self.lp_get_emails(source_name, version)))
+                         (age, max_age, self.lp_get_emails(source_name, version)))
             # don't update the cache file in dry run mode; we'll see all output each time
             return PolicyVerdict.PASS
         if stuck and not sent:
@@ -169,6 +169,8 @@ class EmailPolicy(BasePolicy, Rest):
                 msg['To'] = ', '.join(emails)
                 try:
                     with smtplib.SMTP('localhost') as smtp:
+                        self.log ("%s/%s stuck for %d days, emailing %s" %
+                                  (source_name, version, age, ', '.join(emails)))
                         smtp.send_message(msg)
                         sent = True
                 except ConnectionRefusedError as err:
