@@ -47,7 +47,12 @@ def person_chooser(source):
         source['sponsor_link'],
         source['creator_link'],
     } - {None} - BOTS
-    if source['package_signer_link'] in BOTS:
+    # some bots (e.g. bileto) generate uploads that are otherwise manual. We
+    # want to email the people that the bot was acting on behalf of.
+    bot = source['package_signer_link'] in BOTS
+    # direct uploads
+    regular = not source['creator_link'] and not source['sponsor_link']
+    if bot or regular:
         people.add(source['package_creator_link'])
     return people
 
