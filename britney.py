@@ -538,7 +538,11 @@ class Britney(object):
         if getattr(self.options, 'adt_enable') == 'yes':
             self.policies.append(AutopkgtestPolicy(self.options, self.suite_info))
         self.policies.append(SourcePPAPolicy(self.options, self.suite_info))
-        self.policies.append(EmailPolicy(self.options, self.suite_info))
+        add_email_policy = getattr(self.options, 'email_enable', 'no')
+        if add_email_policy in ('yes', 'dry-run'):
+            self.policies.append(EmailPolicy(self.options,
+                                             self.suite_info,
+                                             dry_run=add_email_policy == 'dry-run'))
 
         for policy in self.policies:
             policy.register_hints(self._hint_parser)

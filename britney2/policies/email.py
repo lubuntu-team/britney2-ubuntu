@@ -65,13 +65,14 @@ def address_chooser(addresses):
 class EmailPolicy(BasePolicy, Rest):
     """Send an email when a package has been rejected."""
 
-    def __init__(self, options, suite_info):
+    def __init__(self, options, suite_info, dry_run=False):
         super().__init__('email', options, suite_info, {'unstable'})
         self.filename = os.path.join(options.unstable, 'EmailCache')
         # Dict of dicts; maps pkg name -> pkg version -> boolean
         self.emails_by_pkg = defaultdict(dict)
         # self.cache contains self.emails_by_pkg from previous run
         self.cache = {}
+        self.dry_run = dry_run
 
     def initialise(self, britney):
         """Load cached source ppa data"""
@@ -144,6 +145,14 @@ class EmailPolicy(BasePolicy, Rest):
         version = source_data_srcdist.version
         sent = self.cache.get(source_name, {}).get(version, False)
         stuck = (excuse.daysold or 0) >= max_age
+        if self.dry_run:
+            self.log("[email dry run] Considering: %s/%s: %s" %
+                     (source_name, version, "stuck" if stuck else "not stuck"))
+            if stuck:
+                self.log("[email dry run] Age %d >= threshold %d: would email: %s" %
+                         (excuse.daysold or 0, max_age, self.lp_get_emails(source_name, version)))
+            # don't update the cache file in dry run mode; we'll see all output each time
+            return PolicyVerdict.PASS
         if stuck and not sent:
             msg = MIMEText(MESSAGE_BODY.format(**locals()))
             msg['X-Proposed-Migration'] = 'notice'
