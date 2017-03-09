@@ -70,18 +70,18 @@ class T(unittest.TestCase):
         """Identify when package has no source PPA"""
         context = urlopen.return_value.__enter__.return_value
         context.getcode.return_value = 200
-        context.read.return_value = b'{"entries": [{"copy_source_archive_link": null, "other_stuff": "ignored"}]}'
+        context.read.return_value = b'{"entries": [{"self_link": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/12345", "build_link": "https://api.launchpad.net/1.0/ubuntu/+source/gcc-5/5.4.1-7ubuntu1/+build/12066956", "other_stuff": "ignored"}]}'
         pol = SourcePPAPolicy(FakeOptions, {})
-        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), None)
+        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), '')
 
     @patch('britney2.policies.sourceppa.urllib.request.urlopen')
     def test_lp_rest_api_with_source_ppa(self, urlopen):
         """Identify source PPA"""
         context = urlopen.return_value.__enter__.return_value
         context.getcode.return_value = 200
-        context.read.return_value = b'{"entries": [{"copy_source_archive_link": "https://api.launchpad.net/1.0/team/ubuntu/ppa", "other_stuff": "ignored"}]}'
+        context.read.return_value = b'{"entries": [{"self_link": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/12345", "build_link": "https://api.launchpad.net/1.0/~ci-train-ppa-service/+archive/ubuntu/2516/+build/12063031", "other_stuff": "ignored"}]}'
         pol = SourcePPAPolicy(FakeOptions, {})
-        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), 'https://api.launchpad.net/1.0/team/ubuntu/ppa')
+        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), 'https://api.launchpad.net/1.0/~ci-train-ppa-service/+archive/ubuntu/2516')
 
     @patch('britney2.policies.sourceppa.urllib.request.urlopen')
     def test_lp_rest_api_errors(self, urlopen):
@@ -141,12 +141,12 @@ class T(unittest.TestCase):
 
         context = urlopen.return_value.__enter__.return_value
         context.getcode.return_value = 200
-        context.read.return_value = b'{"entries": [{"copy_source_archive_link": "https://api.launchpad.net/1.0/team/ubuntu/ppa", "other_stuff": "ignored"}]}'
+        context.read.return_value = b'{"entries": [{"self_link": "https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/12345", "build_link": "https://api.launchpad.net/1.0/~ci-train-ppa-service/+archive/ubuntu/2516/+build/12063031", "other_stuff": "ignored"}]}'
         urlopen.side_effect = l()
         pol = SourcePPAPolicy(FakeOptions, {})
         pol.lp_get_source_ppa('hello', '1.0')
-        self.assertEqual(urlopen.call_count, 4)
-        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), 'https://api.launchpad.net/1.0/team/ubuntu/ppa')
+        self.assertEqual(urlopen.call_count, 5)
+        self.assertEqual(pol.lp_get_source_ppa('hello', '1.0'), 'https://api.launchpad.net/1.0/~ci-train-ppa-service/+archive/ubuntu/2516')
 
     def test_approve_ppa(self):
         """Approve packages by their PPA."""
