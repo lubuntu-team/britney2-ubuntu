@@ -1,11 +1,11 @@
 import os
 import re
 import json
+import socket
 import smtplib
 
 from urllib.parse import unquote
 from collections import defaultdict
-from email.mime.text import MIMEText
 
 from britney2.policies.rest import Rest
 from britney2.policies.policy import BasePolicy, PolicyVerdict
@@ -22,7 +22,12 @@ BOTS = {
     USER + 'katie',
 }
 
-MESSAGE_BODY = """Hi,
+MESSAGE = """From: Ubuntu Release Team <noreply@canonical.com>
+To: {recipients}
+X-Proposed-Migration: notice
+Subject: [proposed-migration] {source_name} {version} stuck in {series}-proposed
+
+Hi,
 
 {source_name} {version} needs attention.
 
@@ -165,20 +170,18 @@ class EmailPolicy(BasePolicy, Rest):
             # don't update the cache file in dry run mode; we'll see all output each time
             return PolicyVerdict.PASS
         if stuck and not sent:
-            msg = MIMEText(MESSAGE_BODY.format(**locals()))
-            msg['X-Proposed-Migration'] = 'notice'
-            msg['Subject'] = '[proposed-migration] {} {} stuck in {}-proposed'.format(source_name, version, series)
-            msg['From'] = 'Ubuntu Release Team <noreply@canonical.com>'
             emails = self.lp_get_emails(source_name, version)
             if emails:
-                msg['To'] = ', '.join(emails)
+                recipients = ', '.join(emails)
+                msg = MESSAGE.format(**locals())
                 try:
-                    with smtplib.SMTP('localhost') as smtp:
-                        self.log ("%s/%s stuck for %d days, emailing %s" %
-                                  (source_name, version, age, ', '.join(emails)))
-                        smtp.send_message(msg)
-                        sent = True
-                except ConnectionRefusedError as err:
+                    self.log("%s/%s stuck for %d days, emailing %s" %
+                              (source_name, version, age, recipients))
+                    server = smtplib.SMTP('localhost')
+                    server.sendmail('noreply@canonical.com', emails, msg)
+                    server.quit()
+                    sent = True
+                except socket.error as err:
                     self.log("Failed to send mail! Is SMTP server running?")
                     self.log(err)
         self.emails_by_pkg[source_name][version] = sent
