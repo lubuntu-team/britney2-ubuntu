@@ -22,9 +22,11 @@ BOTS = {
     USER + 'katie',
 }
 
-MESSAGE_BODY = """{source_name} {version} needs attention.
+MESSAGE_BODY = """Hi,
 
-It has been stuck in {series}-proposed for over a day.
+{source_name} {version} needs attention.
+
+It has been stuck in {series}-proposed for {age} day{plural}.
 
 You either sponsored or uploaded this package, please investigate why it hasn't been approved for migration.
 
@@ -33,6 +35,8 @@ http://people.canonical.com/~ubuntu-archive/proposed-migration/{series}/update_e
 https://wiki.ubuntu.com/ProposedMigration
 
 If you have any questions about this email, please ask them in #ubuntu-release channel on Freenode IRC.
+
+Regards, Ubuntu Release Team.
 """
 
 
@@ -144,7 +148,9 @@ class EmailPolicy(BasePolicy, Rest):
         series = self.options.series
         version = source_data_srcdist.version
         sent = self.cache.get(source_name, {}).get(version, False)
-        stuck = (excuse.daysold or 0) >= max_age
+        age = excuse.daysold or 0
+        stuck = age >= max_age
+        plural = 's' if age != 1 else ''
         if self.dry_run:
             self.log("[email dry run] Considering: %s/%s: %s" %
                      (source_name, version, "stuck" if stuck else "not stuck"))
