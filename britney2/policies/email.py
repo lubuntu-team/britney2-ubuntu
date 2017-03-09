@@ -163,7 +163,7 @@ class EmailPolicy(BasePolicy, Rest):
             msg = MIMEText(MESSAGE_BODY.format(**locals()))
             msg['X-Proposed-Migration'] = 'notice'
             msg['Subject'] = '[proposed-migration] {} {} stuck in {}-proposed'.format(source_name, version, series)
-            msg['From'] = 'noreply@canonical.com'
+            msg['From'] = 'Ubuntu Release Team <noreply@canonical.com>'
             emails = self.lp_get_emails(source_name, version)
             if emails:
                 msg['To'] = ', '.join(emails)
