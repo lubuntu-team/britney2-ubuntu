@@ -64,14 +64,14 @@ def person_chooser(source):
 
 def address_chooser(addresses):
     """Prefer @ubuntu and @canonical addresses."""
-    first = None
-    canonical = None
+    first = ''
+    canonical = ''
     for address in addresses:
         if address.endswith('@ubuntu.com'):
             return address
         if address.endswith('@canonical.com'):
             canonical = address
-        if first is None:
+        if not first:
             first = address
     return canonical or first
 
@@ -148,7 +148,7 @@ class EmailPolicy(BasePolicy, Rest):
         # which is expected to happen when bileto runs britney.
         except IndexError:
             self.log('Email getPublishedSources IndexError (%s %s)' % (pkg, version))
-            return None
+            return []
         return self.scrape_gpg_emails(person_chooser(source))
 
     def apply_policy_impl(self, email_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
