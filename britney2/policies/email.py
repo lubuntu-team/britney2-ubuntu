@@ -31,7 +31,7 @@ Hi,
 
 {source_name} {version} needs attention.
 
-It has been stuck in {series}-proposed for {age} day{plural}.
+It has been stuck in {series}-proposed for {age:.0f} day{plural}.
 
 You either sponsored or uploaded this package, please investigate why it hasn't been approved for migration.
 
