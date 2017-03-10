@@ -111,8 +111,8 @@ class EmailPolicy(BasePolicy, Rest):
             for line in details.splitlines():
                 parts = line.split(':')
                 if parts[0] == 'info':
-                    assert int(parts[1]) == 1  # Version
-                    assert int(parts[2]) <= 1  # Count
+                    if int(parts[1]) != 1 or int(parts[2]) > 1:
+                        break
                 if parts[0] == 'uid':
                     flags = parts[4]
                     if 'e' in flags or 'r' in flags:
@@ -185,12 +185,14 @@ class EmailPolicy(BasePolicy, Rest):
                     self.log("Failed to send mail! Is SMTP server running?")
                     self.log(err)
         self.emails_by_pkg[source_name][version] = sent
+        self.save_state()
         return PolicyVerdict.PASS
 
-    def save_state(self, britney):
+    def save_state(self, britney=None):
         """Write source ppa data to disk"""
         tmp = self.filename + '.tmp'
         with open(tmp, 'w', encoding='utf-8') as data:
             json.dump(self.emails_by_pkg, data)
         os.rename(tmp, self.filename)
-        self.log("Wrote email data to %s" % self.filename)
+        if britney:
+            self.log("Wrote email data to %s" % self.filename)
