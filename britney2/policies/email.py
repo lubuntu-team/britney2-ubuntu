@@ -31,7 +31,7 @@ Hi,
 
 {source_name} {version} needs attention.
 
-It has been stuck in {series}-proposed for {age:.0f} day{plural}.
+It has been stuck in {series}-proposed for {age} day{plural}.
 
 You either sponsored or uploaded this package, please investigate why it hasn't been approved for migration.
 
@@ -160,6 +160,7 @@ class EmailPolicy(BasePolicy, Rest):
         sent = self.cache.get(source_name, {}).get(version, False)
         age = excuse.daysold or 0
         stuck = age >= max_age
+        age = int(age)
         plural = 's' if age != 1 else ''
         if self.dry_run:
             self.log("[email dry run] Considering: %s/%s: %s" %

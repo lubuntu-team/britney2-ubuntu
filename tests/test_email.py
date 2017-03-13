@@ -216,6 +216,25 @@ class T(unittest.TestCase):
         e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
         smtp.SMTP.assert_called_once_with('localhost')
 
+    @patch('britney2.policies.email.EmailPolicy.lp_get_emails')
+    @patch('britney2.policies.email.smtplib', autospec=True)
+    def test_smtp_days(self, smtp, lp):
+        """Pluralize correctly."""
+        lp.return_value = ['email@address.com']
+        e = EmailPolicy(FakeOptions, None)
+        FakeExcuse.is_valid = False
+        FakeExcuse.daysold = 1.01
+        e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
+        smtp.SMTP.assert_called_once_with('localhost')
+        name, args, kwargs = smtp.SMTP().sendmail.mock_calls[0]
+        text = args[2]
+        self.assertIn(' 1 day.', text)
+        FakeExcuse.daysold = 4.9
+        e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
+        name, args, kwargs = smtp.SMTP().sendmail.mock_calls[-1]
+        text = args[2]
+        self.assertIn(' 4 days.', text)
+
 
 if __name__ == '__main__':
     unittest.main()
