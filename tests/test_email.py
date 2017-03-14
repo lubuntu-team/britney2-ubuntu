@@ -194,13 +194,13 @@ class T(unittest.TestCase):
         lp.return_value = ['example@email.com']
         e = EmailPolicy(FakeOptions, None)
         FakeExcuse.is_valid = False
-        FakeExcuse.daysold = 0
+        FakeExcuse.daysold = 0.002
         e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
         FakeExcuse.is_valid = True
-        FakeExcuse.daysold = 4
+        FakeExcuse.daysold = 4.28
         e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
         # Would email but no address found
-        FakeExcuse.daysold = 10
+        FakeExcuse.daysold = 10.12
         lp.return_value = []
         e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
         self.assertEqual(smtp.mock_calls, [])
@@ -220,20 +220,31 @@ class T(unittest.TestCase):
     @patch('britney2.policies.email.smtplib', autospec=True)
     def test_smtp_days(self, smtp, lp):
         """Pluralize correctly."""
+        sendmail = smtp.SMTP().sendmail
         lp.return_value = ['email@address.com']
         e = EmailPolicy(FakeOptions, None)
         FakeExcuse.is_valid = False
+        # day
         FakeExcuse.daysold = 1.01
         e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
-        smtp.SMTP.assert_called_once_with('localhost')
-        name, args, kwargs = smtp.SMTP().sendmail.mock_calls[0]
+        _, args, _ = sendmail.mock_calls[-1]
         text = args[2]
+        self.assertEquals(sendmail.call_count, 1)
         self.assertIn(' 1 day.', text)
+        # days
         FakeExcuse.daysold = 4.9
         e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
-        name, args, kwargs = smtp.SMTP().sendmail.mock_calls[-1]
+        _, args, _ = sendmail.mock_calls[-1]
         text = args[2]
+        self.assertEquals(sendmail.call_count, 2)
         self.assertIn(' 4 days.', text)
+        # day, exactly 1
+        FakeExcuse.daysold = 1
+        e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
+        _, args, _ = sendmail.mock_calls[-1]
+        text = args[2]
+        self.assertEquals(sendmail.call_count, 3)
+        self.assertIn(' 1 day.', text)
 
 
 if __name__ == '__main__':
