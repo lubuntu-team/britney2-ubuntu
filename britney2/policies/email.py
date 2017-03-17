@@ -11,6 +11,9 @@ from britney2.policies.rest import Rest
 from britney2.policies.policy import BasePolicy, PolicyVerdict
 
 
+# Recurring emails should never be more than this many days apart
+MAX_FREQUENCY = 30
+
 API_PREFIX = 'https://api.launchpad.net/1.0/'
 USER = API_PREFIX + '~'
 
@@ -25,13 +28,13 @@ BOTS = {
 MESSAGE = """From: Ubuntu Release Team <noreply@canonical.com>
 To: {recipients}
 X-Proposed-Migration: notice
-Subject: [proposed-migration] {source_name} {version} stuck in {series}-proposed
+Subject: [proposed-migration] {source_name} {version} stuck in {series}-proposed for {rounded_age} days.
 
 Hi,
 
 {source_name} {version} needs attention.
 
-It has been stuck in {series}-proposed for {age} day{plural}.
+It has been stuck in {series}-proposed for {rounded_age} days.
 
 You either sponsored or uploaded this package, please investigate why it hasn't been approved for migration.
 
@@ -82,6 +85,8 @@ class EmailPolicy(BasePolicy, Rest):
     def __init__(self, options, suite_info, dry_run=False):
         super().__init__('email', options, suite_info, {'unstable'})
         self.filename = os.path.join(options.unstable, 'EmailCache')
+        # Maps lp username -> email address
+        self.addresses = {}
         # Dict of dicts; maps pkg name -> pkg version -> boolean
         self.emails_by_pkg = defaultdict(dict)
         # self.cache contains self.emails_by_pkg from previous run
@@ -99,6 +104,8 @@ class EmailPolicy(BasePolicy, Rest):
 
     def _scrape_gpg_emails(self, person):
         """Find email addresses from one person's GPG keys."""
+        if person in self.addresses:
+            return self.addresses[person]
         addresses = []
         gpg = self.query_lp_rest_api(person + '/gpg_keys', {})
         for key in gpg['entries']:
@@ -121,15 +128,12 @@ class EmailPolicy(BasePolicy, Rest):
                     match = re.match(r'^.*<(.+@.+)>$', uid)
                     if match:
                         addresses.append(match.group(1))
-        return addresses
+        address = self.addresses[person] = address_chooser(addresses)
+        return address
 
     def scrape_gpg_emails(self, people):
         """Find email addresses from GPG keys."""
-        addresses = []
-        for person in people or []:
-            address = address_chooser(self._scrape_gpg_emails(person))
-            addresses.append(address)
-        return addresses
+        return [self._scrape_gpg_emails(person) for person in (people or [])]
 
     def lp_get_emails(self, pkg, version):
         """Ask LP who uploaded this package."""
@@ -153,15 +157,24 @@ class EmailPolicy(BasePolicy, Rest):
 
     def apply_policy_impl(self, email_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
         """Send email if package is rejected."""
-        # Have more patience for things blocked in update_output.txt
-        max_age = 5 if excuse.is_valid else 1
         series = self.options.series
         version = source_data_srcdist.version
-        sent = self.cache.get(source_name, {}).get(version, False)
         age = excuse.daysold or 0
-        stuck = age >= max_age
-        age = int(age)
-        plural = 's' if age != 1 else ''
+        rounded_age = int(age)
+        stuck = age >= 3
+        cached = self.cache.get(source_name, {}).get(version)
+        try:
+            emails, sent_age = cached
+            sent = (age - sent_age) < min(MAX_FREQUENCY, age / 2.0)
+        except TypeError:
+            # This exception happens when source_name, version never seen before
+            emails = []
+            sent_age = 0
+            sent = False
+            # TODO: This transitional code can only trigger on the first
+            # production run, feel free to drop this shortly after merging.
+            if cached is True:
+                sent = True
         if self.dry_run:
             self.log("[email dry run] Considering: %s/%s: %s" %
                      (source_name, version, "stuck" if stuck else "not stuck"))
@@ -171,7 +184,8 @@ class EmailPolicy(BasePolicy, Rest):
             # don't update the cache file in dry run mode; we'll see all output each time
             return PolicyVerdict.PASS
         if stuck and not sent:
-            emails = self.lp_get_emails(source_name, version)
+            if not emails:
+                emails = self.lp_get_emails(source_name, version)
             if emails:
                 recipients = ', '.join(emails)
                 msg = MESSAGE.format(**locals())
@@ -181,11 +195,11 @@ class EmailPolicy(BasePolicy, Rest):
                     server = smtplib.SMTP('localhost')
                     server.sendmail('noreply@canonical.com', emails, msg)
                     server.quit()
-                    sent = True
+                    sent_age = age
                 except socket.error as err:
                     self.log("Failed to send mail! Is SMTP server running?")
                     self.log(err)
-        self.emails_by_pkg[source_name][version] = sent
+        self.emails_by_pkg[source_name][version] = (emails, sent_age)
         self.save_state()
         return PolicyVerdict.PASS
 

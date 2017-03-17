@@ -193,11 +193,9 @@ class T(unittest.TestCase):
         """Know when not to send any emails."""
         lp.return_value = ['example@email.com']
         e = EmailPolicy(FakeOptions, None)
-        FakeExcuse.is_valid = False
         FakeExcuse.daysold = 0.002
         e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
-        FakeExcuse.is_valid = True
-        FakeExcuse.daysold = 4.28
+        FakeExcuse.daysold = 2.98
         e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
         # Would email but no address found
         FakeExcuse.daysold = 10.12
@@ -218,33 +216,25 @@ class T(unittest.TestCase):
 
     @patch('britney2.policies.email.EmailPolicy.lp_get_emails')
     @patch('britney2.policies.email.smtplib', autospec=True)
-    def test_smtp_days(self, smtp, lp):
-        """Pluralize correctly."""
-        sendmail = smtp.SMTP().sendmail
+    def test_smtp_repetition(self, smtp, lp):
+        """Resend mails periodically, with decreasing frequency."""
         lp.return_value = ['email@address.com']
+        sendmail = smtp.SMTP().sendmail
         e = EmailPolicy(FakeOptions, None)
-        FakeExcuse.is_valid = False
-        # day
-        FakeExcuse.daysold = 1.01
-        e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
-        _, args, _ = sendmail.mock_calls[-1]
-        text = args[2]
-        self.assertEquals(sendmail.call_count, 1)
-        self.assertIn(' 1 day.', text)
-        # days
-        FakeExcuse.daysold = 4.9
-        e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
-        _, args, _ = sendmail.mock_calls[-1]
-        text = args[2]
-        self.assertEquals(sendmail.call_count, 2)
-        self.assertIn(' 4 days.', text)
-        # day, exactly 1
-        FakeExcuse.daysold = 1
-        e.apply_policy_impl(None, None, 'chromium-browser', None, FakeSourceData, FakeExcuse)
-        _, args, _ = sendmail.mock_calls[-1]
-        text = args[2]
-        self.assertEquals(sendmail.call_count, 3)
-        self.assertIn(' 1 day.', text)
+        called = []
+        e.cache = {}
+        for hours in range(0, 5000):
+            previous = sendmail.call_count
+            age = hours / 24
+            FakeExcuse.daysold = age
+            e.apply_policy_impl(None, None, 'unity8', None, FakeSourceData, FakeExcuse)
+            if sendmail.call_count > previous:
+                e.initialise(None)  # Refill e.cache from disk
+                called.append(age)
+        # Emails were sent when daysold reached these values:
+        self.assertSequenceEqual(called, [
+            3.0, 6.0, 12.0, 24.0, 48.0, 78.0, 108.0, 138.0, 168.0, 198.0
+        ])
 
 
 if __name__ == '__main__':
