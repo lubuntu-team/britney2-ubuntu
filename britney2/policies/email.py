@@ -92,6 +92,7 @@ class EmailPolicy(BasePolicy, Rest):
         # self.cache contains self.emails_by_pkg from previous run
         self.cache = {}
         self.dry_run = dry_run
+        self.email_host = getattr(self.options, 'email_host', 'localhost')
 
     def initialise(self, britney):
         """Load cached source ppa data"""
@@ -192,7 +193,7 @@ class EmailPolicy(BasePolicy, Rest):
                 try:
                     self.log("%s/%s stuck for %d days, emailing %s" %
                               (source_name, version, age, recipients))
-                    server = smtplib.SMTP('localhost')
+                    server = smtplib.SMTP(self.email_host)
                     server.sendmail('noreply@canonical.com', emails, msg)
                     server.quit()
                     sent_age = age
