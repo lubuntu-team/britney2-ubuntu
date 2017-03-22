@@ -376,6 +376,24 @@ class ET(TestBase):
 
         self.do_test([pkg], ['foo@bar.com'])
 
+    def test_email_not_sent_rejected_temporarily(self):
+        '''Test that an email is not sent if the package is REJECTED_TEMPORARILY'''
+        urgency_file = os.path.join(self.data.path,
+                                    'data',
+                                    'series',
+                                    'Urgency')
+        with open(urgency_file, 'w') as f:
+            # we specified in setUp() that emergency has a 10 day delay, and
+            # age rejections are REJECTED_TEMPORARILY
+            f.write('libc6 2 emergency')
+
+        pkg = ('libc6', {'Version': '2',
+                         'Depends': 'notavailable (>= 2)'},
+               6,  # daysold
+               ['foo@bar.com'])
+
+        self.do_test([pkg], [])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -17,6 +17,8 @@
 from collections import defaultdict
 import re
 
+from britney2.policies.policy import PolicyVerdict
+
 
 class Excuse(object):
     """Excuse class
@@ -67,6 +69,7 @@ class Excuse(object):
         self.missing_builds_ood_arch = set()
         self.old_binaries = defaultdict(set)
         self.policy_info = {}
+        self.current_policy_verdict = PolicyVerdict.PASS
 
     def sortkey(self):
         if self.daysold == None:

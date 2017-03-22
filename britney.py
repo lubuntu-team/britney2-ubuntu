@@ -1579,13 +1579,12 @@ class Britney(object):
         # the check fails and we set is_valid to False to block the update; consider
         # the age-days hint, if specified for the package
         policy_info = excuse.policy_info
-        policy_verdict = PolicyVerdict.PASS
         for policy in self.policies:
             if suite in policy.applicable_suites:
                 v = policy.apply_policy(policy_info, suite, src, source_t, source_u, excuse)
-                if v > policy_verdict:
-                    policy_verdict = v
-                    if policy_verdict in [PolicyVerdict.REJECTED_PERMANENTLY, PolicyVerdict.REJECTED_TEMPORARILY]:
+                if v > excuse.current_policy_verdict:
+                    excuse.current_policy_verdict = v
+                    if excuse.current_policy_verdict in [PolicyVerdict.REJECTED_PERMANENTLY, PolicyVerdict.REJECTED_TEMPORARILY]:
                         excuse.is_valid = False
 
         if suite in ('pu', 'tpu') and source_t:

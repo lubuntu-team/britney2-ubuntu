@@ -162,7 +162,13 @@ class EmailPolicy(BasePolicy, Rest):
         version = source_data_srcdist.version
         age = excuse.daysold or 0
         rounded_age = int(age)
-        stuck = age >= 3 and 'block' not in excuse.reason
+        # an item is stuck if it's
+        # - old enough
+        # - not blocked
+        # - not temporarily rejected (e.g. by the autopkgtest policy when tests
+        #   are still running)
+        stuck = age >= 3 and 'block' not in excuse.reason and \
+            excuse.current_policy_verdict != PolicyVerdict.REJECTED_TEMPORARILY
 
         cached = self.cache.get(source_name, {}).get(version)
         try:
