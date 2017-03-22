@@ -162,7 +162,8 @@ class EmailPolicy(BasePolicy, Rest):
         version = source_data_srcdist.version
         age = excuse.daysold or 0
         rounded_age = int(age)
-        stuck = age >= 3
+        stuck = age >= 3 and 'block' not in excuse.reason
+
         cached = self.cache.get(source_name, {}).get(version)
         try:
             emails, sent_age = cached

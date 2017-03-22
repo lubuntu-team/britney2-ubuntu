@@ -346,6 +346,36 @@ class ET(TestBase):
 
         self.do_test([pkg], ["foo@bar.com"])
 
+    def test_email_not_sent_block_all_source(self):
+        '''Test that an email is not sent if the package is blocked by a
+           block-all source hint'''
+        self.create_hint('freeze', 'block-all source')
+        pkg = ('libc6', {'Version': '2'},
+               6,  # daysold
+               ['foo@bar.com'])
+
+        self.do_test([pkg], [])
+
+    def test_email_not_sent_blocked(self):
+        '''Test that an email is not sent if the package is blocked by a block hint'''
+        self.create_hint('freeze', 'block libc6')
+        pkg = ('libc6', {'Version': '2'},
+               6,  # daysold
+               ['foo@bar.com'])
+
+        self.do_test([pkg], [])
+
+    def test_email_sent_unblocked(self):
+        '''Test that an email is sent if the package is unblocked'''
+        self.create_hint('freeze', 'block libc6')
+        self.create_hint('laney', 'unblock libc6/2')
+        pkg = ('libc6', {'Version': '2',
+                         'Depends': 'notavailable (>= 2)'},
+               6,  # daysold
+               ['foo@bar.com'])
+
+        self.do_test([pkg], ['foo@bar.com'])
+
 
 if __name__ == '__main__':
     unittest.main()
