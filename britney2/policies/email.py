@@ -28,13 +28,13 @@ BOTS = {
 MESSAGE = """From: Ubuntu Release Team <noreply@canonical.com>
 To: {recipients}
 X-Proposed-Migration: notice
-Subject: [proposed-migration] {source_name} {version} stuck in {series}-proposed for {rounded_age} days.
+Subject: [proposed-migration] {source_name} {version} stuck in {series}-proposed for {rounded_age} day{plural}.
 
 Hi,
 
 {source_name} {version} needs attention.
 
-It has been stuck in {series}-proposed for {rounded_age} days.
+It has been stuck in {series}-proposed for {rounded_age} day{plural}.
 
 You either sponsored or uploaded this package, please investigate why it hasn't been approved for migration.
 
@@ -158,22 +158,24 @@ class EmailPolicy(BasePolicy, Rest):
 
     def apply_policy_impl(self, email_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
         """Send email if package is rejected."""
+        max_age = 5 if excuse.is_valid else 1
         series = self.options.series
         version = source_data_srcdist.version
         age = excuse.daysold or 0
         rounded_age = int(age)
+        plural = '' if rounded_age == 1 else 's'
         # an item is stuck if it's
         # - old enough
         # - not blocked
         # - not temporarily rejected (e.g. by the autopkgtest policy when tests
         #   are still running)
-        stuck = age >= 3 and 'block' not in excuse.reason and \
+        stuck = age >= max_age and 'block' not in excuse.reason and \
             excuse.current_policy_verdict != PolicyVerdict.REJECTED_TEMPORARILY
 
         cached = self.cache.get(source_name, {}).get(version)
         try:
             emails, sent_age = cached
-            sent = (age - sent_age) < min(MAX_FREQUENCY, age / 2.0)
+            sent = (age - sent_age) < min(MAX_FREQUENCY, (age / 2.0) + 0.5)
         except TypeError:
             # This exception happens when source_name, version never seen before
             emails = []

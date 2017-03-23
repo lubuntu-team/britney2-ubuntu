@@ -225,8 +225,9 @@ class T(unittest.TestCase):
 
     @patch('britney2.policies.email.EmailPolicy.lp_get_emails')
     @patch('britney2.policies.email.smtplib', autospec=True)
-    def test_smtp_repetition(self, smtp, lp):
+    def smtp_repetition(self, smtp, lp, valid=False, expected=None):
         """Resend mails periodically, with decreasing frequency."""
+        FakeExcuse.is_valid = valid
         lp.return_value = ['email@address.com']
         sendmail = smtp.SMTP().sendmail
         e = EmailPolicy(FakeOptions, None)
@@ -240,9 +241,19 @@ class T(unittest.TestCase):
             if sendmail.call_count > previous:
                 e.initialise(None)  # Refill e.cache from disk
                 called.append(age)
+                name, args, kwargs = sendmail.mock_calls[-1]
+                text = args[2]
+                self.assertNotIn(' 1 days.', text)
+        self.assertSequenceEqual(called, expected)
+
+    def test_smtp_repetition(self):
+        """Confirm that emails are sent at appropriate intervals."""
         # Emails were sent when daysold reached these values:
-        self.assertSequenceEqual(called, [
-            3.0, 6.0, 12.0, 24.0, 48.0, 78.0, 108.0, 138.0, 168.0, 198.0
+        self.smtp_repetition(valid=False, expected=[
+            1.0, 3.0, 7.0, 15.0, 31.0, 61.0, 91.0, 121.0, 151.0, 181.0
+        ])
+        self.smtp_repetition(valid=True, expected=[
+            5.0, 11.0, 23.0, 47.0, 77.0, 107.0, 137.0, 167.0, 197.0
         ])
 
 
