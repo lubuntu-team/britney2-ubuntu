@@ -13,12 +13,9 @@ from britney2.policies.policy import BasePolicy, PolicyVerdict
 
 LAUNCHPAD_URL = 'https://api.launchpad.net/1.0/'
 PRIMARY = LAUNCHPAD_URL + 'ubuntu/+archive/primary'
-IGNORE = [
-    None,
-    '',
-    'IndexError',
-    LAUNCHPAD_URL + 'ubuntu/+archive/primary',
-    LAUNCHPAD_URL + 'debian/+archive/primary',
+INCLUDE = [
+    '~bileto-ppa-service/',
+    '~ci-train-ppa-service/',
 ]
 
 
@@ -85,9 +82,9 @@ class SourcePPAPolicy(BasePolicy, Rest):
         accept = excuse.is_valid
         britney_excuses = self.britney.excuses
         version = source_data_srcdist.version
-        sourceppa = self.lp_get_source_ppa(source_name, version)
+        sourceppa = self.lp_get_source_ppa(source_name, version) or ''
         self.source_ppas_by_pkg[source_name][version] = sourceppa
-        if sourceppa in IGNORE:
+        if not [team for team in INCLUDE if team in sourceppa]:
             return PolicyVerdict.PASS
 
         shortppa = sourceppa.replace(LAUNCHPAD_URL, '')
@@ -107,9 +104,8 @@ class SourcePPAPolicy(BasePolicy, Rest):
                     friend_exc.is_valid = False
                     friend_exc.addreason('source-ppa')
                     friend_exc.policy_info['source-ppa'] = sourceppa_info
-                    self.log("Blocking %s because %s from %s" % (friend, source_name, shortppa))
-                    friend_exc.addhtml("Blocking because %s from the same PPA %s is invalid" %
-                                       (friend, shortppa))
+                    self.log("Grouping %s with PPA %s" % (friend, shortppa))
+                    friend_exc.addhtml("Grouped with PPA %s" % shortppa)
             return PolicyVerdict.REJECTED_PERMANENTLY
         return PolicyVerdict.PASS
 

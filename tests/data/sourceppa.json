@@ -1,7 +1,7 @@
 {
-    "pal": {"2.0": "https://api.launchpad.net/1.0/team/ubuntu/ppa"},
-    "buddy": {"2.0": "https://api.launchpad.net/1.0/team/ubuntu/ppa"},
-    "friend": {"2.0": "https://api.launchpad.net/1.0/team/ubuntu/ppa"},
+    "pal": {"2.0": "https://api.launchpad.net/1.0/~ci-train-ppa-service/+archive/NNNN"},
+    "buddy": {"2.0": "https://api.launchpad.net/1.0/~ci-train-ppa-service/+archive/NNNN"},
+    "friend": {"2.0": "https://api.launchpad.net/1.0/~ci-train-ppa-service/+archive/NNNN"},
     "noppa": {"2.0": ""},
     "unused": {"2.0": ""}
 }

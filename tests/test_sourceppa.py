@@ -150,7 +150,7 @@ class T(unittest.TestCase):
 
     def test_approve_ppa(self):
         """Approve packages by their PPA."""
-        shortppa = 'team/ubuntu/ppa'
+        shortppa = '~ci-train-ppa-service/+archive/NNNN'
         pol = SourcePPAPolicy(FakeOptions, {})
         pol.filename = CACHE_FILE
         pol.initialise(FakeBritney())
@@ -159,9 +159,23 @@ class T(unittest.TestCase):
             self.assertEqual(pol.apply_policy_impl(output, None, pkg, None, FakeData, FakeExcuse), PolicyVerdict.PASS)
         self.assertEqual(output, dict(pal=shortppa, buddy=shortppa, friend=shortppa))
 
+    def test_ignore_ppa(self):
+        """Ignore packages in non-bileto PPAs."""
+        shortppa = '~kernel-or-whatever/+archive/ppa'
+        pol = SourcePPAPolicy(FakeOptions, {})
+        pol.filename = CACHE_FILE
+        pol.initialise(FakeBritney())
+        for name, versions in pol.cache.items():
+            for version in versions:
+                pol.cache[name][version] = shortppa
+        output = {}
+        for pkg in ('pal', 'buddy', 'friend', 'noppa'):
+            self.assertEqual(pol.apply_policy_impl(output, None, pkg, None, FakeData, FakeExcuse), PolicyVerdict.PASS)
+        self.assertEqual(output, dict())
+
     def test_reject_ppa(self):
         """Reject packages by their PPA."""
-        shortppa = 'team/ubuntu/ppa'
+        shortppa = '~ci-train-ppa-service/+archive/NNNN'
         pol = SourcePPAPolicy(FakeOptions, {})
         pol.filename = CACHE_FILE
         brit = FakeBritney()
