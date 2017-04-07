@@ -179,10 +179,6 @@ class EmailPolicy(BasePolicy, Rest):
             emails = []
             sent_age = 0
             sent = False
-            # TODO: This transitional code can only trigger on the first
-            # production run, feel free to drop this shortly after merging.
-            if cached is True:
-                sent = True
         if self.dry_run:
             self.log("[email dry run] Considering: %s/%s: %s" %
                      (source_name, version, "stuck" if stuck else "not stuck"))
