@@ -225,8 +225,10 @@ class T(unittest.TestCase):
 
     @patch('britney2.policies.email.EmailPolicy.lp_get_emails')
     @patch('britney2.policies.email.smtplib', autospec=True)
-    def smtp_repetition(self, smtp, lp, valid=False, expected=None):
+    def smtp_repetition(self, smtp, lp, valid, expected):
         """Resend mails periodically, with decreasing frequency."""
+        if not isinstance(valid,list):
+            valid = [valid]*len(expected)
         FakeExcuse.is_valid = valid
         lp.return_value = ['email@address.com']
         sendmail = smtp.SMTP().sendmail
@@ -237,6 +239,11 @@ class T(unittest.TestCase):
             previous = sendmail.call_count
             age = hours / 24
             FakeExcuse.daysold = age
+            try:
+                FakeExcuse.is_valid = valid[len(called)]
+            except IndexError:
+                # we've already gotten all the mails we expect
+                pass
             e.apply_policy_impl(None, None, 'unity8', None, FakeSourceData, FakeExcuse)
             if sendmail.call_count > previous:
                 e.initialise(None)  # Refill e.cache from disk
