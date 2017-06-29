@@ -250,10 +250,10 @@ class T(unittest.TestCase):
         """Confirm that emails are sent at appropriate intervals."""
         # Emails were sent when daysold reached these values:
         self.smtp_repetition(valid=False, expected=[
-            1.0, 3.0, 7.0, 15.0, 31.0, 61.0, 91.0, 121.0, 151.0, 181.0
+            1, 3, 7, 15, 31, 61, 91, 121, 151, 181
         ])
         self.smtp_repetition(valid=True, expected=[
-            5.0, 11.0, 23.0, 47.0, 77.0, 107.0, 137.0, 167.0, 197.0
+            5, 7, 11, 19, 35, 65, 95, 125, 155, 185
         ])
 
 
