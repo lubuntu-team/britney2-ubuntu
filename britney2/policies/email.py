@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import math
 import socket
 import smtplib
 
@@ -12,7 +13,7 @@ from britney2.policies.policy import BasePolicy, PolicyVerdict
 
 
 # Recurring emails should never be more than this many days apart
-MAX_FREQUENCY = 30
+MAX_INTERVAL = 30
 
 API_PREFIX = 'https://api.launchpad.net/1.0/'
 USER = API_PREFIX + '~'
@@ -28,13 +29,13 @@ BOTS = {
 MESSAGE = """From: Ubuntu Release Team <noreply@canonical.com>
 To: {recipients}
 X-Proposed-Migration: notice
-Subject: [proposed-migration] {source_name} {version} stuck in {series}-proposed for {rounded_age} day{plural}.
+Subject: [proposed-migration] {source_name} {version} stuck in {series}-proposed for {age} day{plural}.
 
 Hi,
 
 {source_name} {version} needs attention.
 
-It has been stuck in {series}-proposed for {rounded_age} day{plural}.
+It has been stuck in {series}-proposed for {age} day{plural}.
 
 You either sponsored or uploaded this package, please investigate why it hasn't been approved for migration.
 
@@ -161,9 +162,8 @@ class EmailPolicy(BasePolicy, Rest):
         max_age = 5 if excuse.is_valid else 1
         series = self.options.series
         version = source_data_srcdist.version
-        age = excuse.daysold or 0
-        rounded_age = int(age)
-        plural = '' if rounded_age == 1 else 's'
+        age = int(excuse.daysold) or 0
+        plural = '' if age == 1 else 's'
         # an item is stuck if it's
         # - old enough
         # - not blocked
@@ -171,25 +171,35 @@ class EmailPolicy(BasePolicy, Rest):
         #   are still running)
         stuck = age >= max_age and 'block' not in excuse.reason and \
             excuse.current_policy_verdict != PolicyVerdict.REJECTED_TEMPORARILY
-
-        cached = self.cache.get(source_name, {}).get(version)
-        try:
-            emails, sent_age = cached
-            sent = (age - sent_age) < min(MAX_FREQUENCY, (age / 2.0) + 0.5)
-        except TypeError:
-            # This exception happens when source_name, version never seen before
-            emails = []
-            sent_age = 0
-            sent = False
         if self.dry_run:
             self.log("[email dry run] Considering: %s/%s: %s" %
                      (source_name, version, "stuck" if stuck else "not stuck"))
-            if stuck:
-                self.log("[email dry run] Age %d >= threshold %d: would email: %s" %
-                         (age, max_age, self.lp_get_emails(source_name, version)))
+        if not stuck:
+            return PolicyVerdict.PASS
+
+        cached = self.cache.get(source_name, {}).get(version)
+        try:
+            emails, last_sent = cached
+            # migration of older data
+            last_sent = int(last_sent)
+            if last_sent < max_age:
+                next_due = max_age
+            else:
+                next_due = int(math.pow(2,
+                                        int(math.log(last_sent - max_age + 1,
+                                                     2))+1) + last_sent)
+                if next_due - last_sent > MAX_INTERVAL:
+                    next_due = last_sent + MAX_INTERVAL
+        except TypeError:
+            # This exception happens when source_name, version never seen before
+            emails = []
+            next_due = max_age
+        if self.dry_run:
+            self.log("[email dry run] Age %d >= threshold %d: would email: %s" %
+                     (age, max_age, self.lp_get_emails(source_name, version)))
             # don't update the cache file in dry run mode; we'll see all output each time
             return PolicyVerdict.PASS
-        if stuck and not sent:
+        if age >= next_due:
             if not emails:
                 emails = self.lp_get_emails(source_name, version)
             if emails:
@@ -201,12 +211,12 @@ class EmailPolicy(BasePolicy, Rest):
                     server = smtplib.SMTP(self.email_host)
                     server.sendmail('noreply@canonical.com', emails, msg)
                     server.quit()
-                    sent_age = age
+                    # record the age at which the mail should have been sent
+                    self.emails_by_pkg[source_name][version] = (emails, next_due)
+                    self.save_state()
                 except socket.error as err:
                     self.log("Failed to send mail! Is SMTP server running?")
                     self.log(err)
-        self.emails_by_pkg[source_name][version] = (emails, sent_age)
-        self.save_state()
         return PolicyVerdict.PASS
 
     def save_state(self, britney=None):
