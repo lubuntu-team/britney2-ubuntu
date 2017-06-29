@@ -262,6 +262,12 @@ class T(unittest.TestCase):
         self.smtp_repetition(valid=True, expected=[
             5, 7, 11, 19, 35, 65, 95, 125, 155, 185
         ])
+        self.smtp_repetition(valid=[False, False, True], expected=[
+            1, 3, 5, 7, 11, 19, 35, 65, 95, 125, 155, 185
+        ])
+        self.smtp_repetition(valid=[False, False, True, False, True], expected=[
+            1, 3, 5, 13, 29, 59, 89, 119, 149, 179
+        ])
 
 
 class ET(TestBase):
