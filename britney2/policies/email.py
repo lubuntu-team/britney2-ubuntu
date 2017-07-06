@@ -103,6 +103,14 @@ class EmailPolicy(BasePolicy, Rest):
             with open(self.filename, encoding='utf-8') as data:
                 self.cache = json.load(data)
             self.log("Loaded cached email data from %s" % self.filename)
+        tmp = self.filename + '.new'
+        if os.path.exists(tmp):
+            # if we find a record on disk of emails sent from an incomplete
+            # britney run, merge them in now.
+            with open(tmp, encoding='utf-8') as data:
+                self.cache.update(json.load(data))
+            self._save_progress(self.cache)
+            self.save_state()
 
     def _scrape_gpg_emails(self, person):
         """Find email addresses from one person's GPG keys."""
@@ -193,6 +201,7 @@ class EmailPolicy(BasePolicy, Rest):
         except TypeError:
             # This exception happens when source_name, version never seen before
             emails = []
+            last_sent = 0
             next_due = max_age
         if self.dry_run:
             self.log("[email dry run] Age %d >= threshold %d: would email: %s" %
@@ -212,18 +221,28 @@ class EmailPolicy(BasePolicy, Rest):
                     server.sendmail('noreply@canonical.com', emails, msg)
                     server.quit()
                     # record the age at which the mail should have been sent
-                    self.emails_by_pkg[source_name][version] = (emails, next_due)
-                    self.save_state()
+                    last_sent = next_due
                 except socket.error as err:
                     self.log("Failed to send mail! Is SMTP server running?")
                     self.log(err)
+        self.emails_by_pkg[source_name][version] = (emails, last_sent)
+        self._save_progress(self.emails_by_pkg)
         return PolicyVerdict.PASS
 
-    def save_state(self, britney=None):
-        """Write source ppa data to disk"""
-        tmp = self.filename + '.tmp'
+    def _save_progress(self, my_data):
+        """Checkpoint after each sent mail"""
+        tmp = self.filename + '.new'
         with open(tmp, 'w', encoding='utf-8') as data:
-            json.dump(self.emails_by_pkg, data)
-        os.rename(tmp, self.filename)
+            json.dump(my_data, data)
+        return tmp
+
+    def save_state(self, britney=None):
+        """Save email notification status of all pending packages"""
+        if not self.dry_run:
+            try:
+                os.rename(self.filename + '.new', self.filename)
+            # if we haven't written any cache, don't clobber the old one
+            except FileNotFoundError:
+                pass
         if britney:
             self.log("Wrote email data to %s" % self.filename)
