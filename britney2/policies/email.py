@@ -190,25 +190,25 @@ class EmailPolicy(BasePolicy, Rest):
             emails, last_sent = cached
             # migration of older data
             last_sent = int(last_sent)
-            if last_sent < max_age:
-                next_due = max_age
-            else:
-                next_due = int(math.pow(2,
-                                        int(math.log(last_sent - max_age + 1,
-                                                     2))+1) + last_sent)
-                if next_due - last_sent > MAX_INTERVAL:
-                    next_due = last_sent + MAX_INTERVAL
+            last_due = int(math.pow(2, int(math.log(age + 2 - max_age, 2)))
+                           + max_age - 2)
+            if last_due - max_age >= MAX_INTERVAL:
+                last_due = int((age - max_age - MAX_INTERVAL) / MAX_INTERVAL) \
+                           * MAX_INTERVAL + max_age + MAX_INTERVAL
+            if last_due < max_age:
+                last_due = max_age
+
         except TypeError:
             # This exception happens when source_name, version never seen before
             emails = []
             last_sent = 0
-            next_due = max_age
+            last_due = max_age
         if self.dry_run:
             self.log("[email dry run] Age %d >= threshold %d: would email: %s" %
                      (age, max_age, self.lp_get_emails(source_name, version)))
             # don't update the cache file in dry run mode; we'll see all output each time
             return PolicyVerdict.PASS
-        if age >= next_due:
+        if last_sent < last_due:
             if not emails:
                 emails = self.lp_get_emails(source_name, version)
             if emails:
@@ -221,7 +221,7 @@ class EmailPolicy(BasePolicy, Rest):
                     server.sendmail('noreply@canonical.com', emails, msg)
                     server.quit()
                     # record the age at which the mail should have been sent
-                    last_sent = next_due
+                    last_sent = last_due
                 except socket.error as err:
                     self.log("Failed to send mail! Is SMTP server running?")
                     self.log(err)
