@@ -190,11 +190,20 @@ class EmailPolicy(BasePolicy, Rest):
             emails, last_sent = cached
             # migration of older data
             last_sent = int(last_sent)
+            # Find out whether we are due to send another email by calculating
+            # the most recent age at which we should have sent one.  A
+            # sequence of doubling intervals (0 + 1 = 1, 1 + 2 = 3, 3 + 4 = 7)
+            # is equivalent to 2^n-1, or 2^n + (max_age - 1) - 1.
+            # 2^(floor(log2(age))) straightforwardly calculates the most
+            # recent age at which we wanted to send an email.
             last_due = int(math.pow(2, int(math.log(age + 2 - max_age, 2)))
                            + max_age - 2)
+            # Don't let the interval double without bounds.
             if last_due - max_age >= MAX_INTERVAL:
                 last_due = int((age - max_age - MAX_INTERVAL) / MAX_INTERVAL) \
                            * MAX_INTERVAL + max_age + MAX_INTERVAL
+            # And don't send emails before we've reached the minimum age
+            # threshold.
             if last_due < max_age:
                 last_due = max_age
 
