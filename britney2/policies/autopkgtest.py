@@ -375,8 +375,11 @@ class AutopkgtestPolicy(BasePolicy):
                     except KeyError:
                         continue
                     if 'autopkgtest' in tdep_src_info.testsuite or self.has_autodep8(tdep_src_info, binaries_info):
-                        tests.append((tdep_src, tdep_src_info[VERSION]))
-                        reported_pkgs.add(tdep_src)
+                        for pkg_id in tdep_src_info.binaries:
+                            if pkg_id.architecture == arch:
+                                tests.append((tdep_src, tdep_src_info[VERSION]))
+                                reported_pkgs.add(tdep_src)
+                                break
 
         # Hardcode linux-meta →  linux, lxc, glibc, systemd triggers until we get a more flexible
         # implementation: https://bugs.debian.org/779559
