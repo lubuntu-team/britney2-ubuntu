@@ -58,6 +58,8 @@ def parse_args():
                         'Otherwise this has the same behaviour as test-git.')
     parser.add_argument('--all-proposed', action='store_true',
                         help='Disable apt pinning and use all of -proposed')
+    parser.add_argument('--bulk', action='store_true',
+                        help='Mark this as a bulk (low priority) test')
     parser.add_argument('package', nargs='+',
                         help='Source package name(s) whose tests to run.')
     args = parser.parse_args()
@@ -108,6 +110,8 @@ if __name__ == '__main__':
 
     context = ''
     params = {}
+    if args.bulk:
+        context = 'huge-'
     if args.trigger:
         params['triggers'] = args.trigger
     if args.ppa:
