@@ -59,7 +59,7 @@ def parse_args():
     parser.add_argument('--all-proposed', action='store_true',
                         help='Disable apt pinning and use all of -proposed')
     parser.add_argument('--bulk', action='store_true',
-                        help='Mark this as a bulk (low priority) test')
+                        help='Mark this as a bulk (low priority) test where possible')
     parser.add_argument('package', nargs='+',
                         help='Source package name(s) whose tests to run.')
     args = parser.parse_args()
