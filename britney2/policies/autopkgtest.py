@@ -143,6 +143,13 @@ class AutopkgtestPolicy(BasePolicy):
         else:
             raise RuntimeError('Unknown ADT_AMQP schema %s' % amqp_url.split(':', 1)[0])
 
+    def save_pending_json(self):
+        # update the pending tests on-disk cache
+        self.log('Updating pending requested tests in %s' % self.pending_tests_file)
+        with open(self.pending_tests_file + '.new', 'w') as f:
+            json.dump(self.pending_tests, f, indent=2)
+        os.rename(self.pending_tests_file + '.new', self.pending_tests_file)
+
     def save_state(self, britney):
         super().save_state(britney)
 
@@ -153,11 +160,7 @@ class AutopkgtestPolicy(BasePolicy):
                 json.dump(self.test_results, f, indent=2)
             os.rename(self.results_cache_file + '.new', self.results_cache_file)
 
-        # update the pending tests on-disk cache
-        self.log('Updating pending requested tests in %s' % self.pending_tests_file)
-        with open(self.pending_tests_file + '.new', 'w') as f:
-            json.dump(self.pending_tests, f, indent=2)
-        os.rename(self.pending_tests_file + '.new', self.pending_tests_file)
+        self.save_pending_json()
 
     def apply_policy_impl(self, tests_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
         # skip/delay autopkgtests until package is built
@@ -652,6 +655,8 @@ class AutopkgtestPolicy(BasePolicy):
             arch_list.append(arch)
             arch_list.sort()
             self.send_test_request(src, arch, trigger, huge=huge)
+            # save pending.json right away, so that we don't re-request if britney crashes
+            self.save_pending_json()
 
     def check_ever_passed(self, src, arch):
         '''Check if tests for src ever passed on arch'''
