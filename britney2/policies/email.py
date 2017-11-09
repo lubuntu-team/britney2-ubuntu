@@ -165,10 +165,10 @@ class EmailPolicy(BasePolicy, Rest):
             'version': version,
         })
         try:
-            source = data['entries'][0]
+            source = next(reversed(data['entries']))
         # IndexError means no packages in -proposed matched this name/version,
         # which is expected to happen when bileto runs britney.
-        except IndexError:
+        except StopIteration:
             self.log('Email getPublishedSources IndexError (%s %s)' % (pkg, version))
             return []
         return self.scrape_gpg_emails(person_chooser(source))

@@ -101,6 +101,19 @@ AUTO_SYNC = dict(
     sponsor_link='https://api.launchpad.net/1.0/~ubuntu-archive-robot',
 )
 
+PROMOTED_AUTO_SYNC = [
+    dict(
+        creator_link=None,
+        package_creator_link='https://api.launchpad.net/1.0/~pkg-ruby-extras-maintainers',
+        package_signer_link=None,
+        sponsor_link=None,),
+    dict(
+        creator_link='https://api.launchpad.net/1.0/~katie',
+        package_creator_link='https://api.launchpad.net/1.0/~pkg-ruby-extras-maintainers',
+        package_signer_link=None,
+        sponsor_link='https://api.launchpad.net/1.0/~ubuntu-archive-robot',)
+]
+
 
 # address lists
 UBUNTU = ['personal@gmail.com', 'ubuntu@ubuntu.com', 'work@canonical.com']
@@ -163,6 +176,27 @@ class T(unittest.TestCase):
         self.assertEqual(address_chooser(UBUNTU), 'ubuntu@ubuntu.com')
         self.assertEqual(address_chooser(CANONICAL), 'work@canonical.com')
         self.assertEqual(address_chooser(COMMUNITY), 'personal@gmail.com')
+
+    @patch('britney2.policies.email.EmailPolicy.query_rest_api')
+    @patch('britney2.policies.email.EmailPolicy.query_lp_rest_api')
+    def test_email_promoted_package(self, lp, rest):
+        """When a package has been promoted in proposed, we find the older SPPH
+           and use its details - in the case of an autosync to not email."""
+        lp.return_value = dict(entries=PROMOTED_AUTO_SYNC)
+        e = EmailPolicy(FakeOptions, None)
+        self.assertEqual(e.lp_get_emails('openstack-doct-tools', '1.5.0-0ubuntu1'), [])
+        self.assertSequenceEqual(lp.mock_calls, [
+            call('testbuntu/+archive/primary', {
+                'distro_series': '/testbuntu/zazzy',
+                'exact_match': 'true',
+                'order_by_date': 'true',
+                'pocket': 'Proposed',
+                'source_name': 'openstack-doct-tools',
+                'version': '1.5.0-0ubuntu1',
+                'ws.op': 'getPublishedSources',
+            })
+        ])
+        self.assertSequenceEqual(rest.mock_calls, [])
 
     @patch('britney2.policies.email.EmailPolicy.query_rest_api')
     @patch('britney2.policies.email.EmailPolicy.query_lp_rest_api')
