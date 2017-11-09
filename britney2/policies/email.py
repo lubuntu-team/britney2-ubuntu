@@ -5,6 +5,7 @@ import math
 import socket
 import smtplib
 
+from urllib.error import HTTPError
 from urllib.parse import unquote
 from collections import defaultdict
 
@@ -117,33 +118,40 @@ class EmailPolicy(BasePolicy, Rest):
         if person in self.addresses:
             return self.addresses[person]
         addresses = []
-        gpg = self.query_lp_rest_api(person + '/gpg_keys', {})
-        for key in gpg['entries']:
-            details = self.query_rest_api('http://keyserver.ubuntu.com/pks/lookup', {
-                'op': 'index',
-                'search': '0x' + key['fingerprint'],
-                'exact': 'on',
-                'options': 'mr',
-            })
-            for line in details.splitlines():
-                parts = line.split(':')
-                if parts[0] == 'info':
-                    if int(parts[1]) != 1 or int(parts[2]) > 1:
-                        break
-                if parts[0] == 'uid':
-                    flags = parts[4]
-                    if 'e' in flags or 'r' in flags:
-                        continue
-                    uid = unquote(parts[1])
-                    match = re.match(r'^.*<(.+@.+)>$', uid)
-                    if match:
-                        addresses.append(match.group(1))
-        address = self.addresses[person] = address_chooser(addresses)
-        return address
+        try:
+            gpg = self.query_lp_rest_api(person + '/gpg_keys', {})
+            for key in gpg['entries']:
+                details = self.query_rest_api('http://keyserver.ubuntu.com/pks/lookup', {
+                    'op': 'index',
+                    'search': '0x' + key['fingerprint'],
+                    'exact': 'on',
+                    'options': 'mr',
+                })
+                for line in details.splitlines():
+                    parts = line.split(':')
+                    if parts[0] == 'info':
+                        if int(parts[1]) != 1 or int(parts[2]) > 1:
+                            break
+                    if parts[0] == 'uid':
+                        flags = parts[4]
+                        if 'e' in flags or 'r' in flags:
+                            continue
+                        uid = unquote(parts[1])
+                        match = re.match(r'^.*<(.+@.+)>$', uid)
+                        if match:
+                            addresses.append(match.group(1))
+            address = self.addresses[person] = address_chooser(addresses)
+            return address
+        except HTTPError as e:
+            if e.code != 410:  # suspended user
+                raise
+            self.log('Ignoring person %s as suspended in Launchpad' % person)
+            return None
 
     def scrape_gpg_emails(self, people):
         """Find email addresses from GPG keys."""
-        return [self._scrape_gpg_emails(person) for person in (people or [])]
+        emails = [self._scrape_gpg_emails(person) for person in (people or [])]
+        return [email for email in emails if email is not None]
 
     def lp_get_emails(self, pkg, version):
         """Ask LP who uploaded this package."""
@@ -225,7 +233,7 @@ class EmailPolicy(BasePolicy, Rest):
                 msg = MESSAGE.format(**locals())
                 try:
                     self.log("%s/%s stuck for %d days, emailing %s" %
-                              (source_name, version, age, recipients))
+                             (source_name, version, age, recipients))
                     server = smtplib.SMTP(self.email_host)
                     server.sendmail('noreply@canonical.com', emails, msg)
                     server.quit()
