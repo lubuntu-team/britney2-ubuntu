@@ -368,6 +368,8 @@ def write_excuses(excuselist, dest_file, output_format="yaml"):
         ensuredir(os.path.dirname(dest_file))
         with open(dest_file, 'w', encoding='utf-8') as f:
             edatalist = [e.excusedata() for e in excuselist]
+            for e in edatalist:
+                del(e['excuses'])
             excusesdata = {
                 'sources': edatalist,
                 'generated-date': datetime.utcnow(),
