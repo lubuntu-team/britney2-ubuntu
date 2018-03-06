@@ -60,6 +60,7 @@ class Excuse(object):
         self.deps = {}
         self.sane_deps = []
         self.break_deps = []
+        self.unsat_deps = {}
         self.bugs = []
         self.newbugs = set()
         self.oldbugs = set()
@@ -122,6 +123,13 @@ class Excuse(object):
         """Add a break dependency"""
         if (name, arch) not in self.break_deps:
             self.break_deps.append( (name, arch) )
+
+    def add_unsatisfiable_dep(self, signature, arch):
+        """Add an unsatisfiable dependency"""
+        if arch not in self.unsat_deps:
+            self.unsat_deps[arch] = []
+        if signature not in self.unsat_deps[arch]:
+            self.unsat_deps[arch].append(signature)
 
     def invalidate_dep(self, name):
         """Invalidate dependency"""
@@ -246,7 +254,7 @@ class Excuse(object):
                 'on-architectures': sorted(self.missing_builds),
                 'on-unimportant-architectures': sorted(self.missing_builds_ood_arch),
             }
-        if self.deps or self.invalid_deps or self.break_deps:
+        if self.deps or self.invalid_deps or self.break_deps or self.unsat_deps:
             excusedata['dependencies'] = dep_data = {}
             migrate_after = sorted(x for x in self.deps if x not in self.invalid_deps)
             break_deps = [x for x, _ in self.break_deps if x not in self.deps]
@@ -257,6 +265,12 @@ class Excuse(object):
                 dep_data['migrate-after'] = migrate_after
             if break_deps:
                 dep_data['unimportant-dependencies'] = sorted(break_deps)
+            if self.unsat_deps:
+                dep_data['unsatisfiable-dependencies'] = unsatisfiable = {}
+                for arch in self.unsat_deps:
+                    unsatisfiable[arch] = []
+                    for sig in self.unsat_deps[arch]:
+                        unsatisfiable[arch].append("%s" % sig)
         if self.needs_approval:
             status = 'not-approved'
             for h in self.hints:
