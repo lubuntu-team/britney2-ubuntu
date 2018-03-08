@@ -263,7 +263,7 @@ class Excuse(object):
             if break_deps:
                 dep_data['unimportant-dependencies'] = sorted(break_deps)
             if self.unsat_deps:
-                dep_data['unsatisfiable-dependencies'] = self.unsat_deps
+                dep_data['unsatisfiable-dependencies'] = {x: sorted(self.unsat_deps[x]) for x in self.unsat_deps}
         if self.needs_approval:
             status = 'not-approved'
             for h in self.hints:
