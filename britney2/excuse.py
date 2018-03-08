@@ -60,7 +60,7 @@ class Excuse(object):
         self.deps = {}
         self.sane_deps = []
         self.break_deps = []
-        self.unsat_deps = {}
+        self.unsat_deps = defaultdict(set)
         self.bugs = []
         self.newbugs = set()
         self.oldbugs = set()
@@ -126,10 +126,7 @@ class Excuse(object):
 
     def add_unsatisfiable_dep(self, signature, arch):
         """Add an unsatisfiable dependency"""
-        if arch not in self.unsat_deps:
-            self.unsat_deps[arch] = []
-        if signature not in self.unsat_deps[arch]:
-            self.unsat_deps[arch].append(signature)
+        self.unsat_deps[arch].add(signature)
 
     def invalidate_dep(self, name):
         """Invalidate dependency"""
@@ -266,11 +263,7 @@ class Excuse(object):
             if break_deps:
                 dep_data['unimportant-dependencies'] = sorted(break_deps)
             if self.unsat_deps:
-                dep_data['unsatisfiable-dependencies'] = unsatisfiable = {}
-                for arch in self.unsat_deps:
-                    unsatisfiable[arch] = []
-                    for sig in self.unsat_deps[arch]:
-                        unsatisfiable[arch].append("%s" % sig)
+                dep_data['unsatisfiable-dependencies'] = self.unsat_deps
         if self.needs_approval:
             status = 'not-approved'
             for h in self.hints:

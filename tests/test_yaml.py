@@ -81,7 +81,6 @@ class YamlTest(TestBase):
                 do = time.time() - (60 * 60 * 24 * daysold)
                 f.write('%s %s %d' % (pkg, fields['Version'], do))
 
-
         # Set up sourceppa cache for testing
         sourceppa_path = os.path.join(self.data.dirs[True], 'SourcePPA')
         with open(sourceppa_path, 'w', encoding='utf-8') as sourceppa:
@@ -124,7 +123,7 @@ class YamlTest(TestBase):
                6)
 
         excuse = self.do_test([pkg])
-        self.assertIn('datefudge', excuse['libc6']['dependencies']['unsatisfiable-dependencies']['amd64'][0])
+        self.assertIn('datefudge', list(excuse['libc6']['dependencies']['unsatisfiable-dependencies']['amd64'])[0])
 
 
 
