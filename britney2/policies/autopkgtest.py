@@ -103,6 +103,7 @@ class AutopkgtestPolicy(BasePolicy):
 
     def register_hints(self, hint_parser):
         hint_parser.register_hint_type('force-badtest', britney2.hints.split_into_one_hint_per_package)
+        hint_parser.register_hint_type('force-badtest-until', britney2.hints.split_into_one_hint_per_package)
         hint_parser.register_hint_type('force-skiptest', britney2.hints.split_into_one_hint_per_package)
 
     def initialise(self, britney):
@@ -681,12 +682,22 @@ class AutopkgtestPolicy(BasePolicy):
             # save pending.json right away, so that we don't re-request if britney crashes
             self.save_pending_json()
 
-    def check_ever_passed(self, src, arch):
-        '''Check if tests for src ever passed on arch'''
+    def check_ever_passed_before(self, src, max_ver, arch, min_ver=None):
+        '''Check if tests for src ever passed on arch for specified range
+
+        If min_ver is specified, it checks that all versions in
+        [min_ver, max_ver) have passed; otherwise it checks that
+        [min_ver, inf) have passed.'''
 
         # FIXME: add caching
         for srcmap in self.test_results.values():
             try:
+                too_high = apt_pkg.version_compare(srcmap[src][arch][1], max_ver) > 0
+                too_low = apt_pkg.version_compare(srcmap[src][arch][1], min_ver) <= 0 if min_ver else False
+
+                if too_high or too_low:
+                    continue
+
                 if srcmap[src][arch][0]:
                     return True
             except KeyError:
@@ -700,7 +711,8 @@ class AutopkgtestPolicy(BasePolicy):
         EXCUSES_LABELS. log_url is None if the test is still running.
         '''
         # determine current test result status
-        ever_passed = self.check_ever_passed(src, arch)
+        until = self.find_max_force_badtest_until(src, ver, arch)
+        ever_passed = self.check_ever_passed_before(src, ver, arch, until)
         url = None
         try:
             r = self.test_results[trigger][src][arch]
@@ -746,6 +758,22 @@ class AutopkgtestPolicy(BasePolicy):
                                    (src, ver, arch, trigger))
 
         return (result, ver, url)
+
+    def find_max_force_badtest_until(self, src, ver, arch):
+        '''Find the maximum force-badtest-until hint before/including ver'''
+        hints = self.britney.hints.search('force-badtest-until', package=src)
+        found_ver = None
+
+        if hints:
+            for hint in hints:
+                for mi in hint.packages:
+                    if (mi.architecture in ['source', arch] and
+                            mi.version != 'all' and
+                            apt_pkg.version_compare(mi.version, ver) <= 0 and
+                            (found_ver is None or apt_pkg.version_compare(found_ver, mi.version) < 0)):
+                        found_ver = mi.version
+
+        return found_ver
 
     def has_force_badtest(self, src, ver, arch):
         '''Check if src/ver/arch has a force-badtest hint'''

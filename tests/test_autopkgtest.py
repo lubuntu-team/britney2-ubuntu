@@ -1607,6 +1607,137 @@ class T(TestBase):
             {'green': [('old-version', '1'), ('new-version', '2')]
             })
 
+    def test_hint_force_badtest_until_goodbad_alwaysfail(self):
+        '''force-badtest-until hint marks as alwaysfail'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        self.create_hint('pitti', 'force-badtest-until lightgreen/1')
+
+        self.do_test(
+            [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (True, {
+                              'lightgreen/2': {'amd64': 'ALWAYSFAIL'},
+                             }),
+            },
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]
+            })
+
+    def test_hint_force_badtest_until_goodbad_alwaysfail_arch(self):
+        '''force-badtest-until hint marks as alwaysfail per arch'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
+            'series/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        self.create_hint('pitti', 'force-badtest-until lightgreen/1/amd64')
+
+        self.do_test(
+            [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (False, {
+                             'lightgreen/2': {'amd64': 'ALWAYSFAIL', 'i386': 'REGRESSION'},
+                             }),
+            },
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]
+            })
+
+    def test_hint_force_badtest_until_bad_good_pass(self):
+        '''force-badtest-until hint followed by pass is pass'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('lightgreen/1')),
+            'series/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        self.create_hint('pitti', 'force-badtest-until lightgreen/1')
+
+        self.do_test(
+            [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (True, {
+                              'lightgreen/2': {'amd64': 'PASS'},
+                             }),
+            },
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]
+            })
+
+    def test_hint_force_badtest_until_bad_good_bad_regression(self):
+        '''force-badtest-until hint followed by good, bad is regression'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('lightgreen/1')),
+            'series/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+        self.create_hint('pitti', 'force-badtest-until lightgreen/1')
+
+        self.do_test(
+            [('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (False, {
+                              'lightgreen/3': {'amd64': 'REGRESSION'},
+                             }),
+            },
+            {'lightgreen': [('old-version', '1'), ('new-version', '3')]
+            })
+
+    def test_hint_force_badtest_until_multiple_hints(self):
+        '''force-badtest-until multiple hints check ranges'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lightgreen/20150100_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {
+                              'lightgreen/1': {'amd64': 'REGRESSION'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+
+        self.create_hint('pitti', 'force-badtest-until lightgreen/1')
+        self.do_test(
+            [],
+            {'green': (True, {
+                              'lightgreen/1': {'amd64': 'ALWAYSFAIL'},
+                             }),
+             'lightgreen': (False, {
+                              'lightgreen/3': {'amd64': 'REGRESSION'},
+                             }),
+
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+        self.create_hint('pitti', 'force-badtest-until lightgreen/3')
+        self.do_test(
+            [],
+            {'green': (True, {
+                              'lightgreen/1': {'amd64': 'ALWAYSFAIL'},
+                             }),
+             'lightgreen': (True, {
+                              'lightgreen/3': {'amd64': 'ALWAYSFAIL'},
+                             }),
+
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+
+
     def test_hint_force_badtest_multi_version(self):
         '''force-badtest hint'''
 
