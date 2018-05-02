@@ -130,6 +130,10 @@ if __name__ == '__main__':
         context = 'upstream-'
     if args.all_proposed:
         params['all-proposed'] = True
+    try:
+        params['requester'] = os.environ['SUDO_USER']
+    except KeyError:
+        pass
     params = '\n' + json.dumps(params)
 
     creds = urllib.parse.urlsplit(config.adt_amqp, allow_fragments=False)
