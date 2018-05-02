@@ -103,7 +103,7 @@ class AutopkgtestPolicy(BasePolicy):
 
     def register_hints(self, hint_parser):
         hint_parser.register_hint_type('force-badtest', britney2.hints.split_into_one_hint_per_package)
-        hint_parser.register_hint_type('force-badtest-until', britney2.hints.split_into_one_hint_per_package)
+        hint_parser.register_hint_type('force-reset-test', britney2.hints.split_into_one_hint_per_package)
         hint_parser.register_hint_type('force-skiptest', britney2.hints.split_into_one_hint_per_package)
 
     def initialise(self, britney):
@@ -711,7 +711,7 @@ class AutopkgtestPolicy(BasePolicy):
         EXCUSES_LABELS. log_url is None if the test is still running.
         '''
         # determine current test result status
-        until = self.find_max_force_badtest_until(src, ver, arch)
+        until = self.find_max_force_reset_test(src, ver, arch)
         ever_passed = self.check_ever_passed_before(src, ver, arch, until)
         url = None
         try:
@@ -759,9 +759,9 @@ class AutopkgtestPolicy(BasePolicy):
 
         return (result, ver, url)
 
-    def find_max_force_badtest_until(self, src, ver, arch):
-        '''Find the maximum force-badtest-until hint before/including ver'''
-        hints = self.britney.hints.search('force-badtest-until', package=src)
+    def find_max_force_reset_test(self, src, ver, arch):
+        '''Find the maximum force-reset-test hint before/including ver'''
+        hints = self.britney.hints.search('force-reset-test', package=src)
         found_ver = None
 
         if hints:

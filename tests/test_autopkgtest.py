@@ -1607,15 +1607,15 @@ class T(TestBase):
             {'green': [('old-version', '1'), ('new-version', '2')]
             })
 
-    def test_hint_force_badtest_until_goodbad_alwaysfail(self):
-        '''force-badtest-until hint marks as alwaysfail'''
+    def test_hint_force_reset_test_goodbad_alwaysfail(self):
+        '''force-reset-test hint marks as alwaysfail'''
 
         self.swift.set_results({'autopkgtest-series': {
             'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'series/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
         }})
 
-        self.create_hint('pitti', 'force-badtest-until lightgreen/1')
+        self.create_hint('pitti', 'force-reset-test lightgreen/1')
 
         self.do_test(
             [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
@@ -1626,8 +1626,8 @@ class T(TestBase):
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]
             })
 
-    def test_hint_force_badtest_until_goodbad_alwaysfail_arch(self):
-        '''force-badtest-until hint marks as alwaysfail per arch'''
+    def test_hint_force_reset_test_goodbad_alwaysfail_arch(self):
+        '''force-reset-test hint marks as alwaysfail per arch'''
 
         self.swift.set_results({'autopkgtest-series': {
             'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
@@ -1636,7 +1636,7 @@ class T(TestBase):
             'series/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
         }})
 
-        self.create_hint('pitti', 'force-badtest-until lightgreen/1/amd64')
+        self.create_hint('pitti', 'force-reset-test lightgreen/1/amd64')
 
         self.do_test(
             [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
@@ -1647,15 +1647,15 @@ class T(TestBase):
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]
             })
 
-    def test_hint_force_badtest_until_bad_good_pass(self):
-        '''force-badtest-until hint followed by pass is pass'''
+    def test_hint_force_reset_test_bad_good_pass(self):
+        '''force-reset-test hint followed by pass is pass'''
 
         self.swift.set_results({'autopkgtest-series': {
             'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('lightgreen/1')),
             'series/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
         }})
 
-        self.create_hint('pitti', 'force-badtest-until lightgreen/1')
+        self.create_hint('pitti', 'force-reset-test lightgreen/1')
 
         self.do_test(
             [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
@@ -1666,8 +1666,8 @@ class T(TestBase):
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]
             })
 
-    def test_hint_force_badtest_until_bad_good_bad_regression(self):
-        '''force-badtest-until hint followed by good, bad is regression'''
+    def test_hint_force_reset_test_bad_good_bad_regression(self):
+        '''force-reset-test hint followed by good, bad is regression'''
 
         self.swift.set_results({'autopkgtest-series': {
             'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('lightgreen/1')),
@@ -1675,7 +1675,7 @@ class T(TestBase):
             'series/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 3', tr('lightgreen/3')),
         }})
 
-        self.create_hint('pitti', 'force-badtest-until lightgreen/1')
+        self.create_hint('pitti', 'force-reset-test lightgreen/1')
 
         self.do_test(
             [('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
@@ -1686,8 +1686,8 @@ class T(TestBase):
             {'lightgreen': [('old-version', '1'), ('new-version', '3')]
             })
 
-    def test_hint_force_badtest_until_multiple_hints(self):
-        '''force-badtest-until multiple hints check ranges'''
+    def test_hint_force_reset_test_multiple_hints(self):
+        '''force-reset-test multiple hints check ranges'''
 
         self.swift.set_results({'autopkgtest-series': {
             'series/amd64/l/lightgreen/20150100_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
@@ -1708,7 +1708,7 @@ class T(TestBase):
              'lightgreen': [('old-version', '1'), ('new-version', '3')],
             })
 
-        self.create_hint('pitti', 'force-badtest-until lightgreen/1')
+        self.create_hint('pitti', 'force-reset-test lightgreen/1')
         self.do_test(
             [],
             {'green': (True, {
@@ -1722,7 +1722,7 @@ class T(TestBase):
             {'green': [('old-version', '1'), ('new-version', '2')],
              'lightgreen': [('old-version', '1'), ('new-version', '3')],
             })
-        self.create_hint('pitti', 'force-badtest-until lightgreen/3')
+        self.create_hint('pitti', 'force-reset-test lightgreen/3')
         self.do_test(
             [],
             {'green': (True, {
