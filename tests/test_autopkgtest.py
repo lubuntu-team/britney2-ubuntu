@@ -1686,6 +1686,26 @@ class T(TestBase):
             {'lightgreen': [('old-version', '1'), ('new-version', '3')]
             })
 
+    def test_hint_force_reset_test_bad_good_bad_regression_different_trigger(self):
+        '''force-reset-test hint followed by good, bad is regression (not self-triggered)'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 0.1', tr('lightgreen/0.1')),
+            'series/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'series/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 1', tr('green/2')),
+        }})
+
+        self.create_hint('pitti', 'force-reset-test lightgreen/0.1')
+
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {
+                              'lightgreen/1': {'amd64': 'REGRESSION'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]
+            })
+
     def test_hint_force_reset_test_multiple_hints(self):
         '''force-reset-test multiple hints check ranges'''
 
