@@ -711,7 +711,7 @@ class AutopkgtestPolicy(BasePolicy):
         EXCUSES_LABELS. log_url is None if the test is still running.
         '''
         # determine current test result status
-        until = self.find_max_force_reset_test(src, ver, arch)
+        until = self.find_max_lower_force_reset_test(src, ver, arch)
         ever_passed = self.check_ever_passed_before(src, ver, arch, until)
         url = None
         try:
@@ -732,6 +732,10 @@ class AutopkgtestPolicy(BasePolicy):
                 if ever_passed:
                     if self.has_force_badtest(src, ver, arch):
                         result = 'IGNORE-FAIL'
+                    elif self.has_higher_force_reset_test(src, ver, arch):
+                        # we've got a force-reset-test foo/N, N >= ver hint;
+                        # this is ALWAYSFAIL
+                        result = 'ALWAYSFAIL'
                     else:
                         result = 'REGRESSION'
                 else:
@@ -759,7 +763,7 @@ class AutopkgtestPolicy(BasePolicy):
 
         return (result, ver, url)
 
-    def find_max_force_reset_test(self, src, ver, arch):
+    def find_max_lower_force_reset_test(self, src, ver, arch):
         '''Find the maximum force-reset-test hint before/including ver'''
         hints = self.britney.hints.search('force-reset-test', package=src)
         found_ver = None
@@ -774,6 +778,20 @@ class AutopkgtestPolicy(BasePolicy):
                         found_ver = mi.version
 
         return found_ver
+
+    def has_higher_force_reset_test(self, src, ver, arch):
+        '''Find if there is a minimum force-reset-test hint after/including ver'''
+        hints = self.britney.hints.search('force-reset-test', package=src)
+
+        if hints:
+            for hint in hints:
+                for mi in hint.packages:
+                    if (mi.architecture in ['source', arch] and
+                            mi.version != 'all' and
+                            apt_pkg.version_compare(mi.version, ver) >= 0):
+                        return True
+
+        return False
 
     def has_force_badtest(self, src, ver, arch):
         '''Check if src/ver/arch has a force-badtest hint'''

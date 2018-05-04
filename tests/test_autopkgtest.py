@@ -1738,6 +1738,60 @@ class T(TestBase):
             })
 
 
+    def test_hint_force_reset_test_earlier_hints(self):
+        '''force-reset-test for a later version applies backwards'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lightgreen/20150100_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'series/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+
+        self.create_hint('pitti', 'force-reset-test lightgreen/3')
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {
+                              'lightgreen/1': {'amd64': 'ALWAYSFAIL'},
+                             }),
+             'lightgreen': (True, {
+                              'lightgreen/3': {'amd64': 'ALWAYSFAIL'},
+                             }),
+
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+
+    def test_hint_force_reset_test_earlier_hints_pass(self):
+        '''force-reset-test for a later version which is PASS is still PASS'''
+
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/l/lightgreen/20150100_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'series/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
+            'series/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'series/amd64/l/lightgreen/20150103_100101@': (0, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+
+        self.create_hint('pitti', 'force-reset-test lightgreen/3')
+        self.do_test(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {
+                              'lightgreen/1': {'amd64': 'PASS'},
+                             }),
+             'lightgreen': (True, {
+                              'lightgreen/3': {'amd64': 'PASS'},
+                             }),
+
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+
     def test_hint_force_badtest_multi_version(self):
         '''force-badtest hint'''
 
