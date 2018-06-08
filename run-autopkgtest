@@ -145,5 +145,6 @@ if __name__ == '__main__':
             for arch in args.architecture:
                 queue = 'debci-%s%s-%s' % (context, args.series, arch)
                 for pkg in args.package:
-                    ch.basic_publish(amqp.Message(pkg + params),
+                    ch.basic_publish(amqp.Message(pkg + params,
+                                                  delivery_mode=2),  # persistent
                                      routing_key=queue)
