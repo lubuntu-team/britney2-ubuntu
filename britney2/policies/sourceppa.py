@@ -93,6 +93,7 @@ class SourcePPAPolicy(BasePolicy, Rest):
         for friend in self.pkgs_by_source_ppa[sourceppa]:
             sourceppa_info[friend] = shortppa
             if not britney_excuses[friend].is_valid:
+                self.log ("sourceppa: processing %s, found invalid grouped package %s, will invalidate set"  % (source_name, britney_excuses[friend].name))
                 accept = False
         self.pkgs_by_source_ppa[sourceppa].add(source_name)
 
@@ -104,7 +105,7 @@ class SourcePPAPolicy(BasePolicy, Rest):
                     friend_exc.is_valid = False
                     friend_exc.addreason('source-ppa')
                     friend_exc.policy_info['source-ppa'] = sourceppa_info
-                    self.log("Grouping %s with PPA %s" % (friend, shortppa))
+                    self.log ("sourceppa: ... invalidating %s due to the above (ppa: %s)" % (friend_exc.name, shortppa))
                     friend_exc.addhtml("Grouped with PPA %s" % shortppa)
             return PolicyVerdict.REJECTED_PERMANENTLY
         return PolicyVerdict.PASS

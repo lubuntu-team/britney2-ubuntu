@@ -32,6 +32,7 @@ class FakeExcuse:
     ver = ('1.0', '2.0')
     is_valid = True
     policy_info = {}
+    name = "foo"
 
     def addreason(self, reason):
         """Ignore reasons."""
