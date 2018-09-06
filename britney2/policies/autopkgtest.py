@@ -311,6 +311,10 @@ class AutopkgtestPolicy(BasePolicy):
         # gcc during the test, and libreoffice as an example for a libgcc user.
         if src.startswith('gcc-'):
             if re.match('gcc-\d$', src):
+                # add gcc's own tests, if it has any
+                srcinfo = self.britney.sources['unstable'][src]
+                if 'autopkgtest' in srcinfo.testsuite:
+                    tests.append((src, ver))
                 for test in ['binutils', 'fglrx-installer', 'libreoffice', 'linux']:
                     try:
                         tests.append((test, self.britney.sources['testing'][test][VERSION]))
