@@ -199,7 +199,6 @@ class T(TestBase):
             {'lightgreen': (False, {})},
             {'lightgreen': [('old-version', '1'), ('new-version', '1.1~beta'),
                             ('reason', 'depends'),
-                            ('excuses', 'lightgreen/amd64 unsatisfiable Depends: libgreen1 (>= 2)')
                            ]
             })[1]
         # autopkgtest should not be triggered for uninstallable pkg
@@ -830,8 +829,7 @@ class T(TestBase):
             },
             {'green': [('old-version', '1'), ('new-version', '2')],
              'brokengreen': [('old-version', '-'), ('new-version', '1'),
-                             ('reason', 'depends'),
-                             ('excuses', 'brokengreen/amd64 unsatisfiable Depends: nonexisting')],
+                             ('reason', 'depends')],
             })[1]
         # autopkgtest should not be triggered for uninstallable pkg
         self.assertEqual(exc['brokengreen']['policy_info']['autopkgtest'], {})
@@ -1476,7 +1474,6 @@ class T(TestBase):
             {'lightgreen': (False, {})},
             {'lightgreen': [('old-version', '1'), ('new-version', '0.9~beta'),
                             ('reason', 'newerintesting'),
-                            ('excuses', 'ALERT: lightgreen is newer in testing (1 0.9~beta)')
                            ]
             })[1]
 
@@ -1719,8 +1716,7 @@ class T(TestBase):
                              }),
             },
             {'green': [('old-version', '1'), ('new-version', '2'),
-                       ('forced-reason', 'skiptest'),
-                       ('excuses', 'Should wait for tests relating to green 2, but forced by pitti')]
+                       ('forced-reason', 'skiptest')]
             })
 
     def test_hint_force_skiptest_different_version(self):
@@ -1782,7 +1778,6 @@ class T(TestBase):
             [('darkgreen', {'Version': '2'}, 'autopkgtest')],
             {'darkgreen': (False, {'darkgreen': {'i386': 'RUNNING-ALWAYSFAIL', 'amd64': 'RUNNING-ALWAYSFAIL'}})},
             {'darkgreen': [('reason', 'block'),
-                           ('excuses', 'Not touching package as requested in <a href="https://launchpad.net/bugs/12345">bug 12345</a> on Thu Aug 18 07:23:20 2016'),
                            ('is-candidate', False),
                            ]
             }
@@ -1970,7 +1965,6 @@ class T(TestBase):
              'linux-firmware': (True, {'linux-firmware/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
             },
             {'linux': [('reason', 'depends'),
-                       ('excuses', 'Invalidated by dependency'),
                        ('dependencies', {'blocked-by': ['linux-meta']})]
             }
         )
