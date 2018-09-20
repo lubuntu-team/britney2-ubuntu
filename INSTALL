@@ -4,8 +4,8 @@ INSTALL for britney v2.0
 Requirements:
 -------------
 
-  * Python 3                    aptitude install python3
-  * Python APT/DPKG bindings    aptitude install python3-apt
-  * Python YAML library         aptitude install python3-yaml
-  * Python nose tests (testing) aptitude install python3-nose
+  * Python 3                    apt install python3
+  * Python APT/DPKG bindings    apt install python3-apt
+  * Python YAML library         apt install python3-yaml
+  * Python nose tests (testing) apt install python3-nose
   * Python AMQP bindings        apt install python3-amqplib
