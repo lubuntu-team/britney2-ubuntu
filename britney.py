@@ -205,6 +205,7 @@ from britney2.policies.policy import AgePolicy, RCBugPolicy, PiupartsPolicy, Pol
 from britney2.policies.policy import LPBlockBugPolicy
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.policies.sourceppa import SourcePPAPolicy
+from britney2.policies.sruadtregression import SRUADTRegressionPolicy
 from britney2.policies.email import EmailPolicy
 from britney2.utils import (old_libraries_format, undo_changes,
                             compute_reverse_tree, possibly_compressed,
@@ -543,6 +544,11 @@ class Britney(object):
             self.policies.append(EmailPolicy(self.options,
                                              self.suite_info,
                                              dry_run=add_email_policy == 'dry-run'))
+        add_sruregression_policy = getattr(self.options, 'sruregression_enable', 'no')
+        if add_sruregression_policy in ('yes', 'dry-run'):
+            self.policies.append(SRUADTRegressionPolicy(self.options,
+                                                        self.suite_info,
+                                                        dry_run=add_sruregression_policy == 'dry-run'))
 
         for policy in self.policies:
             policy.register_hints(self._hint_parser)
