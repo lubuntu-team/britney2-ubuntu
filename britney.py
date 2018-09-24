@@ -220,6 +220,7 @@ from britney2.policies.policy import (AgePolicy,
                                       )
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.policies.sourceppa import SourcePPAPolicy
+from britney2.policies.sruadtregression import SRUADTRegressionPolicy
 from britney2.policies.email import EmailPolicy
 from britney2.policies.lpexcusebugs import LPExcuseBugsPolicy
 from britney2.utils import (log_and_format_old_libraries,
@@ -531,6 +532,11 @@ class Britney(object):
         self._policy_engine.add_policy(LPBlockBugPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(LPExcuseBugsPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(SourcePPAPolicy(self.options, self.suite_info))
+        add_sruregression_policy = getattr(self.options, 'sruregressionemail_enable', 'no')
+        if add_sruregression_policy in ('yes', 'dry-run'):
+            self._policy_engine.add_policy(SRUADTRegressionPolicy(self.options,
+                                                                  self.suite_info,
+                                                                  dry_run=add_sruregression_policy == 'dry-run'))
         add_email_policy = getattr(self.options, 'email_enable', 'no')
         if add_email_policy in ('yes', 'dry-run'):
             self._policy_engine.add_policy(EmailPolicy(self.options,
