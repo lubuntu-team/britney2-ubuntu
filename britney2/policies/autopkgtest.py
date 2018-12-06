@@ -952,7 +952,9 @@ class AutopkgtestPolicy(BasePolicy):
         params = json.dumps(params)
 
         if self.amqp_channel:
-            self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params), routing_key=qname)
+            self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params,
+                                                         delivery_mode=2),  # persistent
+                                            routing_key=qname)
         else:
             assert self.amqp_file
             with open(self.amqp_file, 'a') as f:
