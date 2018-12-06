@@ -296,7 +296,7 @@ class AutopkgtestPolicy(BasePolicy):
         # hack for vivid's gccgo-5 and xenial's gccgo-6; these build libgcc1
         # too, so test some Go and some libgcc1 consumers
         if src in ['gccgo-5', 'gccgo-6']:
-            for test in ['juju-mongodb', 'mongodb', 'gzip']:
+            for test in ['juju-mongodb', 'mongodb', 'doxygen']:
                 try:
                     tests.append((test, self.britney.sources['testing'][test][VERSION]))
                 except KeyError:
@@ -308,14 +308,14 @@ class AutopkgtestPolicy(BasePolicy):
         # gcc already tests itself during build, and it is being used from
         # -proposed, so holding it back on a dozen unrelated test failures
         # serves no purpose. Just check some key packages which actually use
-        # gcc during the test, and gzip as an example for a libgcc user.
+        # gcc during the test, and doxygen as an example for a libgcc user.
         if src.startswith('gcc-'):
             if re.match('gcc-\d$', src):
                 # add gcc's own tests, if it has any
                 srcinfo = self.britney.sources['unstable'][src]
                 if 'autopkgtest' in srcinfo.testsuite:
                     tests.append((src, ver))
-                for test in ['binutils', 'fglrx-installer', 'gzip', 'linux']:
+                for test in ['binutils', 'fglrx-installer', 'doxygen', 'linux']:
                     try:
                         tests.append((test, self.britney.sources['testing'][test][VERSION]))
                     except KeyError:
