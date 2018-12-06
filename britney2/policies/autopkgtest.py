@@ -215,18 +215,18 @@ class AutopkgtestPolicy(BasePolicy):
                         'r': self.options.series, 'a': arch}
                 if status == 'REGRESSION':
                     retry_url = 'https://autopkgtest.ubuntu.com/request.cgi?' + \
-                            urllib.parse.urlencode([('release', self.options.series),
-                                                    ('arch', arch),
-                                                    ('package', testsrc),
-                                                    ('trigger', trigger)] +
-                                                   [('ppa', p) for p in self.options.adt_ppas])
+                        urllib.parse.urlencode([('release', self.options.series),
+                                               ('arch', arch),
+                                               ('package', testsrc),
+                                               ('trigger', trigger)] +
+                                               [('ppa', p) for p in self.options.adt_ppas])
                 if testver:
                     testname = '%s/%s' % (testsrc, testver)
                 else:
                     testname = testsrc
 
                 tests_info.setdefault(testname, {})[arch] = \
-                        [status, log_url, history_url, artifact_url, retry_url]
+                    [status, log_url, history_url, artifact_url, retry_url]
 
                 # render HTML snippet for testsrc entry for current arch
                 if history_url:
@@ -242,7 +242,6 @@ class AutopkgtestPolicy(BasePolicy):
 
             # render HTML line for testsrc entry
             excuse.addhtml("autopkgtest for %s: %s" % (testname, ', '.join(html_archmsg)))
-
 
         if verdict != PolicyVerdict.PASS:
             # check for force-skiptest hint
@@ -310,7 +309,7 @@ class AutopkgtestPolicy(BasePolicy):
         # serves no purpose. Just check some key packages which actually use
         # gcc during the test, and doxygen as an example for a libgcc user.
         if src.startswith('gcc-'):
-            if re.match('gcc-\d$', src):
+            if re.match(r'gcc-\d$', src):
                 # add gcc's own tests, if it has any
                 srcinfo = self.britney.sources['unstable'][src]
                 if 'autopkgtest' in srcinfo.testsuite:
@@ -417,13 +416,13 @@ class AutopkgtestPolicy(BasePolicy):
         assert self.pending_tests is None, 'already initialized'
         if not os.path.exists(self.pending_tests_file):
             self.log('No %s, starting with no pending tests' %
-                             self.pending_tests_file)
+                     self.pending_tests_file)
             self.pending_tests = {}
             return
         with open(self.pending_tests_file) as f:
             self.pending_tests = json.load(f)
         self.log('Read pending requested tests from %s: %s' %
-                         (self.pending_tests_file, self.pending_tests))
+                 (self.pending_tests_file, self.pending_tests))
 
     def latest_run_for_package(self, src, arch):
         '''Return latest run ID for src on arch'''
@@ -639,7 +638,7 @@ class AutopkgtestPolicy(BasePolicy):
                 self.log('%s/%s triggered by %s already passed' % (src, arch, trigger))
                 return
             self.log('Checking for new results for failed %s/%s for trigger %s' %
-                             (src, arch, trigger))
+                     (src, arch, trigger))
             raise KeyError  # fall through
         except KeyError:
             self.fetch_swift_results(self.options.adt_swift_url, src, arch)
@@ -654,10 +653,10 @@ class AutopkgtestPolicy(BasePolicy):
         arch_list = self.pending_tests.setdefault(trigger, {}).setdefault(src, [])
         if arch in arch_list:
             self.log('Test %s/%s for %s is already pending, not queueing' %
-                             (src, arch, trigger))
+                     (src, arch, trigger))
         else:
             self.log('Requesting %s autopkgtest on %s to verify %s' %
-                             (src, arch, trigger))
+                     (src, arch, trigger))
             arch_list.append(arch)
             arch_list.sort()
             self.send_test_request(src, arch, trigger, huge=huge)
@@ -742,4 +741,3 @@ class AutopkgtestPolicy(BasePolicy):
                     return True
 
         return False
-
