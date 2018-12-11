@@ -554,7 +554,7 @@ class AutopkgtestPolicy(BasePolicy):
 
         stamp = os.path.basename(os.path.dirname(url))
         # allow some skipped tests, but nothing else
-        passed = exitcode in [0, 2]
+        passed = exitcode in [0, 2, 8]
 
         self.log('Fetched test result for %s/%s/%s %s (triggers: %s): %s' % (
             src, ver, arch, stamp, result_triggers, passed and 'pass' or 'fail'))
