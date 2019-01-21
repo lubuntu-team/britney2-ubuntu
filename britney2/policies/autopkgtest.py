@@ -528,7 +528,14 @@ class AutopkgtestPolicy(BasePolicy):
         try:
             with tarfile.open(None, 'r', tar_bytes) as tar:
                 exitcode = int(tar.extractfile('exitcode').read().strip())
-                srcver = tar.extractfile('testpkg-version').read().decode().strip()
+                try:
+                    srcver = tar.extractfile('testpkg-version').read().decode().strip()
+                except KeyError as e:
+                    if exitcode in (4, 12, 20):
+                        # repair it
+                        srcver = "%s unknown" % (src)
+                    else:
+                        raise
                 (ressrc, ver) = srcver.split()
                 testinfo = json.loads(tar.extractfile('testinfo.json').read().decode())
         except (KeyError, ValueError, tarfile.TarError) as e:
