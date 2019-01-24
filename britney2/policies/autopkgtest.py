@@ -744,7 +744,9 @@ class AutopkgtestPolicy(BasePolicy):
             self.log('Checking hints for %s/%s/%s: %s' % (src, ver, arch, [str(h) for h in hints]))
             for hint in hints:
                 if [mi for mi in hint.packages if mi.architecture in ['source', arch] and
-                        (mi.version == 'all' or apt_pkg.version_compare(ver, mi.version) <= 0)]:
+                        (mi.version == 'all' or
+                         (mi.version == 'blacklisted' and ver == 'blacklisted') or
+                         (mi.version != 'blacklisted' and apt_pkg.version_compare(ver, mi.version) <= 0))]:
                     return True
 
         return False
