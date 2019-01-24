@@ -1182,8 +1182,8 @@ class AT(TestAutopkgtestBase):
                                      'brown': ['i386']}})
 
     def test_blacklisted_force(self):
-        '''blacklisted packages return exit code 99 and version all, check they
-        are handled correctly'''
+        '''blacklisted packages return exit code 99 and version blacklisted,
+        check they can be forced over'''
 
         self.data.add_default_packages(black=False)
 
@@ -1201,6 +1201,28 @@ class AT(TestAutopkgtestBase):
             {'black': (True, {'black/blacklisted': {'amd64': 'IGNORE-FAIL',
                                                     'i386': 'IGNORE-FAIL'}})
              },
+            {'black': [('old-version', '1'), ('new-version', '2')]})
+
+        self.assertEqual(len(self.amqp_requests), 0)
+
+    def test_blacklisted_force_mismatch(self):
+        '''forcing a blacklisted package doesn't mean you force other versions'''
+
+        self.data.add_default_packages(black=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/b/black/20150101_100000@': (0, 'black 1', tr('black/1')),
+            'testing/i386/b/black/20150101_100001@': (0, 'black 1', tr('black/1')),
+            'testing/amd64/b/black/20150102_100000@': (4, 'black 2', tr('black/2')),
+            'testing/i386/b/black/20150102_100001@': (4, 'black 2', tr('black/2'))
+        }})
+
+        self.create_hint('autopkgtest', 'force-badtest black/amd64/blacklisted')
+
+        self.run_it(
+            [('black', {'Version': '2'}, 'autopkgtest')],
+            {'black': (False, {'black/2': {'amd64': 'REGRESSION'}})
+            },
             {'black': [('old-version', '1'), ('new-version', '2')]})
 
         self.assertEqual(len(self.amqp_requests), 0)
