@@ -35,10 +35,6 @@ from itertools import filterfalse
 import yaml
 
 from britney2 import SourcePackage
-from britney2.consts import (VERSION, PROVIDES, DEPENDS, CONFLICTS,
-                             ARCHITECTURE, SECTION,
-                             SOURCE, MAINTAINER, MULTIARCH,
-                             ESSENTIAL)
 from britney2.policies import PolicyVerdict
 
 
