@@ -359,7 +359,7 @@ class AgePolicy(BasePolicy):
         if min_days < bounty_min_age:
             min_days = bounty_min_age
             excuse.addhtml('Required age is not allowed to drop below %d days' % min_days)
-        age_info['age-requirement'] = min_days
+
         age_info['current-age'] = days_old
 
         for age_days_hint in self.hints.search('age-days', package=source_name,
@@ -369,8 +369,11 @@ class AgePolicy(BasePolicy):
                 'new-requirement': new_req,
                 'changed-by': age_days_hint.user
             }
+            if 'original-age-requirement' not in age_info:
+                age_info['original-age-requirement'] = min_days
             min_days = new_req
 
+        age_info['age-requirement'] = min_days
         res = PolicyVerdict.PASS
 
         if days_old < min_days:
