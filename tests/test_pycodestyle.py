@@ -15,7 +15,7 @@ EXCEPTIONS_BY_FILE = {
     'britney2/excusefinder.py': 1,
     'britney2/hints.py': 8,
     'britney2/installability/tester.py': 4,
-    'britney2/policies/__init__.py': 2,
+    'britney2/policies/__init__.py': 1,
     'britney2/policies/policy.py': 19,
     'britney2/policies/autopkgtest.py': 0,
     'tests/mock_swift.py': 2,

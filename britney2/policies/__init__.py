@@ -1,5 +1,8 @@
 from enum import Enum, unique
+from functools import total_ordering
 
+
+@total_ordering
 @unique
 class PolicyVerdict(Enum):
     """"""
@@ -56,6 +59,9 @@ class PolicyVerdict(Enum):
             PolicyVerdict.REJECTED_CANNOT_DETERMINE_IF_PERMANENT, # Assuming the worst
             PolicyVerdict.REJECTED_PERMANENTLY,
         }
+
+    def __lt__(self, other):
+        return True if self.value < other.value else False
 
 
 @unique

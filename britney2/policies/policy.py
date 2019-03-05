@@ -48,18 +48,18 @@ class PolicyEngine(object):
                 if policy.src_policy.run_arch:
                     for arch in policy.options.architectures:
                         v = policy.apply_srcarch_policy_impl(pinfo, item, arch, source_t, source_u, excuse)
-                        if v.value > policy_verdict.value:
+                        if v > policy_verdict:
                             policy_verdict = v
                 if policy.src_policy.run_src:
                     v = policy.apply_src_policy_impl(pinfo, item, source_t, source_u, excuse)
-                    if v.value > policy_verdict.value:
+                    if v > policy_verdict:
                         policy_verdict = v
             # The base policy provides this field, so the subclass should leave it blank
             assert 'verdict' not in pinfo
             if policy_verdict != PolicyVerdict.NOT_APPLICABLE:
                 excuse.policy_info[policy.policy_id] = pinfo
                 pinfo['verdict'] = policy_verdict.name
-                if policy_verdict.value > excuse_verdict.value:
+                if policy_verdict > excuse_verdict:
                     excuse_verdict = policy_verdict
         excuse.policy_verdict = excuse_verdict
 
@@ -71,7 +71,7 @@ class PolicyEngine(object):
             pinfo = {}
             if suite_class in policy.applicable_suites:
                 policy_verdict = policy.apply_srcarch_policy_impl(pinfo, item, arch, source_t, source_u, excuse)
-                if policy_verdict.value > excuse_verdict.value:
+                if policy_verdict > excuse_verdict:
                     excuse_verdict = policy_verdict
                 # The base policy provides this field, so the subclass should leave it blank
                 assert 'verdict' not in pinfo
@@ -795,7 +795,7 @@ class BuildDependsPolicy(BasePolicy):
             v = self._check_build_deps(deps, DependencyType.BUILD_DEPENDS, build_deps_info, item,
                                        source_data_tdist, source_data_srcdist, excuse,
                                        get_dependency_solvers=get_dependency_solvers)
-            if verdict.value < v.value:
+            if verdict < v:
                 verdict = v
 
         ideps = source_data_srcdist.build_deps_indep
@@ -803,7 +803,7 @@ class BuildDependsPolicy(BasePolicy):
             v = self._check_build_deps(ideps, DependencyType.BUILD_DEPENDS_INDEP, build_deps_info, item,
                                        source_data_tdist, source_data_srcdist, excuse,
                                        get_dependency_solvers=get_dependency_solvers)
-            if verdict.value < v.value:
+            if verdict < v:
                 verdict = v
 
         return verdict
@@ -840,7 +840,7 @@ class BuildDependsPolicy(BasePolicy):
 
         if arch in results:
             if results[arch] == BuildDepResult.FAILED:
-                if verdict.value < PolicyVerdict.REJECTED_PERMANENTLY.value:
+                if verdict < PolicyVerdict.REJECTED_PERMANENTLY:
                     verdict = PolicyVerdict.REJECTED_PERMANENTLY
 
         return verdict
@@ -1037,7 +1037,7 @@ class BuiltUsingPolicy(BasePolicy):
                     else:
                         excuse.addhtml("%s/%s has unsatisfiable Built-Using on %s %s" % (
                             pkg_name, arch, bu_source, bu_version))
-                        if verdict.value < PolicyVerdict.REJECTED_PERMANENTLY.value:
+                        if verdict < PolicyVerdict.REJECTED_PERMANENTLY:
                             verdict = PolicyVerdict.REJECTED_PERMANENTLY
 
         return verdict
