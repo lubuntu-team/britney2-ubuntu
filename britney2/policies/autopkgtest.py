@@ -210,7 +210,7 @@ class AutopkgtestPolicy(BasePolicy):
                             # let's see if we still need it
                             continue
                         else:
-                            self.logger.info('Results %s %s %s added', src, trigger, status)
+                            self.logger.debug('Results %s %s %s added', src, trigger, status)
                             self.add_trigger_to_results(trigger, src, ver, arch, run_id, seen, Result[status.upper()])
             else:
                 self.logger.info('%s does not exist, no new data will be processed', debci_file)
@@ -343,7 +343,7 @@ class AutopkgtestPolicy(BasePolicy):
             verdict = PolicyVerdict.REJECTED_TEMPORARILY
 
         if verdict == PolicyVerdict.PASS:
-            self.logger.info('Checking autopkgtests for %s', source_name)
+            self.logger.debug('Checking autopkgtests for %s', source_name)
             trigger = source_name + '/' + source_data_srcdist.version
 
             # build a (testsrc, testver) → arch → (status, log_url) map; we trigger/check test
@@ -868,14 +868,14 @@ class AutopkgtestPolicy(BasePolicy):
         try:
             (trigsrc, trigver) = trigger.split('/', 1)
         except ValueError:
-            self.logger.error('Ignoring invalid test trigger %s', trigger)
+            self.logger.info('Ignoring invalid test trigger %s', trigger)
             return
         if trigsrc == src and apt_pkg.version_compare(ver, trigver) < 0:
-            self.logger.error('test trigger %s, but run for older version %s, ignoring', trigger, ver)
+            self.logger.debug('test trigger %s, but run for older version %s, ignoring', trigger, ver)
             return
         if self.options.adt_baseline == 'reference' and \
            not self.test_version_in_any_suite(src, ver):
-            self.logger.error(
+            self.logger.debug(
                 "Ignoring result for source %s and trigger %s as the tested version %s isn't found in any suite",
                 src, trigger, ver)
             return
@@ -953,7 +953,7 @@ class AutopkgtestPolicy(BasePolicy):
                 # We're done if we don't retrigger and we're not using swift
                 return
             elif result_state in {Result.PASS, Result.NEUTRAL}:
-                self.logger.info('%s/%s triggered by %s already known', src, arch, trigger)
+                self.logger.debug('%s/%s triggered by %s already known', src, arch, trigger)
                 return
 
         # Without swift we don't expect new results
@@ -1000,11 +1000,11 @@ class AutopkgtestPolicy(BasePolicy):
         if self.options.adt_baseline == 'reference':
             try:
                 result_reference = self.test_results[REF_TRIG][src][arch]
-                self.logger.info('Found result for src %s in reference: %s',
-                                 src, result_reference[0].name)
+                self.logger.debug('Found result for src %s in reference: %s',
+                                  src, result_reference[0].name)
             except KeyError:
-                self.logger.info('Found NO result for src %s in reference: %s',
-                                 src, result_reference[0].name)
+                self.logger.debug('Found NO result for src %s in reference: %s',
+                                  src, result_reference[0].name)
                 pass
             self.result_in_baseline_cache[src][arch] = deepcopy(result_reference)
             return result_reference
@@ -1023,7 +1023,7 @@ class AutopkgtestPolicy(BasePolicy):
                 pass
 
         self.result_in_baseline_cache[src][arch] = deepcopy(result_ever)
-        self.logger.info('Result for src %s ever: %s', src, result_ever[0].name)
+        self.logger.debug('Result for src %s ever: %s', src, result_ever[0].name)
         return result_ever
 
     def pkg_test_result(self, src, ver, arch, trigger):
