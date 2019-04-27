@@ -9,6 +9,10 @@ TESTING           = /path/to/target/suite
 # TPU               = /path/to/secondary-source/suite
 # PU                = /path/to/another-source/suite
 
+# By default, package removal propagates to the target suite. To disable this,
+# e.g. for partial suites like experimental or spu, uncomment the next line
+# PARTIAL_SOURCE    = true
+
 # Output
 NONINST_STATUS      = /path/to/britneys-output-dir/non-installable-status
 EXCUSES_OUTPUT      = /path/to/britneys-output-dir/excuses.html

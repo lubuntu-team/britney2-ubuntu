@@ -110,6 +110,8 @@ class ExcuseFinder(object):
         In the former case, a new excuse is appended to the object
         attribute excuses.
         """
+        if hasattr(self.options, 'partial_source'):
+            return False
         # if the source package is available in unstable, then do nothing
         source_suite = self.suite_info.primary_source_suite
         pkg = item.package
