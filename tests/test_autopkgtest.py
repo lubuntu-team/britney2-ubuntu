@@ -2445,23 +2445,23 @@ class T(TestBase):
   "until": 12345,
   "results": [
   {"trigger": "green/2", "package": "darkgreen",  "arch": "i386",  "version": "1", "status": "pass",
-   "run_id": "100000", "updated_at": "2018-10-04T11:18:00.000Z"},
+   "run_id": "100000", "suite": "testing", "updated_at": "2018-10-04T11:18:00.000Z"},
   {"trigger": "green/2", "package": "darkgreen",  "arch": "amd64", "version": "1", "status": "pass",
-   "run_id": "100000", "updated_at": "2018-10-04T11:18:01.000Z"},
+   "run_id": "100000", "suite": "testing", "updated_at": "2018-10-04T11:18:01.000Z"},
   {"trigger": "green/1", "package": "lightgreen", "arch": "i386",  "version": "1", "status": "pass",
-   "run_id": "101000", "updated_at": "2018-10-04T11:18:02.000Z"},
+   "run_id": "101000", "suite": "testing", "updated_at": "2018-10-04T11:18:02.000Z"},
   {"trigger": "green/2", "package": "lightgreen", "arch": "i386",  "version": "1", "status": "fail",
-   "run_id": "101001", "updated_at": "2018-10-04T11:18:03.000Z"},
+   "run_id": "101001", "suite": "testing", "updated_at": "2018-10-04T11:18:03.000Z"},
   {"trigger": "green/1", "package": "lightgreen", "arch": "amd64", "version": "1", "status": "pass",
-   "run_id": "101000", "updated_at": "2018-10-04T11:18:04.000Z"},
+   "run_id": "101000", "suite": "testing", "updated_at": "2018-10-04T11:18:04.000Z"},
   {"trigger": "green/2", "package": "lightgreen", "arch": "amd64", "version": "1", "status": "fail",
-   "run_id": "101001", "updated_at": "2018-10-04T11:18:05.000Z"},
+   "run_id": "101001", "suite": "testing", "updated_at": "2018-10-04T11:18:05.000Z"},
   {"trigger": "green/2", "package": "green",      "arch": "i386",  "version": "2", "status": "pass",
-   "run_id": "102000", "updated_at": "2018-10-04T11:18:06.000Z"},
+   "run_id": "102000", "suite": "testing", "updated_at": "2018-10-04T11:18:06.000Z"},
   {"trigger": "green/1", "package": "green",      "arch": "amd64", "version": "2", "status": "pass",
-   "run_id": "102000", "updated_at": "2018-10-04T11:18:07.000Z"},
+   "run_id": "102000", "suite": "testing", "updated_at": "2018-10-04T11:18:07.000Z"},
   {"trigger": "green/2", "package": "green",      "arch": "amd64", "version": "2", "status": "fail",
-   "run_id": "102001", "updated_at": "2018-10-04T11:18:08.000Z"}
+   "run_id": "102001", "suite": "testing", "updated_at": "2018-10-04T11:18:08.000Z"}
   ]
 }
 ''')
