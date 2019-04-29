@@ -150,6 +150,7 @@ class AutopkgtestPolicy(BasePolicy):
             for src, data in suite.sources.items():
                 for trigger in data.testsuite_triggers:
                     self.testsuite_triggers.setdefault(trigger, set()).add(src)
+        target_suite_name = self.suite_info.target_suite.name
 
         os.makedirs(self.state_dir, exist_ok=True)
         self.read_pending_tests()
@@ -187,7 +188,8 @@ class AutopkgtestPolicy(BasePolicy):
                     # Blacklisted tests don't get a version
                     if res['version'] is None:
                         res['version'] = 'blacklisted'
-                    (triggers, src, arch, ver, status, run_id, seen) = ([
+                    (test_suite, triggers, src, arch, ver, status, run_id, seen) = ([
+                        res['suite'],
                         res['trigger'],
                         res['package'],
                         res['arch'],
@@ -195,6 +197,9 @@ class AutopkgtestPolicy(BasePolicy):
                         res['status'],
                         str(res['run_id']),
                         round(calendar.timegm(time.strptime(res['updated_at'][0:-5], '%Y-%m-%dT%H:%M:%S')))])
+                    if test_suite != target_suite_name:
+                        # not requested for this target suite, so ignore
+                        continue
                     if triggers is None:
                         # not requested for this policy, so ignore
                         continue

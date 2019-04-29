@@ -113,6 +113,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         # - Load all sources before any of the binaries.
         for suite in suites:
             sources = self._read_sources(suite.path)
+            self._update_suite_name(suite)
             suite.sources = sources
             (suite.binaries, suite.provides_table) = self._read_binaries(suite, self._architectures)
 
@@ -132,6 +133,18 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         # Intern architectures for efficiency; items in this list will be used for lookups and
         # building items/keys - by intern strings we reduce memory (considerably).
         self._architectures = [sys.intern(arch) for arch in allarches]
+
+    def _update_suite_name(self, suite):
+        try:
+            release_file = read_release_file(suite.path)
+        except FileNotFoundError:
+            self.logger.info("The %s suite does not have a Release file, unable to update the name",
+                             suite.name)
+            release_file = None
+
+        if release_file is not None:
+            suite.name = release_file['Suite']
+            self.logger.info("Using suite name from Release file: %s", release_file['Suite'])
 
     def _check_release_file(self, target_suite, missing_config_msg):
         try:
