@@ -402,7 +402,7 @@ class Britney(object):
                           help="Compute which packages can migrate (the default)")
         parser.add_option("", "--no-compute-migrations", action="store_false", dest="compute_migrations",
                           help="Do not compute which packages can migrate.")
-        parser.add_option("", "--series", action="store", dest="series", default='testing',
+        parser.add_option("", "--series", action="store", dest="series", default='',
                                help="set distribution series name")
         (self.options, self.args) = parser.parse_args()
 
@@ -465,6 +465,8 @@ class Britney(object):
         self.options.outofsync_arches = suite_loader.outofsync_arches
         self.options.break_arches = suite_loader.break_arches
         self.options.new_arches = suite_loader.new_arches
+        if self.options.series == '':
+            self.options.series = self.suite_info.target_suite.name
 
         if not hasattr(self.options, "heidi_delta_output"):
             self.options.heidi_delta_output = self.options.heidi_output + "Delta"
