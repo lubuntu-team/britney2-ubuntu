@@ -10,7 +10,6 @@ import os
 import sys
 import json
 import unittest
-from contextlib import ExitStack
 from tempfile import TemporaryDirectory
 from unittest.mock import DEFAULT, Mock, patch, call
 from urllib.request import URLError
@@ -23,8 +22,7 @@ from britney2.policies.sruadtregression import SRUADTRegressionPolicy
 from tests.test_sourceppa import FakeBritney
 
 
-FAKE_CHANGES = \
-"""Format: 1.8
+FAKE_CHANGES = """Format: 1.8
 Date: Mon, 16 Jul 2018 17:05:18 -0500
 Source: test
 Binary: test
@@ -98,47 +96,41 @@ class T(unittest.TestCase):
     def setUp(self):
         super().setUp()
 
-    def test_bugs_from_changes(self):
+    @patch('britney2.policies.sruadtregression.urlopen', return_value=iter(FAKE_CHANGES.split('\n')))
+    def test_bugs_from_changes(self, urlopen_mock):
         """Check extraction of bug numbers from .changes files"""
-        with ExitStack() as resources:
+        with TemporaryDirectory() as tmpdir:
             options = FakeOptions
-            options.unstable = resources.enter_context(TemporaryDirectory())
-            urlopen_mock = resources.enter_context(
-                patch('britney2.policies.sruadtregression.urlopen'))
-            urlopen_mock.return_value = iter(FAKE_CHANGES.split('\n'))
+            options.unstable = tmpdir
             pol = SRUADTRegressionPolicy(options, {})
             bugs = pol.bugs_from_changes('http://some.url')
             self.assertEqual(len(bugs), 4)
             self.assertSetEqual(bugs, set((1, 4, 2, 31337)))
 
-    def test_bugs_from_changes_retry(self):
+    @patch('britney2.policies.sruadtregression.urlopen', side_effect=URLError('timeout'))
+    def test_bugs_from_changes_retry(self, urlopen_mock):
         """Check .changes extraction retry mechanism"""
-        with ExitStack() as resources:
+        with TemporaryDirectory() as tmpdir:
             options = FakeOptions
-            options.unstable = resources.enter_context(TemporaryDirectory())
-            urlopen_mock = resources.enter_context(
-                patch('britney2.policies.sruadtregression.urlopen'))
-            urlopen_mock.side_effect = URLError('timeout')
+            options.unstable = tmpdir
             pol = SRUADTRegressionPolicy(options, {})
             self.assertRaises(URLError, pol.bugs_from_changes, 'http://some.url')
             self.assertEqual(urlopen_mock.call_count, 3)
 
-    def test_comment_on_regression_and_update_state(self):
+    @patch('smtplib.SMTP')
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
+    def test_comment_on_regression_and_update_state(self, lp, bugs_from_changes, smtp):
         """Verify bug commenting about ADT regressions and save the state"""
-        with ExitStack() as resources:
+        with TemporaryDirectory() as tmpdir:
             options = FakeOptions
-            options.unstable = resources.enter_context(TemporaryDirectory())
+            options.unstable = tmpdir
+
             pkg_mock = Mock()
             pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
-            smtp_mock = Mock()
-            resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes',
-                      return_value=set([1, 2])))
-            lp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api',
-                      return_value={'entries': [pkg_mock]}))
-            smtp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.smtplib.SMTP', return_value=smtp_mock))
+
+            lp.return_value = {'entries': [pkg_mock]}
+
             previous_state = {
                 'testbuntu': {
                     'zazzy': {
@@ -175,11 +167,11 @@ class T(unittest.TestCase):
             ])
             # The .changes file only lists 2 bugs, make sure only those are
             # commented on
-            self.assertSequenceEqual(smtp.mock_calls, [
+            self.assertSequenceEqual(smtp.call_args_list, [
                 call('localhost:1337'),
                 call('localhost:1337')
             ])
-            self.assertEqual(smtp_mock.sendmail.call_count, 2)
+            self.assertEqual(smtp().sendmail.call_count, 2)
             # Check if the state has been saved and not overwritten
             expected_state = {
                 'testbuntu': {
@@ -196,84 +188,76 @@ class T(unittest.TestCase):
             }
             self.assertDictEqual(pol.state, expected_state)
 
-    def test_no_comment_if_running(self):
+    @patch('smtplib.SMTP')
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
+    def test_no_comment_if_running(self, lp, bugs_from_changes, smtp):
         """Don't comment if tests still running"""
-        with ExitStack() as resources:
+        with TemporaryDirectory() as tmpdir:
             options = FakeOptions
-            options.unstable = resources.enter_context(TemporaryDirectory())
+            options.unstable = tmpdir
             pkg_mock = Mock()
             pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
-            smtp_mock = Mock()
-            bugs_from_changes = resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes',
-                      return_value=set([1, 2])))
-            lp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api',
-                      return_value={'entries': [pkg_mock]}))
-            smtp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.smtplib.SMTP', return_value=smtp_mock))
+
+            lp.return_value = {'entries': [pkg_mock]}
+
             pol = SRUADTRegressionPolicy(options, {})
             status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuseRunning)
             self.assertEqual(status, PolicyVerdict.PASS)
-            self.assertEqual(bugs_from_changes.call_count, 0)
-            self.assertEqual(lp.call_count, 0)
-            self.assertEqual(smtp_mock.sendmail.call_count, 0)
+            bugs_from_changes.assert_not_called()
+            lp.assert_not_called()
+            smtp.sendmail.assert_not_called()
 
-    def test_no_comment_if_passed(self):
+    @patch('smtplib.SMTP')
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
+    def test_no_comment_if_passed(self, lp, bugs_from_changes, smtp):
         """Don't comment if all tests passed"""
-        with ExitStack() as resources:
+        with TemporaryDirectory() as tmpdir:
             options = FakeOptions
-            options.unstable = resources.enter_context(TemporaryDirectory())
+            options.unstable = tmpdir
             pkg_mock = Mock()
             pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
-            smtp_mock = Mock()
-            bugs_from_changes = resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes',
-                      return_value=set([1, 2])))
-            lp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api',
-                      return_value={'entries': [pkg_mock]}))
-            smtp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.smtplib.SMTP', return_value=smtp_mock))
+
+            bugs_from_changes.return_value = {'entries': [pkg_mock]}
+
             pol = SRUADTRegressionPolicy(options, {})
             status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcusePass)
             self.assertEqual(status, PolicyVerdict.PASS)
-            self.assertEqual(bugs_from_changes.call_count, 0)
-            self.assertEqual(lp.call_count, 0)
-            self.assertEqual(smtp_mock.sendmail.call_count, 0)
+            bugs_from_changes.assert_not_called()
+            lp.assert_not_called()
+            smtp.sendmail.assert_not_called()
 
-    def test_no_comment_if_hinted(self):
+    @patch('smtplib.SMTP')
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
+    def test_no_comment_if_hinted(self, lp, bugs_from_changes, smtp):
         """Don't comment if package has been hinted in"""
-        with ExitStack() as resources:
+        with TemporaryDirectory() as tmpdir:
             options = FakeOptions
-            options.unstable = resources.enter_context(TemporaryDirectory())
+            options.unstable = tmpdir
             pkg_mock = Mock()
             pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
-            smtp_mock = Mock()
-            bugs_from_changes = resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes',
-                      return_value=set([1, 2])))
-            lp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api',
-                      return_value={'entries': [pkg_mock]}))
-            smtp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.smtplib.SMTP', return_value=smtp_mock))
+            bugs_from_changes.return_value = {'entries': [pkg_mock]}
+
             pol = SRUADTRegressionPolicy(options, {})
             status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuseHinted)
             self.assertEqual(status, PolicyVerdict.PASS)
-            self.assertEqual(bugs_from_changes.call_count, 0)
-            self.assertEqual(lp.call_count, 0)
-            self.assertEqual(smtp_mock.sendmail.call_count, 0)
+            bugs_from_changes.assert_not_called()
+            lp.assert_not_called()
+            smtp.sendmail.assert_not_called()
 
-    def test_initialize(self):
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
+    def test_initialize(self, lp):
         """Check state load, old package cleanup and LP login"""
-        with ExitStack() as resources:
+        with TemporaryDirectory() as tmpdir:
             options = FakeOptions
-            options.unstable = resources.enter_context(TemporaryDirectory())
+            options.unstable = tmpdir
             pkg_mock1 = Mock()
             pkg_mock1.source_name = 'testpackage'
             pkg_mock2 = Mock()
             pkg_mock2.source_name = 'otherpackage'
+
             # Since we want to be as accurate as possible, we return query
             # results per what query has been performed.
             def query_side_effect(link, query):
@@ -282,9 +266,7 @@ class T(unittest.TestCase):
                 elif query['source_name'] == 'otherpackage':
                     return {'entries': [pkg_mock2]}
                 return {'entries': []}
-            lp = resources.enter_context(
-                patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api',
-                      side_effect=query_side_effect))
+            lp.side_effect = query_side_effect
             state = {
                 'testbuntu': {
                     'zazzy': {
@@ -315,6 +297,59 @@ class T(unittest.TestCase):
             # Check if we logged in with the right LP credentials
             self.assertEqual(pol.email_host, 'localhost:1337')
 
+    @patch('smtplib.SMTP')
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
+    def test_no_comment_dry_run(self, lp, bugs_from_changes, smtp):
+        """Verify bug commenting about ADT regressions and save the state"""
+        with TemporaryDirectory() as tmpdir:
+            options = FakeOptions
+            options.unstable = tmpdir
+
+            pkg_mock = Mock()
+            pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
+
+            lp.return_value = {'entries': [pkg_mock]}
+
+            previous_state = {
+                'testbuntu': {
+                    'zazzy': {
+                        'testpackage': '54.0',
+                        'ignored': '0.1',
+                    }
+                },
+                'ghostdistro': {
+                    'spooky': {
+                        'ignored': '0.1',
+                    }
+                }
+            }
+            pol = SRUADTRegressionPolicy(options, {}, dry_run=True)
+            # Set a base state
+            pol.state = previous_state
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuse)
+            self.assertEqual(status, PolicyVerdict.PASS)
+            # Assert that we were looking for the right package as per
+            # FakeSourceData contents
+            self.assertSequenceEqual(lp.mock_calls, [
+                call('testbuntu/+archive/primary', {
+                    'distro_series': '/testbuntu/zazzy',
+                    'exact_match': 'true',
+                    'order_by_date': 'true',
+                    'pocket': 'Proposed',
+                    'source_name': 'testpackage',
+                    'version': '55.0',
+                    'ws.op': 'getPublishedSources',
+                }),
+                call('https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565', {
+                    'ws.op': 'changesFileUrl',
+                })
+            ])
+
+            # Nothing happened
+            smtp.assert_not_called()
+            smtp.sendmail.assert_not_called()
+            self.assertDictEqual(pol.state, previous_state)
 
 if __name__ == '__main__':
     unittest.main()
