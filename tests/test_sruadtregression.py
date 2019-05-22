@@ -117,10 +117,11 @@ class T(unittest.TestCase):
             self.assertRaises(URLError, pol.bugs_from_changes, 'http://some.url')
             self.assertEqual(urlopen_mock.call_count, 3)
 
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.log')
     @patch('smtplib.SMTP')
     @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
     @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
-    def test_comment_on_regression_and_update_state(self, lp, bugs_from_changes, smtp):
+    def test_comment_on_regression_and_update_state(self, lp, bugs_from_changes, smtp, log):
         """Verify bug commenting about ADT regressions and save the state"""
         with TemporaryDirectory() as tmpdir:
             options = FakeOptions
@@ -187,6 +188,7 @@ class T(unittest.TestCase):
                 }
             }
             self.assertDictEqual(pol.state, expected_state)
+            log.assert_called_with('Sending ADT regression message to LP: #2 regarding testpackage/55.0 in zazzy')
 
     @patch('smtplib.SMTP')
     @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
@@ -297,10 +299,11 @@ class T(unittest.TestCase):
             # Check if we logged in with the right LP credentials
             self.assertEqual(pol.email_host, 'localhost:1337')
 
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.log')
     @patch('smtplib.SMTP')
     @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
     @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
-    def test_no_comment_dry_run(self, lp, bugs_from_changes, smtp):
+    def test_no_comment_dry_run(self, lp, bugs_from_changes, smtp, log):
         """Verify bug commenting about ADT regressions and save the state"""
         with TemporaryDirectory() as tmpdir:
             options = FakeOptions
@@ -350,6 +353,8 @@ class T(unittest.TestCase):
             smtp.assert_not_called()
             smtp.sendmail.assert_not_called()
             self.assertDictEqual(pol.state, previous_state)
+            log.assert_called_with('[dry-run] Sending ADT regression message to LP: #2 regarding testpackage/55.0 in zazzy')
+
 
 if __name__ == '__main__':
     unittest.main()

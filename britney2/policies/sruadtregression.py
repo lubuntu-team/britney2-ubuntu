@@ -115,9 +115,10 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
                     bug_mail,
                     MESSAGE.format(**locals()))
                 server.quit()
-            self.log('Sending ADT regression message to LP: #%s '
+            self.log('%sSending ADT regression message to LP: #%s '
                      'regarding %s/%s in %s' % (
-                        bug, source_name, version, series_name))
+                        "[dry-run] " if self.dry_run else "", bug,
+                        source_name, version, series_name))
         self.save_progress(source_name, version, distro_name, series_name)
         return PolicyVerdict.PASS
 
