@@ -127,8 +127,8 @@ class T(unittest.TestCase):
             options = FakeOptions
             options.unstable = tmpdir
 
-            pkg_mock = Mock()
-            pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
+            pkg_mock = {}
+            pkg_mock['self_link'] = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
 
             lp.return_value = {'entries': [pkg_mock]}
 
@@ -309,8 +309,8 @@ class T(unittest.TestCase):
             options = FakeOptions
             options.unstable = tmpdir
 
-            pkg_mock = Mock()
-            pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
+            pkg_mock = {}
+            pkg_mock['self_link'] = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
 
             lp.return_value = {'entries': [pkg_mock]}
 
