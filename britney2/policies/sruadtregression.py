@@ -104,6 +104,9 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
         changes_url = self.query_lp_rest_api(src['self_link'], {
             'ws.op': 'changesFileUrl',
         })
+        if not changes_url:
+            return PolicyVerdict.PASS
+
         bugs = self.bugs_from_changes(changes_url)
         # Now leave a comment informing about the ADT regressions on each bug
         for bug in bugs:
