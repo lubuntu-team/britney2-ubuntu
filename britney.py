@@ -544,7 +544,7 @@ class Britney(object):
             self.policies.append(EmailPolicy(self.options,
                                              self.suite_info,
                                              dry_run=add_email_policy == 'dry-run'))
-        add_sruregression_policy = getattr(self.options, 'sruregression_enable', 'no')
+        add_sruregression_policy = getattr(self.options, 'sruregressionemail_enable', 'no')
         if add_sruregression_policy in ('yes', 'dry-run'):
             self.policies.append(SRUADTRegressionPolicy(self.options,
                                                         self.suite_info,
