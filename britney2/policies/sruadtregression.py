@@ -58,6 +58,7 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
             raise last_exception
         bugs = set()
         for l in changes:
+            l = l.decode('utf-8')
             if l.startswith('Launchpad-Bugs-Fixed: '):
                 bugs = {int(b) for b in l.split()[1:]}
                 break

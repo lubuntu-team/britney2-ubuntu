@@ -22,7 +22,7 @@ from britney2.policies.sruadtregression import SRUADTRegressionPolicy
 from tests.test_sourceppa import FakeBritney
 
 
-FAKE_CHANGES = """Format: 1.8
+FAKE_CHANGES = b"""Format: 1.8
 Date: Mon, 16 Jul 2018 17:05:18 -0500
 Source: test
 Binary: test
@@ -96,7 +96,7 @@ class T(unittest.TestCase):
     def setUp(self):
         super().setUp()
 
-    @patch('britney2.policies.sruadtregression.urlopen', return_value=iter(FAKE_CHANGES.split('\n')))
+    @patch('britney2.policies.sruadtregression.urlopen', return_value=iter(FAKE_CHANGES.split(b'\n')))
     def test_bugs_from_changes(self, urlopen_mock):
         """Check extraction of bug numbers from .changes files"""
         with TemporaryDirectory() as tmpdir:
