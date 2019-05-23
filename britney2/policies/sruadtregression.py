@@ -101,7 +101,7 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
                      'informing of ADT regressions' % (
                         source_name, version, distro_name, series_name))
             return PolicyVerdict.PASS
-        changes_url = self.query_lp_rest_api(src.self_link, {
+        changes_url = self.query_lp_rest_api(src['self_link'], {
             'ws.op': 'changesFileUrl',
         })
         bugs = self.bugs_from_changes(changes_url)
