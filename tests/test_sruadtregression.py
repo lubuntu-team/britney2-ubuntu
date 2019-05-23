@@ -189,6 +189,13 @@ class T(unittest.TestCase):
             }
             self.assertDictEqual(pol.state, expected_state)
             log.assert_called_with('Sending ADT regression message to LP: #2 regarding testpackage/55.0 in zazzy')
+            # But also test if the state has been correctly recorded to the
+            # state file
+            state_path = os.path.join(
+                options.unstable, 'sru_regress_inform_state')
+            with open(state_path) as f:
+                saved_state = json.load(f)
+                self.assertDictEqual(saved_state, expected_state)
 
     @patch('smtplib.SMTP')
     @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})

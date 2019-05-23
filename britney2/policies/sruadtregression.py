@@ -35,11 +35,6 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
             with open(self.state_filename, encoding='utf-8') as data:
                 self.state = json.load(data)
             self.log('Loaded state file %s' % self.state_filename)
-        tmp = self.state_filename + '.new'
-        if os.path.exists(tmp):
-            with open(tmp, encoding='utf-8') as data:
-                self.state.update(json.load(data))
-            self.restore_state()
         # Remove any old entries from the statefile
         self.cleanup_state()
 
@@ -134,18 +129,8 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
         if series not in self.state[distro]:
             self.state[distro][series] = {}
         self.state[distro][series][source] = version
-        tmp = self.state_filename + '.new'
-        with open(tmp, 'w', encoding='utf-8') as data:
+        with open(self.state_filename, 'w', encoding='utf-8') as data:
             json.dump(self.state, data)
-
-    def restore_state(self):
-        try:
-            os.rename(self.state_filename + '.new', self.state_filename)
-        # If we haven't written any state, don't clobber the old one
-        except FileNotFoundError:
-            pass
-
-        self.log('Wrote SRU ADT regression state to %s' % self.state_filename)
 
     def cleanup_state(self):
         '''Remove all no-longer-valid package entries from the statefile'''
