@@ -256,6 +256,35 @@ class T(unittest.TestCase):
             lp.assert_not_called()
             smtp.sendmail.assert_not_called()
 
+    @patch('smtplib.SMTP')
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
+    def test_no_comment_if_commented(self, lp, bugs_from_changes, smtp):
+        """Don't comment if package has been already commented on"""
+        with TemporaryDirectory() as tmpdir:
+            options = FakeOptions
+            options.unstable = tmpdir
+            pkg_mock = Mock()
+            pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
+            bugs_from_changes.return_value = {'entries': [pkg_mock]}
+
+            previous_state = {
+                'testbuntu': {
+                    'zazzy': {
+                        'testpackage': '55.0',
+                        'ignored': '0.1',
+                    }
+                },
+            }
+            pol = SRUADTRegressionPolicy(options, {})
+            # Set a base state
+            pol.state = previous_state
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuse)
+            self.assertEqual(status, PolicyVerdict.PASS)
+            bugs_from_changes.assert_not_called()
+            lp.assert_not_called()
+            smtp.sendmail.assert_not_called()
+
     @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
     def test_initialize(self, lp):
         """Check state load, old package cleanup and LP login"""

@@ -71,7 +71,7 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
         distro_name = self.options.distribution
         series_name = self.options.series
         try:
-            if self.state[source_name] == version:
+            if self.state[distro_name][series_name][source_name] == version:
                 # We already informed about the regression.
                 return PolicyVerdict.PASS
         except KeyError:
