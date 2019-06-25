@@ -9,9 +9,8 @@ from britney2.policies.rest import Rest
 from britney2.policies.policy import BasePolicy, PolicyVerdict
 
 
-MESSAGE = """From: Ubuntu Stable Release Team <noreply@canonical.com>
+MESSAGE = """From: Ubuntu Stable Release Team <lukasz.zemczak@canonical.com>
 To: {bug_mail}
-X-Proposed-Migration: notice
 Subject: Autopkgtest regression report ({source_name}/{version})
 
 All autopkgtests for the newly accepted {source_name} ({version}) for {series_name} have finished running.
