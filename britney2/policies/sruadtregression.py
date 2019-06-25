@@ -1,5 +1,6 @@
 import os
 import json
+import socket
 import smtplib
 
 from urllib.request import urlopen, URLError
@@ -106,18 +107,22 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
         bugs = self.bugs_from_changes(changes_url)
         # Now leave a comment informing about the ADT regressions on each bug
         for bug in bugs:
-            if not self.dry_run:
-                bug_mail = '%s@bugs.launchpad.net' % bug
-                server = smtplib.SMTP(self.email_host)
-                server.sendmail(
-                    'noreply@canonical.com',
-                    bug_mail,
-                    MESSAGE.format(**locals()))
-                server.quit()
             self.log('%sSending ADT regression message to LP: #%s '
                      'regarding %s/%s in %s' % (
                         "[dry-run] " if self.dry_run else "", bug,
                         source_name, version, series_name))
+            if not self.dry_run:
+                try:
+                    bug_mail = '%s@bugs.launchpad.net' % bug
+                    server = smtplib.SMTP(self.email_host)
+                    server.sendmail(
+                        'noreply@canonical.com',
+                        bug_mail,
+                        MESSAGE.format(**locals()))
+                    server.quit()
+                except socket.error as err:
+                    self.log('Failed to send mail! Is SMTP server running?')
+                    self.log(err)
         self.save_progress(source_name, version, distro_name, series_name)
         return PolicyVerdict.PASS
 
