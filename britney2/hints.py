@@ -50,7 +50,7 @@ class HintCollection(object):
 
 
 class Hint(object):
-    NO_VERSION = [ 'block', 'block-all', 'block-udeb' ]
+    NO_VERSION = [ 'block', 'block-all', 'block-udeb', 'allow-archall-maintainer-upload' ]
 
     def __init__(self, user, hint_type, packages):
         self._user = user

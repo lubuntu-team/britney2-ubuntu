@@ -1134,3 +1134,110 @@ class BlockPolicy(BasePolicy):
     def apply_srcarch_policy_impl(self, block_info, item, arch, source_data_tdist, source_data_srcdist, excuse):
         return self._check_blocked(item, arch, source_data_srcdist.version, excuse)
 
+
+class BuiltOnBuilddPolicy(BasePolicy):
+
+    def __init__(self, options, suite_info):
+        super().__init__('builtonbuildd', options, suite_info,
+                         {SuiteClass.PRIMARY_SOURCE_SUITE, SuiteClass.ADDITIONAL_SOURCE_SUITE},
+                         ApplySrcPolicy.RUN_ON_EVERY_ARCH_ONLY)
+        self._britney = None
+        self._builtonbuildd = {
+            'signerinfo': None,
+        }
+
+    def register_hints(self, hint_parser):
+        hint_parser.register_hint_type('allow-archall-maintainer-upload', split_into_one_hint_per_package)
+
+    def initialise(self, britney):
+        super().initialise(britney)
+        self._britney = britney
+        try:
+            filename_signerinfo = os.path.join(self.state_dir, 'signers.json')
+        except AttributeError as e:  # pragma: no cover
+            raise RuntimeError("Please set STATE_DIR in the britney configuration") from e
+        self._builtonbuildd['signerinfo'] = self._read_signerinfo(filename_signerinfo)
+
+    def apply_srcarch_policy_impl(self, buildd_info, item, arch, source_data_tdist,
+                                  source_data_srcdist, excuse):
+        verdict = PolicyVerdict.PASS
+        signers = self._builtonbuildd['signerinfo']
+
+        if "signed-by" not in buildd_info:
+            buildd_info["signed-by"] = {}
+
+        source_suite = item.suite
+
+        # horribe hard-coding, but currently, we don't keep track of the
+        # component when loading the packages files
+        component = "main"
+        # we use the source component, because a binary in contrib can
+        # belong to a source in main
+        section = source_data_srcdist.section
+        if section.find("/") > -1:
+            component = section.split('/')[0]
+
+        packages_s_a = source_suite.binaries[arch]
+
+        for pkg_id in sorted(x for x in source_data_srcdist.binaries if x.architecture == arch):
+            pkg_name = pkg_id.package_name
+            binary_u = packages_s_a[pkg_name]
+            pkg_arch = binary_u.architecture
+
+            if (binary_u.source_version != source_data_srcdist.version):
+                continue
+
+            signer = None
+            uid = None
+            uidinfo = ""
+            buildd_ok = False
+            failure_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            try:
+                signer = signers[pkg_name][pkg_id.version][pkg_arch]
+                if signer["buildd"]:
+                    buildd_ok = True
+                uid = signer['uid']
+                uidinfo = "arch %s binaries uploaded by %s" % (pkg_arch, uid)
+            except KeyError as e:
+                self.logger.info("signer info for %s %s (%s) on %s not found " % (pkg_name, binary_u.version, pkg_arch, arch))
+                uidinfo = "upload info for arch %s binaries not found" % (pkg_arch)
+                failure_verdict = PolicyVerdict.REJECTED_CANNOT_DETERMINE_IF_PERMANENT
+            if not buildd_ok:
+                if component != "main":
+                    if not buildd_ok and pkg_arch not in buildd_info["signed-by"]:
+                        # TODO is it useful to have this info in the excuses,
+                        # or is it just confusing?
+                        excuse.addhtml("%s, but package in %s" % (uidinfo, component))
+                    buildd_ok = True
+                elif pkg_arch == 'all':
+                    allow_hints = self.hints.search('allow-archall-maintainer-upload', package=item.package)
+                    if allow_hints:
+                        buildd_ok = True
+                        if verdict < PolicyVerdict.PASS_HINTED:
+                            verdict = PolicyVerdict.PASS_HINTED
+                        if pkg_arch not in buildd_info["signed-by"]:
+                            excuse.addhtml("%s, but whitelisted by %s" % (uidinfo, allow_hints[0].user))
+            if not buildd_ok:
+                verdict = failure_verdict
+                if pkg_arch not in buildd_info["signed-by"]:
+                    excuse.addhtml("Not built on buildd: %s" % (uidinfo))
+
+            if pkg_arch in buildd_info["signed-by"] and buildd_info["signed-by"][pkg_arch] != uid:
+                self.logger.info("signer mismatch for %s (%s %s) on %s: %s, while %s already listed" %
+                                 (pkg_name, binary_u.source, binary_u.source_version,
+                                  pkg_arch, uid, buildd_info["signed-by"][pkg_arch]))
+
+            buildd_info["signed-by"][pkg_arch] = uid
+
+        return verdict
+
+    def _read_signerinfo(self, filename):
+        signerinfo = {}
+        self.logger.info("Loading signer info from %s", filename)
+        with open(filename) as fd:
+            if os.fstat(fd.fileno()).st_size < 1:
+                return singerinfo
+            signerinfo = json.load(fd)
+
+        return signerinfo
+
