@@ -68,6 +68,22 @@ class FakeExcuse:
     daysold = 0
     reason = {'autopkgtest': 1}
     current_policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+    policy_info = {
+        'autopkgtest': {
+            'testpackage/55.0': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['REGRESSION', None, None, None, None],
+            },
+            'rdep1/1.1-0ubuntu1': {
+                'amd64': ['REGRESSION', None, None, None, None],
+                'i386': ['REGRESSION', None, None, None, None],
+            },
+            'rdep2/0.1-0ubuntu2': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+        }
+    }
 
 
 class FakeExcuseRunning:
@@ -75,6 +91,22 @@ class FakeExcuseRunning:
     daysold = 0
     reason = {'autopkgtest': 1}
     current_policy_verdict = PolicyVerdict.REJECTED_TEMPORARILY
+    policy_info = {
+        'autopkgtest': {
+            'testpackage/55.0': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['REGRESSION', None, None, None, None],
+            },
+            'rdep1/1.1-0ubuntu1': {
+                'amd64': ['RUNNING', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+            'rdep2/0.1-0ubuntu2': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+        }
+    }
 
 
 class FakeExcusePass:
@@ -82,6 +114,22 @@ class FakeExcusePass:
     daysold = 0
     reason = {}
     current_policy_verdict = PolicyVerdict.PASS
+    policy_info = {
+        'autopkgtest': {
+            'testpackage/55.0': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+            'rdep1/1.1-0ubuntu1': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+            'rdep2/0.1-0ubuntu2': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+        }
+    }
 
 
 class FakeExcuseHinted:
@@ -89,6 +137,45 @@ class FakeExcuseHinted:
     daysold = 0
     reason = {'skiptest': 1}
     current_policy_verdict = PolicyVerdict.PASS_HINTED
+    policy_info = {
+        'autopkgtest': {
+            'testpackage/55.0': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['ALWAYSFAIL', None, None, None, None],
+            },
+            'rdep1/1.1-0ubuntu1': {
+                'amd64': ['IGNORE-FAIL', None, None, None, None],
+                'i386': ['IGNORE-FAIL', None, None, None, None],
+            },
+            'rdep2/0.1-0ubuntu2': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+        }
+    }
+
+
+class FakeExcuseVerdictOverriden:
+    is_valid = True
+    daysold = 0
+    reason = {'skiptest': 1}
+    current_policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+    policy_info = {
+        'autopkgtest': {
+            'testpackage/55.0': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+            'rdep1/1.1-0ubuntu1': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+            'rdep2/0.1-0ubuntu2': {
+                'amd64': ['PASS', None, None, None, None],
+                'i386': ['PASS', None, None, None, None],
+            },
+        }
+    }
 
 
 class T(unittest.TestCase):
@@ -145,10 +232,11 @@ class T(unittest.TestCase):
                     }
                 }
             }
+            excuse = FakeExcuse
             pol = SRUADTRegressionPolicy(options, {})
             # Set a base state
             pol.state = previous_state
-            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuse)
+            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             # Assert that we were looking for the right package as per
             # FakeSourceData contents
@@ -173,6 +261,13 @@ class T(unittest.TestCase):
                 call('localhost:1337')
             ])
             self.assertEqual(smtp().sendmail.call_count, 2)
+            # call_args is a tuple (args, kwargs), and the email content is
+            # the third non-named argument of sendmail() - hence [0][2]
+            message = smtp().sendmail.call_args[0][2]
+            # Check if the e-mail/comment we were sending includes info about
+            # which tests have failed
+            self.assertIn('testpackage/55.0 (i386)', message)
+            self.assertIn('rdep1/1.1-0ubuntu1 (amd64, i386)', message)
             # Check if the state has been saved and not overwritten
             expected_state = {
                 'testbuntu': {
@@ -210,8 +305,9 @@ class T(unittest.TestCase):
 
             lp.return_value = {'entries': [pkg_mock]}
 
+            excuse = FakeExcuseRunning
             pol = SRUADTRegressionPolicy(options, {})
-            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuseRunning)
+            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -230,8 +326,9 @@ class T(unittest.TestCase):
 
             bugs_from_changes.return_value = {'entries': [pkg_mock]}
 
+            excuse = FakeExcusePass
             pol = SRUADTRegressionPolicy(options, {})
-            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcusePass)
+            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -249,8 +346,9 @@ class T(unittest.TestCase):
             pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
             bugs_from_changes.return_value = {'entries': [pkg_mock]}
 
+            excuse = FakeExcuseHinted
             pol = SRUADTRegressionPolicy(options, {})
-            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuseHinted)
+            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -276,10 +374,38 @@ class T(unittest.TestCase):
                     }
                 },
             }
+            excuse = FakeExcuse
             pol = SRUADTRegressionPolicy(options, {})
             # Set a base state
             pol.state = previous_state
-            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuse)
+            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
+            self.assertEqual(status, PolicyVerdict.PASS)
+            bugs_from_changes.assert_not_called()
+            lp.assert_not_called()
+            smtp.sendmail.assert_not_called()
+
+    @patch('smtplib.SMTP')
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.bugs_from_changes', return_value={1, 2})
+    @patch('britney2.policies.sruadtregression.SRUADTRegressionPolicy.query_lp_rest_api')
+    def test_no_comment_if_verdict_overriden(self, lp, bugs_from_changes, smtp):
+        """Make sure the previous 'bug' of commenting on uploads that had no
+           failing tests (or had them still running) because of the
+           current_policy_verdict getting reset to REJECTED_PERMANENTLY
+           by some other policy does not happen anymore."""
+        with TemporaryDirectory() as tmpdir:
+            options = FakeOptions
+            options.unstable = tmpdir
+            pkg_mock = Mock()
+            pkg_mock.self_link = 'https://api.launchpad.net/1.0/ubuntu/+archive/primary/+sourcepub/9870565'
+
+            lp.return_value = {'entries': [pkg_mock]}
+
+            # This should no longer be a valid bug as we switched how we
+            # actually determine if a regression is present, but still
+            # - better to have an explicit test case for it.
+            excuse = FakeExcuseVerdictOverriden
+            pol = SRUADTRegressionPolicy(options, {})
+            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -363,10 +489,11 @@ class T(unittest.TestCase):
                     }
                 }
             }
+            excuse = FakeExcuse
             pol = SRUADTRegressionPolicy(options, {}, dry_run=True)
             # Set a base state
             pol.state = previous_state
-            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, FakeExcuse)
+            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             # Assert that we were looking for the right package as per
             # FakeSourceData contents

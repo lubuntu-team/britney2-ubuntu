@@ -3,6 +3,7 @@ import json
 import socket
 import smtplib
 
+from collections import defaultdict
 from urllib.request import urlopen, URLError
 
 from britney2.policies.rest import Rest
@@ -14,9 +15,17 @@ To: {bug_mail}
 Subject: Autopkgtest regression report ({source_name}/{version})
 
 All autopkgtests for the newly accepted {source_name} ({version}) for {series_name} have finished running.
-There have been regressions in tests triggered by the package. Please visit the sru report page and investigate the failures.
+The following regressions have been reported in tests triggered by the package:
 
-https://people.canonical.com/~ubuntu-archive/pending-sru.html#{series_name}
+{failures}
+
+Please visit the excuses page listed below and investigate the failures, proceeding afterwards as per the StableReleaseUpdates policy regarding autopkgtest regressions [1].
+
+https://people.canonical.com/~ubuntu-archive/proposed-migration/{series_name}/update_excuses.html#{source_name}
+
+[1] https://wiki.ubuntu.com/StableReleaseUpdates#Autopkgtest_Regressions
+
+Thank you!
 """
 
 
@@ -60,13 +69,25 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
         return bugs
 
     def apply_policy_impl(self, policy_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
-        # If all the autopkgtests have finished running.
-        if (excuse.current_policy_verdict == PolicyVerdict.REJECTED_TEMPORARILY or
-                excuse.current_policy_verdict == PolicyVerdict.PASS_HINTED):
-            return PolicyVerdict.PASS
         # We only care about autopkgtest regressions
         if 'autopkgtest' not in excuse.reason or not excuse.reason['autopkgtest']:
             return PolicyVerdict.PASS
+        # Check the policy_info to see if all tests finished and, if yes, if we
+        # have any failures to report on.
+        if not policy_info or 'autopkgtest' not in policy_info:
+            return PolicyVerdict.PASS
+        regressions = defaultdict(list)
+        for pkg in policy_info['autopkgtest']:
+            for arch in policy_info['autopkgtest'][pkg]:
+                if policy_info['autopkgtest'][pkg][arch][0] == 'RUNNING':
+                    # If there's at least one test still running, we just stop
+                    # and not proceed any further.
+                    return PolicyVerdict.PASS
+                elif policy_info['autopkgtest'][pkg][arch][0] == 'REGRESSION':
+                    regressions[pkg].append(arch)
+        if not regressions:
+            return PolicyVerdict.PASS
+
         version = source_data_srcdist.version
         distro_name = self.options.distribution
         series_name = self.options.series
@@ -90,8 +111,7 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
         })
         try:
             src = next(iter(data['entries']))
-        # IndexError means no packages in -proposed matched this name/version,
-        # which is expected to happen when bileto runs britney.
+        # IndexError means no packages in -proposed matched this name/version.
         except StopIteration:
             self.log('No packages matching %s/%s the %s/%s main archive, not '
                      'informing of ADT regressions' % (
@@ -102,6 +122,10 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
         })
         if not changes_url:
             return PolicyVerdict.PASS
+        # Prepare a helper string that lists all the ADT failures
+        failures = ''
+        for pkg, arches in regressions.items():
+            failures += '%s (%s)' % (pkg, ', '.join(arches))
 
         bugs = self.bugs_from_changes(changes_url)
         # Now leave a comment informing about the ADT regressions on each bug
