@@ -1187,6 +1187,12 @@ class BuiltOnBuilddPolicy(BasePolicy):
             if (binary_u.source_version != source_data_srcdist.version):
                 continue
 
+            if (item.architecture != 'source' and pkg_arch == 'all'):
+                # we don't care about the existing arch: all binaries when
+                # checking a binNMU item, because the arch: all binaries won't
+                # migrate anyway
+                continue
+
             signer = None
             uid = None
             uidinfo = ""
