@@ -232,8 +232,9 @@ class EmailPolicy(BasePolicy, Rest):
                 recipients = ', '.join(emails)
                 msg = MESSAGE.format(**locals())
                 try:
-                    self.log("%s/%s stuck for %d days, emailing %s" %
-                             (source_name, version, age, recipients))
+                    self.log("%s/%s stuck for %d days (email last sent at %d days old, "
+                             "threshold for sending %d days), emailing %s" %
+                             (source_name, version, age, last_sent, last_due, recipients))
                     server = smtplib.SMTP(self.email_host)
                     server.sendmail('noreply@canonical.com', emails, msg)
                     server.quit()
