@@ -1216,8 +1216,6 @@ class Britney(object):
         if not self.options.dry_run:
             target_suite = self.suite_info.target_suite
 
-            self._policy_engine.save_state(self)
-
             # write HeidiResult
             self.logger.info("Writing Heidi results to %s", self.options.heidi_output)
             write_heidi(self.options.heidi_output,
@@ -1484,6 +1482,8 @@ class Britney(object):
                 self.logger.info('>   %s', stat)
         else:
             self.logger.info('Migration computation skipped as requested.')
+        if not self.options.dry_run:
+            self._policy_engine.save_state(self)
         logging.shutdown()
 
 
