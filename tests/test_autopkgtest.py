@@ -116,7 +116,7 @@ class T(TestBase):
 
         # convert excuses to source indexed dict
         excuses_dict = {}
-        for s in yaml.load(excuses_yaml)['sources']:
+        for s in yaml.safe_load(excuses_yaml)['sources']:
             excuses_dict[s['source']] = s
 
         if 'SHOW_EXCUSES' in os.environ:
