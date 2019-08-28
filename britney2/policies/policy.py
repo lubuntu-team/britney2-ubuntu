@@ -834,10 +834,6 @@ class BuildDependsPolicy(BasePolicy):
         return checkarchs
 
     def _add_info_for_arch(self, arch, excuses_info, blockers, results, dep_type, target_suite, source_suite, excuse, verdict):
-        if arch in excuses_info:
-            for excuse_text in excuses_info[arch]:
-                excuse.addhtml(excuse_text)
-
         if arch in blockers:
             packages = blockers[arch]
 
@@ -854,6 +850,13 @@ class BuildDependsPolicy(BasePolicy):
             if results[arch] == BuildDepResult.FAILED:
                 if verdict < PolicyVerdict.REJECTED_PERMANENTLY:
                     verdict = PolicyVerdict.REJECTED_PERMANENTLY
+
+        if arch in excuses_info:
+            for excuse_text in excuses_info[arch]:
+                if verdict.is_rejected:
+                    excuse.add_verdict_info(verdict, excuse_text)
+                else:
+                    excuse.addinfo(excuse_text)
 
         return verdict
 
@@ -945,7 +948,7 @@ class BuildDependsPolicy(BasePolicy):
 
         if any_arch_ok:
             arch = result_archs[bestresult][0]
-            excuse.addhtml("Checking %s on %s" % (dep_type.get_description(), arch))
+            excuse.addinfo("Checking %s on %s" % (dep_type.get_description(), arch))
             key = "check-%s-on-arch" % dep_type.get_reason()
             build_deps_info[key] = arch
             verdict = self._add_info_for_arch(
