@@ -594,7 +594,7 @@ class RCBugPolicy(BasePolicy):
         #   (https://tracker.debian.org/news/415935)
         assert not bugs_t or source_data_tdist, "%s had bugs in the target suite but is not present" % source_name
 
-        success_verdict = PolicyVerdict.PASS
+        verdict = PolicyVerdict.PASS
 
         for ignore_hint in self.hints.search('ignore-rc-bugs', package=source_name,
                                              version=source_data_srcdist.version):
@@ -612,7 +612,7 @@ class RCBugPolicy(BasePolicy):
                     'bugs': sorted(ignored_bugs),
                     'issued-by': ignore_hint.user
                 }
-                success_verdict = PolicyVerdict.PASS_HINTED
+                verdict = PolicyVerdict.PASS_HINTED
             else:
                 self.logger.info("Ignoring ignore-rc-bugs hint from %s on %s as none of %s affect the package",
                                  ignore_hint.user, source_name, str(ignored_bugs))
@@ -625,20 +625,20 @@ class RCBugPolicy(BasePolicy):
         new_bugs = rcbugs_info['unique-source-bugs']
         old_bugs = rcbugs_info['unique-target-bugs']
         excuse.setbugs(old_bugs, new_bugs)
+
         if new_bugs:
-            excuse.addhtml("Updating %s introduces new bugs: %s" % (source_name, ", ".join(
+            verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            excuse.add_verdict_info(verdict, "Updating %s introduces new bugs: %s" % (source_name, ", ".join(
                 ["<a href=\"https://bugs.debian.org/%s\">#%s</a>" % (quote(a), a) for a in new_bugs])))
 
         if old_bugs:
-            excuse.addhtml("Updating %s fixes old bugs: %s" % (source_name, ", ".join(
+            excuse.addinfo("Updating %s fixes old bugs: %s" % (source_name, ", ".join(
                 ["<a href=\"https://bugs.debian.org/%s\">#%s</a>" % (quote(a), a) for a in old_bugs])))
         if new_bugs and len(old_bugs) > len(new_bugs):
-            excuse.addhtml("%s introduces new bugs, so still ignored (even "
+            excuse.addinfo("%s introduces new bugs, so still ignored (even "
                            "though it fixes more than it introduces, whine at debian-release)" % source_name)
 
-        if not bugs_u or bugs_u <= bugs_t:
-            return success_verdict
-        return PolicyVerdict.REJECTED_PERMANENTLY
+        return verdict
 
     def _read_bugs(self, filename):
         """Read the release critical bug summary from the specified file
