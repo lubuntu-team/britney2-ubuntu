@@ -1240,6 +1240,8 @@ class BuiltOnBuilddPolicy(BasePolicy):
             if not buildd_ok:
                 verdict = failure_verdict
                 if pkg_arch not in buildd_info["signed-by"]:
+                    if pkg_arch == 'all':
+                        uidinfo += ', a new source-only upload is needed to allow migration'
                     excuse.add_verdict_info(verdict, "Not built on buildd: %s" % (uidinfo))
 
             if pkg_arch in buildd_info["signed-by"] and buildd_info["signed-by"][pkg_arch] != uid:
