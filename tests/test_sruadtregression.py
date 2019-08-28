@@ -236,7 +236,7 @@ class T(unittest.TestCase):
             pol = SRUADTRegressionPolicy(options, {})
             # Set a base state
             pol.state = previous_state
-            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             # Assert that we were looking for the right package as per
             # FakeSourceData contents
@@ -307,7 +307,7 @@ class T(unittest.TestCase):
 
             excuse = FakeExcuseRunning
             pol = SRUADTRegressionPolicy(options, {})
-            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -328,7 +328,7 @@ class T(unittest.TestCase):
 
             excuse = FakeExcusePass
             pol = SRUADTRegressionPolicy(options, {})
-            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -348,7 +348,7 @@ class T(unittest.TestCase):
 
             excuse = FakeExcuseHinted
             pol = SRUADTRegressionPolicy(options, {})
-            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -378,7 +378,7 @@ class T(unittest.TestCase):
             pol = SRUADTRegressionPolicy(options, {})
             # Set a base state
             pol.state = previous_state
-            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -405,7 +405,7 @@ class T(unittest.TestCase):
             # - better to have an explicit test case for it.
             excuse = FakeExcuseVerdictOverriden
             pol = SRUADTRegressionPolicy(options, {})
-            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             bugs_from_changes.assert_not_called()
             lp.assert_not_called()
@@ -493,7 +493,7 @@ class T(unittest.TestCase):
             pol = SRUADTRegressionPolicy(options, {}, dry_run=True)
             # Set a base state
             pol.state = previous_state
-            status = pol.apply_policy_impl(excuse.policy_info, None, 'testpackage', None, FakeSourceData, excuse)
+            status = pol.apply_policy_impl(None, None, 'testpackage', None, FakeSourceData, excuse)
             self.assertEqual(status, PolicyVerdict.PASS)
             # Assert that we were looking for the right package as per
             # FakeSourceData contents

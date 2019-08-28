@@ -74,16 +74,16 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
             return PolicyVerdict.PASS
         # Check the policy_info to see if all tests finished and, if yes, if we
         # have any failures to report on.
-        if not policy_info or 'autopkgtest' not in policy_info:
+        if 'autopkgtest' not in excuse.policy_info:
             return PolicyVerdict.PASS
         regressions = defaultdict(list)
-        for pkg in policy_info['autopkgtest']:
-            for arch in policy_info['autopkgtest'][pkg]:
-                if policy_info['autopkgtest'][pkg][arch][0] == 'RUNNING':
+        for pkg in excuse.policy_info['autopkgtest']:
+            for arch in excuse.policy_info['autopkgtest'][pkg]:
+                if excuse.policy_info['autopkgtest'][pkg][arch][0] == 'RUNNING':
                     # If there's at least one test still running, we just stop
                     # and not proceed any further.
                     return PolicyVerdict.PASS
-                elif policy_info['autopkgtest'][pkg][arch][0] == 'REGRESSION':
+                elif excuse.policy_info['autopkgtest'][pkg][arch][0] == 'REGRESSION':
                     regressions[pkg].append(arch)
         if not regressions:
             return PolicyVerdict.PASS
