@@ -89,6 +89,9 @@ class Excuse(object):
         self.missing_builds_ood_arch = set()
         self.old_binaries = defaultdict(set)
         self.policy_info = {}
+        self.verdict_info = defaultdict(list)
+        self.infoline = []
+        self.detailed_info = []
 
         self.bounty = {}
         self.penalty = {}
@@ -189,6 +192,18 @@ class Excuse(object):
         """Add a note in HTML"""
         self.htmlline.append(note)
 
+    def addinfo(self, note):
+        """Add a note in HTML"""
+        self.infoline.append(note)
+
+    def add_verdict_info(self, verdict, note):
+        """Add a note to info about this verdict level"""
+        self.verdict_info[verdict].append(note)
+
+    def add_detailed_info(self, note):
+        """Add a note to detailed info"""
+        self.detailed_info.append(note)
+
     def missing_build_on_arch(self, arch):
         """Note that the item is missing a build on a given architecture"""
         self.missing_builds.add(arch)
@@ -268,12 +283,24 @@ class Excuse(object):
         """"adding reason"""
         self.reason[reason] = 1
 
-    # TODO: remove
     def _text(self):
         """Render the excuse in text"""
         res = []
-        for x in self.htmlline:
-            res.append("" + x + "")
+        res.append("Migration status for %s (%s to %s): %s" %
+            (self.name, self.ver[0], self.ver[1], self._format_verdict_summary()))
+        if not self.is_valid:
+            res.append("Issues preventing migration:")
+        for v in sorted(self.verdict_info.keys(), reverse=True):
+            for x in self.verdict_info[v]:
+                res.append("" + x + "")
+        if self.infoline:
+            res.append("Additional info:")
+            for x in self.infoline:
+                res.append("" + x + "")
+        if self.htmlline:
+            res.append("Legacy info:")
+            for x in self.htmlline:
+                res.append("" + x + "")
         return res
 
     def excusedata(self):
@@ -339,6 +366,11 @@ class Excuse(object):
         else:
             excusedata["reason"] = sorted(list(self.reason.keys()))
         excusedata["is-candidate"] = self.is_valid
+        if self.detailed_info:
+            di = []
+            for x in self.detailed_info:
+                di.append("" + x + "")
+            excusedata["detailed-info"] = di
         return excusedata
 
     def add_bounty(self, policy, bounty):
