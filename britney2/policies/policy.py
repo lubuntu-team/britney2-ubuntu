@@ -341,7 +341,7 @@ class AgePolicy(BasePolicy):
             if excuse.bounty[bounty]:
                 self.logger.info('Applying bounty for %s granted by %s: %d days',
                                  source_name, bounty, excuse.bounty[bounty])
-                excuse.addhtml('Required age reduced by %d days because of %s' %
+                excuse.addinfo('Required age reduced by %d days because of %s' %
                                (excuse.bounty[bounty], bounty))
                 min_days -= excuse.bounty[bounty]
         if urgency not in self._penalty_immune_urgencies:
@@ -349,7 +349,7 @@ class AgePolicy(BasePolicy):
                 if excuse.penalty[penalty]:
                     self.logger.info('Applying penalty for %s given by %s: %d days',
                                      source_name, penalty, excuse.penalty[penalty])
-                    excuse.addhtml('Required age increased by %d days because of %s' %
+                    excuse.addinfo('Required age increased by %d days because of %s' %
                                    (excuse.penalty[penalty], penalty))
                     min_days += excuse.penalty[penalty]
 
@@ -358,7 +358,7 @@ class AgePolicy(BasePolicy):
         bounty_min_age = min(self._bounty_min_age, self._min_days[urgency])
         if min_days < bounty_min_age:
             min_days = bounty_min_age
-            excuse.addhtml('Required age is not allowed to drop below %d days' % min_days)
+            excuse.addinfo('Required age is not allowed to drop below %d days' % min_days)
 
         age_info['current-age'] = days_old
 
@@ -395,12 +395,21 @@ class AgePolicy(BasePolicy):
             new_req = age_hint['new-requirement']
             who = age_hint['changed-by']
             if new_req:
-                excuse.addhtml("Overriding age needed from %d days to %d by %s" % (
+                excuse.addinfo("Overriding age needed from %d days to %d by %s" % (
                     age_min_req, new_req, who))
                 age_min_req = new_req
             else:
-                excuse.addhtml("Too young, but urgency pushed by %s" % who)
+                excuse.addinfo("Too young, but urgency pushed by %s" % who)
         excuse.setdaysold(age_info['current-age'], age_min_req)
+
+        if age_min_req == 0:
+            excuse.addinfo("%d days old" % days_old)
+        elif days_old < age_min_req:
+            excuse.add_verdict_info(res, "Too young, only %d of %d days old" %
+                                    (days_old, age_min_req))
+        else:
+            excuse.addinfo("%d days old (needed %d days)" %
+                           (days_old, age_min_req))
 
         return res
 
