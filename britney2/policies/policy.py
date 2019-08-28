@@ -1017,10 +1017,10 @@ class BuiltUsingPolicy(BasePolicy):
                 found = True
                 item_name = compute_item_name(sources_t, source_suite.sources, bu_source, arch)
                 if arch in self.options.break_arches:
-                    excuse.addhtml("Ignoring Built-Using for %s/%s on %s" % (pkg_name, arch, item_name))
+                    excuse.add_detailed_info("Ignoring Built-Using for %s/%s on %s" % (pkg_name, arch, item_name))
                 else:
                     excuse.add_dependency(DependencyType.BUILT_USING, item_name, arch)
-                    excuse.addhtml("%s/%s has Built-Using on %s" % (pkg_name, arch, item_name))
+                    excuse.add_detailed_info("%s/%s has Built-Using on %s" % (pkg_name, arch, item_name))
 
             return found
 
@@ -1048,13 +1048,13 @@ class BuiltUsingPolicy(BasePolicy):
 
                 if not found:
                     if arch in self.options.break_arches:
-                        excuse.addhtml("Ignoring unsatisfiable Built-Using for %s/%s on %s %s" % (
+                        excuse.add_detailed_info("Ignoring unsatisfiable Built-Using for %s/%s on %s %s" % (
                             pkg_name, arch, bu_source, bu_version))
                     else:
-                        excuse.addhtml("%s/%s has unsatisfiable Built-Using on %s %s" % (
-                            pkg_name, arch, bu_source, bu_version))
                         if verdict < PolicyVerdict.REJECTED_PERMANENTLY:
                             verdict = PolicyVerdict.REJECTED_PERMANENTLY
+                        excuse.add_verdict_info(verdict, "%s/%s has unsatisfiable Built-Using on %s %s" % (
+                            pkg_name, arch, bu_source, bu_version))
 
         return verdict
 
