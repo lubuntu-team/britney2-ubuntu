@@ -335,17 +335,18 @@ class AutopkgtestPolicy(BasePolicy):
         verdict = PolicyVerdict.PASS
         elegible_for_bounty = False
         source_name = item.package
+        results_info = []
 
         # skip/delay autopkgtests until new package is built somewhere
         if not source_data_srcdist.binaries:
             self.logger.info('%s hasn''t been built anywhere, skipping autopkgtest policy', excuse.name)
-            excuse.addhtml("nothing built yet, autopkgtest delayed")
             verdict = PolicyVerdict.REJECTED_TEMPORARILY
+            excuse.add_verdict_info(verdict, "nothing built yet, autopkgtest delayed")
 
         if 'all' in excuse.missing_builds:
             self.logger.info('%s hasn''t been built for arch:all, skipping autopkgtest policy', source_name)
-            excuse.addhtml("arch:all not built yet, autopkgtest delayed")
             verdict = PolicyVerdict.REJECTED_TEMPORARILY
+            excuse.add_verdict_info(verdict, "arch:all not built yet, autopkgtest delayed")
 
         if verdict == PolicyVerdict.PASS:
             self.logger.debug('Checking autopkgtests for %s', source_name)
@@ -360,11 +361,11 @@ class AutopkgtestPolicy(BasePolicy):
                 if arch in excuse.missing_builds:
                     verdict = PolicyVerdict.REJECTED_TEMPORARILY
                     self.logger.info('%s hasn''t been built on arch %s, delay autopkgtest there', source_name, arch)
-                    excuse.addhtml("arch:%s not built yet, autopkgtest delayed there" % arch)
+                    excuse.add_verdict_info(verdict, "arch:%s not built yet, autopkgtest delayed there" % arch)
                 elif arch in excuse.unsatisfiable_on_archs:
                     verdict = PolicyVerdict.REJECTED_TEMPORARILY
                     self.logger.info('%s is uninstallable on arch %s, delay autopkgtest there', source_name, arch)
-                    excuse.addhtml("uninstallable on arch %s, autopkgtest delayed there" % arch)
+                    excuse.add_verdict_info(verdict, "uninstallable on arch %s, autopkgtest delayed there" % arch)
                 else:
                     self.request_tests_for_source(item, arch, source_data_srcdist, pkg_arch_result)
 
@@ -433,14 +434,14 @@ class AutopkgtestPolicy(BasePolicy):
                 # render HTML line for testsrc entry, but only when action is
                 # or may be required
                 if r - {'PASS', 'NEUTRAL', 'RUNNING-ALWAYSFAIL', 'ALWAYSFAIL'}:
-                    excuse.addhtml("autopkgtest for %s: %s" % (testname, ', '.join(html_archmsg)))
+                    results_info.append("autopkgtest for %s: %s" % (testname, ', '.join(html_archmsg)))
 
         if verdict != PolicyVerdict.PASS:
             # check for force-skiptest hint
             hints = self.hints.search('force-skiptest', package=source_name, version=source_data_srcdist.version)
             if hints:
                 excuse.addreason('skiptest')
-                excuse.addhtml("Should wait for tests relating to %s %s, but forced by %s" %
+                excuse.addinfo("Should wait for tests relating to %s %s, but forced by %s" %
                                (source_name, source_data_srcdist.version, hints[0].user))
                 verdict = PolicyVerdict.PASS_HINTED
             else:
@@ -453,6 +454,11 @@ class AutopkgtestPolicy(BasePolicy):
             excuse.add_penalty('autopkgtest', int(self.options.adt_regression_penalty))
             # In case we give penalties instead of blocking, we must always pass
             verdict = PolicyVerdict.PASS
+        for i in results_info:
+            if verdict.is_rejected:
+                excuse.add_verdict_info(verdict, i)
+            else:
+                excuse.addinfo(i)
 
         return verdict
 
