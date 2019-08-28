@@ -1227,9 +1227,7 @@ class BuiltOnBuilddPolicy(BasePolicy):
             if not buildd_ok:
                 if component != "main":
                     if not buildd_ok and pkg_arch not in buildd_info["signed-by"]:
-                        # TODO is it useful to have this info in the excuses,
-                        # or is it just confusing?
-                        excuse.addhtml("%s, but package in %s" % (uidinfo, component))
+                        excuse.add_detailed_info("%s, but package in %s" % (uidinfo, component))
                     buildd_ok = True
                 elif pkg_arch == 'all':
                     allow_hints = self.hints.search('allow-archall-maintainer-upload', package=item.package)
@@ -1238,11 +1236,11 @@ class BuiltOnBuilddPolicy(BasePolicy):
                         if verdict < PolicyVerdict.PASS_HINTED:
                             verdict = PolicyVerdict.PASS_HINTED
                         if pkg_arch not in buildd_info["signed-by"]:
-                            excuse.addhtml("%s, but whitelisted by %s" % (uidinfo, allow_hints[0].user))
+                            excuse.addinfo("%s, but whitelisted by %s" % (uidinfo, allow_hints[0].user))
             if not buildd_ok:
                 verdict = failure_verdict
                 if pkg_arch not in buildd_info["signed-by"]:
-                    excuse.addhtml("Not built on buildd: %s" % (uidinfo))
+                    excuse.add_verdict_info(verdict, "Not built on buildd: %s" % (uidinfo))
 
             if pkg_arch in buildd_info["signed-by"] and buildd_info["signed-by"][pkg_arch] != uid:
                 self.logger.info("signer mismatch for %s (%s %s) on %s: %s, while %s already listed" %
