@@ -1127,24 +1127,26 @@ class BlockPolicy(BasePolicy):
             unblock_cmd = 'un'+block_cmd
             if block_cmd in unblocked:
                 if is_primary or block_cmd == 'block-udeb':
-                    excuse.addhtml("Ignoring %s request by %s, due to %s request by %s" %
+                    excuse.addinfo("Ignoring %s request by %s, due to %s request by %s" %
                                    (block_cmd, blocked[block_cmd], unblock_cmd, unblocked[block_cmd]))
                 else:
-                    excuse.addhtml("Approved by %s" % (unblocked[block_cmd]))
+                    excuse.addinfo("Approved by %s" % (unblocked[block_cmd]))
             else:
+                verdict = PolicyVerdict.REJECTED_NEEDS_APPROVAL
                 if is_primary or block_cmd == 'block-udeb':
                     tooltip = "please contact debian-release if update is needed"
                     # redirect people to d-i RM for udeb things:
                     if block_cmd == 'block-udeb':
                         tooltip = "please contact the d-i release manager if an update is needed"
-                    excuse.addhtml("Not touching package due to %s request by %s (%s)" %
-                                   (block_cmd, blocked[block_cmd], tooltip))
+                    excuse.add_verdict_info(
+                        verdict,
+                        "Not touching package due to %s request by %s (%s)" %
+                        (block_cmd, blocked[block_cmd], tooltip))
                 else:
-                    excuse.addhtml("NEEDS APPROVAL BY RM")
+                    excuse.add_verdict_info(verdict, "NEEDS APPROVAL BY RM")
                 excuse.addreason("block")
                 if mismatches:
-                    excuse.addhtml("Some hints for %s do not match this item" % src)
-                verdict = PolicyVerdict.REJECTED_NEEDS_APPROVAL
+                    excuse.add_detailed_info("Some hints for %s do not match this item" % src)
         return verdict
 
     def apply_src_policy_impl(self, block_info, item, source_data_tdist, source_data_srcdist, excuse):
