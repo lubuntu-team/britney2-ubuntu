@@ -729,7 +729,10 @@ class PiupartsPolicy(BasePolicy):
 
         if url is not None:
             piuparts_info['piuparts-test-url'] = url
-        excuse.addhtml(msg)
+        if result.is_rejected:
+            excuse.add_verdict_info(result, msg)
+        else:
+            excuse.addinfo(msg)
 
         if result.is_rejected:
             for ignore_hint in self.hints.search('ignore-piuparts',
@@ -739,7 +742,7 @@ class PiupartsPolicy(BasePolicy):
                     'issued-by': ignore_hint.user
                 }
                 result = PolicyVerdict.PASS_HINTED
-                excuse.addhtml("Ignoring piuparts issue as requested by {0}".format(ignore_hint.user))
+                excuse.addinfo("Ignoring piuparts issue as requested by {0}".format(ignore_hint.user))
                 break
 
         return result
