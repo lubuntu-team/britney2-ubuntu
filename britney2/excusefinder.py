@@ -657,7 +657,11 @@ class ExcuseFinder(object):
                         if arch_ok:
                             ok = True
                     if not ok:
-                        e.addhtml("Impossible %s: %s -> %s" % (deptype, e.name, d))
+                        # TODO this should actually invalidate the excuse
+                        # would that be correct in all cases?
+                        # - arch all on non-nobreakall arch?
+                        # - pkg in testing already uninstallable?
+                        e.addinfo("Impossible %s: %s -> %s" % (deptype, e.name, d))
                         e.addreason(deptype.get_reason())
 
         invalidate_excuses(excuses, actionable_items, unconsidered)
