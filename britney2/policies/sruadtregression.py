@@ -125,7 +125,7 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
         # Prepare a helper string that lists all the ADT failures
         failures = ''
         for pkg, arches in regressions.items():
-            failures += '%s (%s)' % (pkg, ', '.join(arches))
+            failures += '%s (%s)\n' % (pkg, ', '.join(arches))
 
         bugs = self.bugs_from_changes(changes_url)
         # Now leave a comment informing about the ADT regressions on each bug
