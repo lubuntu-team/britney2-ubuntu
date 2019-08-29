@@ -10,7 +10,7 @@ from britney2.policies.rest import Rest
 from britney2.policies.policy import BasePolicy, PolicyVerdict
 
 
-MESSAGE = """From: Ubuntu Stable Release Team <lukasz.zemczak@canonical.com>
+MESSAGE = """From: Ubuntu Stable Release Team <ubuntu-sru-bot@canonical.com>
 To: {bug_mail}
 Subject: Autopkgtest regression report ({source_name}/{version})
 
