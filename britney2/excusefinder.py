@@ -514,7 +514,7 @@ class ExcuseFinder(object):
             # force() updates the final verdict for us
             changed_state = excuse.force()
             if changed_state:
-                excuse.addhtml("Should ignore, but forced by %s" % (forces[0].user))
+                excuse.addinfo("Should ignore, but forced by %s" % (forces[0].user))
 
         self.excuses[excuse.name] = excuse
         return excuse.is_valid
