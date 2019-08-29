@@ -468,9 +468,9 @@ class ExcuseFinder(object):
 
         # if the source package has no binaries, set is_valid to False to block the update
         if not source_u.binaries:
-            excuse.addhtml("%s has no binaries on any arch" % src)
-            excuse.addreason("no-binaries")
             excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            excuse.add_verdict_info(excuse.policy_verdict, "%s has no binaries on any arch" % src)
+            excuse.addreason("no-binaries")
 
         self._policy_engine.apply_src_policies(item, source_t, source_u, excuse)
 
