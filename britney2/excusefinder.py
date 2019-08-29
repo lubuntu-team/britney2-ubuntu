@@ -195,7 +195,7 @@ class ExcuseFinder(object):
             if binary_u.architecture == 'all':
                 if pkg_id not in source_t.binaries:
                     # only add a note if the arch:all does not match the expected version
-                    excuse.addhtml("Ignoring %s %s (from %s) as it is arch: all" % (pkg_name, binary_u.version, pkgsv))
+                    excuse.add_detailed_info("Ignoring %s %s (from %s) as it is arch: all" % (pkg_name, binary_u.version, pkgsv))
                 continue
 
             # if the new binary package is not from the same source as the testing one, then skip it
@@ -209,7 +209,7 @@ class ExcuseFinder(object):
             # cruft in unstable
             if source_u.version != pkgsv and source_t.version != pkgsv:
                 if self.options.ignore_cruft:
-                    excuse.addhtml("Old cruft: %s %s (but ignoring cruft, so nevermind)" % (pkg_name, pkgsv))
+                    excuse.add_detailed_info("Old cruft: %s %s (but ignoring cruft, so nevermind)" % (pkg_name, pkgsv))
                 else:
                     anywrongver = True
                     excuse.addhtml("Old cruft: %s %s" % (pkg_name, pkgsv))
@@ -229,7 +229,7 @@ class ExcuseFinder(object):
             # if the binary is not present in testing, then it is a new binary;
             # in this case, there is something worth doing
             if not binary_t:
-                excuse.addhtml("New binary: %s (%s)" % (pkg_name, binary_u.version))
+                excuse.add_detailed_info("New binary: %s (%s)" % (pkg_name, binary_u.version))
                 anyworthdoing = True
                 continue
 
@@ -244,7 +244,7 @@ class ExcuseFinder(object):
                 break
             # ... if updating would mean upgrading, then there is something worth doing
             elif vcompare < 0:
-                excuse.addhtml("Updated binary: %s (%s to %s)" % (pkg_name, binary_t.version, binary_u.version))
+                excuse.add_detailed_info("Updated binary: %s (%s to %s)" % (pkg_name, binary_t.version, binary_u.version))
                 anyworthdoing = True
 
         srcv = source_u.version
@@ -285,11 +285,11 @@ class ExcuseFinder(object):
                     if tpkg_data.architecture == 'all':
                         if pkg_id not in source_u.binaries:
                             # only add a note if the arch:all does not match the expected version
-                            excuse.addhtml("Ignoring removal of %s as it is arch: all" % (pkg))
+                            excuse.add_detailed_info("Ignoring removal of %s as it is arch: all" % (pkg))
                         continue
                     # if the package is not produced by the new source package, then remove it from testing
                     if pkg not in packages_s_a:
-                        excuse.addhtml("Removed binary: %s %s" % (pkg, tpkg_data.version))
+                        excuse.add_detailed_info("Removed binary: %s %s" % (pkg, tpkg_data.version))
                         # the removed binary is only interesting if this is a binary-only migration,
                         # as otherwise the updated source will already cause the binary packages
                         # to be updated
