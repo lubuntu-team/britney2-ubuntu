@@ -452,8 +452,8 @@ class ExcuseFinder(object):
                            (quote(arch), quote(src), quote(source_u.version), arch, oodtxt)
                 else:
                     text = "missing build on <a href=\"https://buildd.debian.org/status/logs.php?" \
-                           "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>: %s" % \
-                           (quote(arch), quote(src), quote(source_u.version), arch, oodtxt)
+                           "arch=%s&pkg=%s&ver=%s\" target=\"_blank\">%s</a>" % \
+                           (quote(arch), quote(src), quote(source_u.version), arch)
 
                 if arch in self.options.outofsync_arches:
                     text = text + " (but %s isn't keeping up, so nevermind)" % (arch)
@@ -463,13 +463,17 @@ class ExcuseFinder(object):
                     if uptodatebins:
                         if self.options.ignore_cruft:
                             text = text + " (but ignoring cruft, so nevermind)"
+                            excuse.add_detailed_info(text)
                         else:
                             excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+                            excuse.addreason("cruft")
+                            excuse.add_verdict_info(excuse.policy_verdict, text)
                     else:
                         excuse.policy_verdict = PolicyVerdict.REJECTED_CANNOT_DETERMINE_IF_PERMANENT
                         excuse.missing_build_on_arch(arch)
-
-                excuse.addhtml(text)
+                        excuse.addreason("missingbuild")
+                        excuse.add_verdict_info(excuse.policy_verdict, text)
+                        excuse.add_detailed_info("old binaries on %s: %s" % (arch, oodtxt))
 
         # if the source package has no binaries, set is_valid to False to block the update
         if not source_u.binaries:
