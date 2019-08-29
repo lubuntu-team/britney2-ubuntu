@@ -509,6 +509,7 @@ class ExcuseFinder(object):
                 else:
                     excuse.policy_verdict = PolicyVerdict.REJECTED_CANNOT_DETERMINE_IF_PERMANENT
                     excuse.missing_build_on_arch(arch)
+                    excuse.addreason("missingbuild")
                     excuse.add_verdict_info(excuse.policy_verdict, text)
 
         # check if there is a `force' hint for this package, which allows it to go in even if it is not updateable
