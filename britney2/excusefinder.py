@@ -120,15 +120,16 @@ class ExcuseFinder(object):
         # otherwise, add a new excuse for its removal
         src = item.suite.sources[pkg]
         excuse = Excuse(item.name)
-        excuse.addhtml("Package not in %s, will try to remove" % source_suite.name)
+        excuse.addinfo("Package not in %s, will try to remove" % source_suite.name)
         excuse.set_vers(src.version, None)
         src.maintainer and excuse.set_maint(src.maintainer)
         src.section and excuse.set_section(src.section)
 
         # if the package is blocked, skip it
         for hint in self.hints.search('block', package=pkg, removal=True):
-            excuse.addhtml("Not touching package, as requested by %s "
-                           "(contact debian-release if update is needed)" % hint.user)
+            excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            excuse.add_verdict_info(excuse.policy_verdict, "Not touching package, as requested by %s "
+                "(contact debian-release if update is needed)" % hint.user)
             excuse.addreason("block")
             self.excuses[excuse.name] = excuse
             return False
@@ -168,8 +169,9 @@ class ExcuseFinder(object):
         # package and its binary packages on each architecture)
         for hint in self.hints.search('remove', package=src, version=source_t.version):
             excuse.add_hint(hint)
-            excuse.addhtml("Removal request by %s" % (hint.user))
-            excuse.addhtml("Trying to remove package, not update it")
+            excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            excuse.add_verdict_info(excuse.policy_verdict, "Removal request by %s" % (hint.user))
+            excuse.add_verdict_info(excuse.policy_verdict, "Trying to remove package, not update it")
             self.excuses[excuse.name] = excuse
             return False
 
@@ -371,9 +373,9 @@ class ExcuseFinder(object):
             if source_t and source_t.version == hint.version or \
                     source_u.version == hint.version:
                 excuse.add_hint(hint)
-                excuse.addhtml("Removal request by %s" % (hint.user))
-                excuse.addhtml("Trying to remove package, not update it")
                 excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+                excuse.add_verdict_info(excuse.policy_verdict, "Removal request by %s" % (hint.user))
+                excuse.add_verdict_info(excuse.policy_verdict, "Trying to remove package, not update it")
                 break
 
         all_binaries = self.all_binaries
@@ -587,12 +589,13 @@ class ExcuseFinder(object):
             # add the removal of the package to actionable_items and build a new excuse
             excuse = Excuse("-%s" % (src))
             excuse.set_vers(tsrcv, None)
-            excuse.addhtml("Removal request by %s" % (hint.user))
+            excuse.addinfo("Removal request by %s" % (hint.user))
             # if the removal of the package is blocked, skip it
             blocked = False
             for blockhint in self.hints.search('block', package=src, removal=True):
-                excuse.addhtml("Not removing package, due to block hint by %s "
-                               "(contact debian-release if update is needed)" % blockhint.user)
+                excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+                excuse.add_verdict_info(excuse.policy_verdict, "Not removing package, due to block hint by %s "
+                    "(contact debian-release if update is needed)" % blockhint.user)
                 excuse.addreason("block")
                 blocked = True
 
@@ -601,7 +604,7 @@ class ExcuseFinder(object):
                 continue
 
             actionable_items_add("-%s" % (src))
-            excuse.addhtml("Package is broken, will try to remove")
+            excuse.addinfo("Package is broken, will try to remove")
             excuse.add_hint(hint)
             # Using "PASS" here as "Created by a hint" != "accepted due to hint".  In a future
             # where there might be policy checks on removals, it would make sense to distinguish
