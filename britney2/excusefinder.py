@@ -356,7 +356,8 @@ class ExcuseFinder(object):
 
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u.version, source_t.version) < 0:
-            excuse.addhtml("ALERT: %s is newer in the target suite (%s %s)" % (src, source_t.version, source_u.version))
+            excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            excuse.add_verdict_info(excuse.policy_verdict, "ALERT: %s is newer in the target suite (%s %s)" % (src, source_t.version, source_u.version))
             self.excuses[excuse.name] = excuse
             excuse.addreason("newerintesting")
             return False
