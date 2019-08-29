@@ -708,7 +708,7 @@ def invalidate_excuses(excuses, valid, invalid):
                     valid.discard(x)
                     invalid.add(x)
                     for deptype in allrevdeps[ename][x]:
-                        excuses[x].addhtml("Invalidated by %s" % deptype.get_description())
+                        excuses[x].add_verdict_info(rdep_verdict, "Invalidated by %s" % deptype.get_description())
                         excuses[x].addreason(deptype.get_reason())
 
 
