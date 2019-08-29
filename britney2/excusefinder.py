@@ -180,6 +180,8 @@ class ExcuseFinder(object):
         packages_t_a = target_suite.binaries[arch]
         packages_s_a = source_suite.binaries[arch]
 
+        wrong_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+
         # for every binary package produced by this source in unstable for this architecture
         for pkg_id in sorted(x for x in source_u.binaries if x.architecture == arch):
             pkg_name = pkg_id.package_name
@@ -202,8 +204,8 @@ class ExcuseFinder(object):
             # this implies that this binary migration is part of a source migration
             if source_u.version == pkgsv and source_t.version != pkgsv:
                 anywrongver = True
-                excuse.addhtml("From wrong source: %s %s (%s not %s)" % (pkg_name, binary_u.version, pkgsv,
-                                                                         source_t.version))
+                excuse.add_verdict_info(wrong_verdict, "From wrong source: %s %s (%s not %s)" %
+                    (pkg_name, binary_u.version, pkgsv, source_t.version))
                 continue
 
             # cruft in unstable
@@ -212,15 +214,15 @@ class ExcuseFinder(object):
                     excuse.add_detailed_info("Old cruft: %s %s (but ignoring cruft, so nevermind)" % (pkg_name, pkgsv))
                 else:
                     anywrongver = True
-                    excuse.addhtml("Old cruft: %s %s" % (pkg_name, pkgsv))
+                    excuse.add_verdict_info(wrong_verdict, "Old cruft: %s %s" % (pkg_name, pkgsv))
                 continue
 
             # if the source package has been updated in unstable and this is a binary migration, skip it
             # (the binaries are now out-of-date)
             if source_t.version == pkgsv and source_t.version != source_u.version:
                 anywrongver = True
-                excuse.addhtml("From wrong source: %s %s (%s not %s)" % (pkg_name, binary_u.version, pkgsv,
-                                                                         source_u.version))
+                excuse.add_verdict_info(wrong_verdict, "From wrong source: %s %s (%s not %s)" %
+                    (pkg_name, binary_u.version, pkgsv, source_u.version))
                 continue
 
             # find unsatisfied dependencies for the new binary package
@@ -240,7 +242,7 @@ class ExcuseFinder(object):
             # ... if updating would mean downgrading, then stop here: there is something wrong
             if vcompare > 0:
                 anywrongver = True
-                excuse.addhtml("Not downgrading: %s (%s to %s)" % (pkg_name, binary_t.version, binary_u.version))
+                excuse.add_verdict_info(wrong_verdict, "Not downgrading: %s (%s to %s)" % (pkg_name, binary_t.version, binary_u.version))
                 break
             # ... if updating would mean upgrading, then there is something worth doing
             elif vcompare < 0:
@@ -310,7 +312,7 @@ class ExcuseFinder(object):
 
         # if there is something something wrong, reject this package
         if anywrongver:
-            excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            excuse.policy_verdict = wrong_verdict
 
         self._policy_engine.apply_srcarch_policies(item, arch, source_t, source_u, excuse)
 
