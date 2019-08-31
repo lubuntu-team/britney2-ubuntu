@@ -634,9 +634,6 @@ class RCBugPolicy(BasePolicy):
         if old_bugs:
             excuse.addinfo("Updating %s fixes old bugs: %s" % (source_name, ", ".join(
                 ["<a href=\"https://bugs.debian.org/%s\">#%s</a>" % (quote(a), a) for a in old_bugs])))
-        if new_bugs and len(old_bugs) > len(new_bugs):
-            excuse.addinfo("%s introduces new bugs, so still ignored (even "
-                           "though it fixes more than it introduces, whine at debian-release)" % source_name)
 
         return verdict
 
