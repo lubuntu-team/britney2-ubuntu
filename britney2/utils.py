@@ -700,16 +700,16 @@ def invalidate_excuses(excuses, valid, invalid):
                 # if the item is valid and it is not marked as `forced', then we invalidate it
                 if x in valid and not excuses[x].forced:
 
+                    if excuses[x].policy_verdict < rdep_verdict:
+                        excuses[x].policy_verdict = rdep_verdict
                     # otherwise, invalidate the dependency and mark as invalidated and
                     # remove the depending excuses
-                    excuses[x].invalidate_dependency(ename)
+                    excuses[x].invalidate_dependency(ename, rdep_verdict)
                     valid.discard(x)
                     invalid.add(x)
                     for deptype in allrevdeps[ename][x]:
                         excuses[x].addhtml("Invalidated by %s" % deptype.get_description())
                         excuses[x].addreason(deptype.get_reason())
-                    if excuses[x].policy_verdict < rdep_verdict:
-                        excuses[x].policy_verdict = rdep_verdict
 
 
 def compile_nuninst(target_suite, architectures, nobreakall_arches):

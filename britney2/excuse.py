@@ -75,7 +75,7 @@ class Excuse(object):
         self.forced = False
         self._policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
 
-        self.all_invalid_deps = set()
+        self.all_invalid_deps = {}
         self.all_deps = {}
         self.sane_deps = []
         self.break_deps = []
@@ -171,9 +171,9 @@ class Excuse(object):
         """Add an unsatisfiable dependency"""
         self.unsat_deps[arch].add(signature)
 
-    def invalidate_dependency(self, name):
+    def invalidate_dependency(self, name, verdict):
         """Invalidate dependency"""
-        self.all_invalid_deps.add(name)
+        self.all_invalid_deps[name] = verdict
 
     def setdaysold(self, daysold, mindays):
         """Set the number of days from the upload and the minimum number of days for the update"""
@@ -239,11 +239,11 @@ class Excuse(object):
                     continue
                 seen[deptype] = True
                 if x in invalid_deps:
-                    res.append("<li>%s: %s <a href=\"#%s\">%s</a> (not considered)\n" % (field, self.name, dep, dep))
+                    res.append("%s: %s <a href=\"#%s\">%s</a> (not considered)" % (field, self.name, dep, dep))
                 else:
-                    res.append("<li>%s: %s <a href=\"#%s\">%s</a>\n" % (field, self.name, dep, dep))
+                    res.append("%s: %s <a href=\"#%s\">%s</a>" % (field, self.name, dep, dep))
 
-        return "".join(res)
+        return res
 
     def html(self):
         """Render the excuse in HTML"""
@@ -273,6 +273,10 @@ class Excuse(object):
             res.append("Issues preventing migration:")
         for v in sorted(self.verdict_info.keys(), reverse=True):
             for x in self.verdict_info[v]:
+                res.append("" + x + "")
+            di = [x for x in self.all_invalid_deps.keys() if self.all_invalid_deps[x] == v]
+            ad = {x: self.all_deps[x] for x in di}
+            for x in self._render_dep_issues(ad, di):
                 res.append("" + x + "")
         if self.infoline:
             res.append("Additional info:")
@@ -313,14 +317,14 @@ class Excuse(object):
             }
         if self.all_invalid_deps:
             excusedata['invalidated-by-other-package'] = True
-        if self.all_deps or self.all_invalid_deps \
+        if self.all_deps or self.all_invalid_deps.keys() \
                 or self.break_deps or self.unsat_deps:
             excusedata['dependencies'] = dep_data = {}
-            migrate_after = sorted(self.all_deps.keys() - self.all_invalid_deps)
+            migrate_after = sorted(self.all_deps.keys() - self.all_invalid_deps.keys())
             break_deps = [x for x, _ in self.break_deps if x not in self.all_deps]
 
-            if self.all_invalid_deps:
-                dep_data['blocked-by'] = sorted(self.all_invalid_deps)
+            if self.all_invalid_deps.keys():
+                dep_data['blocked-by'] = sorted(self.all_invalid_deps.keys())
             if migrate_after:
                 dep_data['migrate-after'] = migrate_after
             if break_deps:
