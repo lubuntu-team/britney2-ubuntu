@@ -249,28 +249,9 @@ class Excuse(object):
         """Render the excuse in HTML"""
         res = "<a id=\"%s\" name=\"%s\">%s</a> (%s to %s)\n<ul>\n" % \
             (self.name, self.name, self.name, self.ver[0], self.ver[1])
-        res += "<li>Migration status: %s\n" % self._format_verdict_summary()
-        if self.maint:
-            res = res + "<li>Maintainer: %s\n" % (self.maint)
-        if self.section and self.section.find("/") > -1:
-            res = res + "<li>Section: %s\n" % (self.section)
-        if self.daysold is not None:
-            if self.mindays == 0:
-                res = res + ("<li>%d days old\n" % self.daysold)
-            elif self.daysold < self.mindays:
-                res = res + ("<li>Too young, only %d of %d days old\n" %
-                             (self.daysold, self.mindays))
-            else:
-                res = res + ("<li>%d days old (needed %d days)\n" %
-                             (self.daysold, self.mindays))
-        for x in self.htmlline:
-            res = res + "<li>" + x + "\n"
-        res += self._render_dep_issues(self.all_deps, self.all_invalid_deps)
-
-        for (n, a) in self.break_deps:
-            if n not in self.all_deps:
-                res += "<li>Ignoring %s depends: <a href=\"#%s\">%s</a>\n" % (a, n, n)
-
+        info = self._text()
+        for l in info:
+            res += "<li>%s\n" % l
         res = res + "</ul>\n"
         return res
 
