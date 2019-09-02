@@ -56,7 +56,7 @@ class PolicyVerdict(Enum):
         return self in {
             PolicyVerdict.REJECTED_BLOCKED_BY_ANOTHER_ITEM,
             PolicyVerdict.REJECTED_NEEDS_APPROVAL,
-            PolicyVerdict.REJECTED_CANNOT_DETERMINE_IF_PERMANENT, # Assuming the worst
+            PolicyVerdict.REJECTED_CANNOT_DETERMINE_IF_PERMANENT,  # Assuming the worst
             PolicyVerdict.REJECTED_PERMANENTLY,
         }
 
