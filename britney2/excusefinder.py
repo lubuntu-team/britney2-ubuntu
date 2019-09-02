@@ -138,7 +138,9 @@ class ExcuseFinder(object):
         # if the package is blocked, skip it
         for hint in self.hints.search('block', package=pkg, removal=True):
             excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
-            excuse.add_verdict_info(excuse.policy_verdict, "Not touching package, as requested by %s "
+            excuse.add_verdict_info(
+                excuse.policy_verdict,
+                "Not touching package, as requested by %s "
                 "(contact debian-release if update is needed)" % hint.user)
             excuse.addreason("block")
             self.excuses[excuse.name] = excuse
@@ -216,7 +218,9 @@ class ExcuseFinder(object):
             # this implies that this binary migration is part of a source migration
             if source_u.version == pkgsv and source_t.version != pkgsv:
                 anywrongver = True
-                excuse.add_verdict_info(wrong_verdict, "From wrong source: %s %s (%s not %s)" %
+                excuse.add_verdict_info(
+                    wrong_verdict,
+                    "From wrong source: %s %s (%s not %s)" %
                     (pkg_name, binary_u.version, pkgsv, source_t.version))
                 continue
 
@@ -233,7 +237,9 @@ class ExcuseFinder(object):
             # (the binaries are now out-of-date)
             if source_t.version == pkgsv and source_t.version != source_u.version:
                 anywrongver = True
-                excuse.add_verdict_info(wrong_verdict, "From wrong source: %s %s (%s not %s)" %
+                excuse.add_verdict_info(
+                    wrong_verdict,
+                    "From wrong source: %s %s (%s not %s)" %
                     (pkg_name, binary_u.version, pkgsv, source_u.version))
                 continue
 
@@ -254,7 +260,9 @@ class ExcuseFinder(object):
             # ... if updating would mean downgrading, then stop here: there is something wrong
             if vcompare > 0:
                 anywrongver = True
-                excuse.add_verdict_info(wrong_verdict, "Not downgrading: %s (%s to %s)" % (pkg_name, binary_t.version, binary_u.version))
+                excuse.add_verdict_info(
+                    wrong_verdict,
+                    "Not downgrading: %s (%s to %s)" % (pkg_name, binary_t.version, binary_u.version))
                 break
             # ... if updating would mean upgrading, then there is something worth doing
             elif vcompare < 0:
@@ -369,7 +377,9 @@ class ExcuseFinder(object):
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u.version, source_t.version) < 0:
             excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
-            excuse.add_verdict_info(excuse.policy_verdict, "ALERT: %s is newer in the target suite (%s %s)" % (src, source_t.version, source_u.version))
+            excuse.add_verdict_info(
+                excuse.policy_verdict,
+                "ALERT: %s is newer in the target suite (%s %s)" % (src, source_t.version, source_u.version))
             self.excuses[excuse.name] = excuse
             excuse.addreason("newerintesting")
             return False
@@ -512,7 +522,11 @@ class ExcuseFinder(object):
                     base = 'stable'
                 else:
                     base = target_suite.name
-                text = "Not yet built on <a href=\"https://buildd.debian.org/status/logs.php?arch=%s&pkg=%s&ver=%s&suite=%s\" target=\"_blank\">%s</a> (relative to target suite)" % (quote(arch), quote(src), quote(source_u.version), base, arch)
+                text = "Not yet built on "\
+                    "<a href=\"https://buildd.debian.org/status/logs.php?"\
+                    "arch=%s&pkg=%s&ver=%s&suite=%s\" target=\"_blank\">%s</a> "\
+                    "(relative to target suite)" % \
+                    (quote(arch), quote(src), quote(source_u.version), base, arch)
 
                 if arch in self.options.outofsync_arches:
                     text = text + " (but %s isn't keeping up, so never mind)" % (arch)
@@ -604,7 +618,9 @@ class ExcuseFinder(object):
             blocked = False
             for blockhint in self.hints.search('block', package=src, removal=True):
                 excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
-                excuse.add_verdict_info(excuse.policy_verdict, "Not removing package, due to block hint by %s "
+                excuse.add_verdict_info(
+                    excuse.policy_verdict,
+                    "Not removing package, due to block hint by %s "
                     "(contact debian-release if update is needed)" % blockhint.user)
                 excuse.addreason("block")
                 blocked = True
