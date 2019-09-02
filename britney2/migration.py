@@ -92,7 +92,7 @@ class MigrationManager(object):
         any data structure.
         """
         # local copies for better performances
-        source_name = item.package
+        item_package = item.package
         target_suite = self.suite_info.target_suite
         binaries_t = target_suite.binaries
 
@@ -100,6 +100,7 @@ class MigrationManager(object):
 
         # remove all binary packages (if the source already exists)
         if item.architecture == 'source' or not item.is_removal:
+            source_name = item_package
             if source_name in target_suite.sources:
                 rms, smoothbins = self._compute_removals(item, allow_smooth_updates, removals)
             else:
@@ -109,9 +110,9 @@ class MigrationManager(object):
         # single binary removal; used for clearing up after smooth
         # updates but not supported as a manual hint
         else:
-            assert source_name in binaries_t[item.architecture]
-            pkg_id = binaries_t[item.architecture][source_name].pkg_id
-            source_name = binaries_t[item.architecture][source_name].source
+            assert item_package in binaries_t[item.architecture]
+            pkg_id = binaries_t[item.architecture][item_package].pkg_id
+            source_name = binaries_t[item.architecture][item_package].source
             rms = {pkg_id}
             smoothbins = set()
 
