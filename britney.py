@@ -754,7 +754,10 @@ class Britney(object):
 
         # sort the list of candidates
         self.upgrade_me = sorted(upgrade_me)
-        self.upgrade_me.extend(old_libraries(mi_factory, self.suite_info, self.options.outofsync_arches))
+        old_lib_removals = old_libraries(mi_factory, self.suite_info, self.options.outofsync_arches)
+        self.upgrade_me.extend(old_lib_removals)
+        self.output_logger.info("List of old libraries added to upgrade_me (%d):", len(old_lib_removals))
+        log_and_format_old_libraries(self.output_logger, old_lib_removals)
 
         # write excuses to the output file
         if not self.options.dry_run:
