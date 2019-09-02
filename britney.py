@@ -383,27 +383,27 @@ class Britney(object):
         parser = optparse.OptionParser(version="%prog")
         parser.add_option("-v", "", action="count", dest="verbose", help="enable verbose output")
         parser.add_option("-c", "--config", action="store", dest="config", default="/etc/britney.conf",
-                               help="path for the configuration file")
+                          help="path for the configuration file")
         parser.add_option("", "--architectures", action="store", dest="architectures", default=None,
-                               help="override architectures from configuration file")
+                          help="override architectures from configuration file")
         parser.add_option("", "--actions", action="store", dest="actions", default=None,
-                               help="override the list of actions to be performed")
+                          help="override the list of actions to be performed")
         parser.add_option("", "--hints", action="store", dest="hints", default=None,
-                               help="additional hints, separated by semicolons")
+                          help="additional hints, separated by semicolons")
         parser.add_option("", "--hint-tester", action="store_true", dest="hint_tester", default=None,
-                               help="provide a command line interface to test hints")
+                          help="provide a command line interface to test hints")
         parser.add_option("", "--dry-run", action="store_true", dest="dry_run", default=False,
-                               help="disable all outputs to the testing directory")
+                          help="disable all outputs to the testing directory")
         parser.add_option("", "--nuninst-cache", action="store_true", dest="nuninst_cache", default=False,
-                               help="do not build the non-installability status, use the cache from file")
+                          help="do not build the non-installability status, use the cache from file")
         parser.add_option("", "--print-uninst", action="store_true", dest="print_uninst", default=False,
-                               help="just print a summary of uninstallable packages")
+                          help="just print a summary of uninstallable packages")
         parser.add_option("", "--compute-migrations", action="store_true", dest="compute_migrations", default=True,
                           help="Compute which packages can migrate (the default)")
         parser.add_option("", "--no-compute-migrations", action="store_false", dest="compute_migrations",
                           help="Do not compute which packages can migrate.")
         parser.add_option("", "--series", action="store", dest="series", default='',
-                               help="set distribution series name")
+                          help="set distribution series name")
         (self.options, self.args) = parser.parse_args()
 
         if self.options.verbose:
@@ -441,9 +441,12 @@ class Britney(object):
                         MINDAYS[k.split("_")[1].lower()] = int(v)
                     elif k.startswith("HINTS_"):
                         self.HINTS[k.split("_")[1].lower()] = \
-                            reduce(lambda x,y: x+y, [hasattr(self, "HINTS_" + i) and getattr(self, "HINTS_" + i) or (i,) for i in v.split()])
+                            reduce(lambda x, y: x+y, [
+                                hasattr(self, "HINTS_" + i) and
+                                getattr(self, "HINTS_" + i) or
+                                (i,) for i in v.split()])
                     elif not hasattr(self.options, k.lower()) or \
-                         not getattr(self.options, k.lower()):
+                            not getattr(self.options, k.lower()):
                         setattr(self.options, k.lower(), v)
 
         if hasattr(self.options, 'components'):  # pragma: no cover
@@ -474,7 +477,7 @@ class Britney(object):
         self.options.smooth_updates = self.options.smooth_updates.split()
 
         if not hasattr(self.options, 'ignore_cruft') or \
-            self.options.ignore_cruft == "0":
+                self.options.ignore_cruft == "0":
             self.options.ignore_cruft = False
 
         if not hasattr(self.options, 'check_consistency_level'):
@@ -614,7 +617,8 @@ class Britney(object):
 
             self.logger.info(" - constraint %s", pkg_name)
 
-            pkg_list = [x.strip() for x in mandatory_field('Package-List').split("\n") if x.strip() != '' and not x.strip().startswith("#")]
+            pkg_list = [x.strip() for x in mandatory_field('Package-List').split("\n")
+                        if x.strip() != '' and not x.strip().startswith("#")]
             src_data = SourcePackage(faux_version,
                                      faux_section,
                                      set(),
@@ -717,12 +721,14 @@ class Britney(object):
                         if apt_pkg.version_compare(hint2.version, hint.version) < 0:
                             # This hint is for a newer version, so discard the old one
                             self.logger.warning("Overriding %s[%s] = ('%s', '%s', '%s') with ('%s', '%s', '%s')",
-                                                x, package, hint2.version, hint2.architecture, hint2.user, hint.version, hint.architecture, hint.user)
+                                                x, package, hint2.version, hint2.architecture,
+                                                hint2.user, hint.version, hint.architecture, hint.user)
                             hint2.set_active(False)
                         else:
                             # This hint is for an older version, so ignore it in favour of the new one
                             self.logger.warning("Ignoring %s[%s] = ('%s', '%s', '%s'), ('%s', '%s', '%s') is higher or equal",
-                                                x, package, hint.version, hint.architecture, hint.user, hint2.version, hint2.architecture, hint2.user)
+                                                x, package, hint.version, hint.architecture, hint.user,
+                                                hint2.version, hint2.architecture, hint2.user)
                             hint.set_active(False)
                     else:
                         self.logger.warning("Overriding %s[%s] = ('%s', '%s') with ('%s', '%s')",
@@ -797,7 +803,8 @@ class Britney(object):
                 n = len(nuninst[arch])
             elif original and arch in original:
                 n = len(original[arch])
-            else: continue
+            else:
+                continue
             if arch in self.options.break_arches:
                 totalbreak = totalbreak + n
             else:
@@ -828,8 +835,8 @@ class Britney(object):
                 group_info[y] = result
             except MigrationConstraintException as e:
                 rescheduled_packages.remove(y)
-                output_logger.info("not adding package to list: %s",(y.package))
-                output_logger.info("    got exception: %s"%(repr(e)))
+                output_logger.info("not adding package to list: %s", (y.package))
+                output_logger.info("    got exception: %s" % (repr(e)))
 
         if nuninst:
             nuninst_orig = nuninst
@@ -865,7 +872,8 @@ class Britney(object):
                             output_logger.info("   pre: %s", self.eval_nuninst(nuninst_last_accepted))
                             output_logger.info("   now: %s", self.eval_nuninst(nuninst_after))
                             if new_cruft:
-                                output_logger.info("   added new cruft items to list: %s",
+                                output_logger.info(
+                                    "   added new cruft items to list: %s",
                                     " ".join(x.uvname for x in new_cruft))
 
                             if len(selected) <= 20:
@@ -916,9 +924,10 @@ class Britney(object):
                                            len(maybe_rescheduled_packages),
                                            len(worklist)
                                            )
-                        output_logger.info("    got exception: %s"%(repr(e)))
+                        output_logger.info("    got exception: %s" % (repr(e)))
                         if self.options.check_consistency_level >= 3:
-                            target_suite.check_suite_source_pkg_consistency('iter_package after rollback (MigrationConstraintException)')
+                            target_suite.check_suite_source_pkg_consistency(
+                                'iter_package after rollback (MigrationConstraintException)')
 
                     if not accepted:
                         if len(comp) > 1:
@@ -1006,7 +1015,8 @@ class Britney(object):
                     # On non-recursive hints check for cruft and purge it proactively in case it "fixes" the hint.
                     cruft = [x for x in upgrade_me if x.is_cruft_removal]
                     if new_cruft:
-                        output_logger.info("Change added new cruft items to list: %s",
+                        output_logger.info(
+                            "Change added new cruft items to list: %s",
                             " ".join(x.uvname for x in new_cruft))
                         cruft.extend(new_cruft)
                     if cruft:
@@ -1241,7 +1251,6 @@ class Britney(object):
             write_heidi_delta(self.options.heidi_delta_output,
                               self.all_selected)
 
-
         self.logger.info("Test completed!")
 
     def printuninstchange(self):
@@ -1430,7 +1439,7 @@ class Britney(object):
                     if h != mincands[-1] and h not in seen_hints:
                         candidates.append(h)
                         seen_hints.add(h)
-        return [ candidates, mincands ]
+        return [candidates, mincands]
 
     def run_auto_hinter(self):
         mi_factory = self._migration_item_factory
