@@ -137,9 +137,9 @@ class Excuse(object):
     def add_dependency(self, deptype, name, arch):
         """Add a dependency of type deptype """
         if name not in self.all_deps:
-            self.all_deps[name]={}
+            self.all_deps[name] = {}
         if deptype not in self.all_deps[name]:
-            self.all_deps[name][deptype]=[]
+            self.all_deps[name][deptype] = []
         self.all_deps[name][deptype].append(arch)
 
     def get_deps(self):
@@ -155,12 +155,13 @@ class Excuse(object):
 
     def add_sane_dep(self, name):
         """Add a sane dependency"""
-        if name not in self.sane_deps: self.sane_deps.append(name)
+        if name not in self.sane_deps:
+            self.sane_deps.append(name)
 
     def add_break_dep(self, name, arch):
         """Add a break dependency"""
         if (name, arch) not in self.break_deps:
-            self.break_deps.append( (name, arch) )
+            self.break_deps.append((name, arch))
 
     def add_unsatisfiable_on_arch(self,  arch):
         """Add an arch that has unsatisfiable dependencies"""
@@ -267,7 +268,8 @@ class Excuse(object):
     def _text(self):
         """Render the excuse in text"""
         res = []
-        res.append("Migration status for %s (%s to %s): %s" %
+        res.append(
+            "Migration status for %s (%s to %s): %s" %
             (self.name, self.ver[0], self.ver[1], self._format_verdict_summary()))
         if not self.is_valid:
             res.append("Issues preventing migration:")
