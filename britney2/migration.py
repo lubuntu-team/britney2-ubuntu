@@ -112,6 +112,12 @@ class MigrationManager(object):
         else:
             assert item_package in binaries_t[item.architecture]
             pkg_id = binaries_t[item.architecture][item_package].pkg_id
+            binary, ver, parch = pkg_id
+            if ver != item.version:
+                raise MigrationConstraintException(
+                    "trying cruft removal item %s, while %s has %s/%s on %s" % (
+                        item, target_suite.name,
+                        binary, ver, parch))
             source_name = binaries_t[item.architecture][item_package].source
             rms = {pkg_id}
             smoothbins = set()

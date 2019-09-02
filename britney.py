@@ -878,10 +878,15 @@ class Britney(object):
                                 target_suite.check_suite_source_pkg_consistency('iter_packages after commit')
                             nuninst_last_accepted = nuninst_after
                             for cruft_item in new_cruft:
-                                _, updates, rms, _ = mm.compute_groups(cruft_item)
-                                result = (cruft_item, frozenset(updates), frozenset(rms))
-                                group_info[cruft_item] = result
-                            worklist.extend([x] for x in new_cruft)
+                                try:
+                                    _, updates, rms, _ = mm.compute_groups(cruft_item)
+                                    result = (cruft_item, frozenset(updates), frozenset(rms))
+                                    group_info[cruft_item] = result
+                                    worklist.append([cruft_item])
+                                except MigrationConstraintException as e:
+                                    output_logger.info(
+                                        "    got exception adding cruft item %s to list: %s" %
+                                        (cruft_item.uvname, repr(e)))
                             rescheduled_packages.extend(maybe_rescheduled_packages)
                             maybe_rescheduled_packages.clear()
                         else:
