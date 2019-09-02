@@ -861,6 +861,10 @@ class Britney(object):
                             output_logger.info("   ori: %s", self.eval_nuninst(nuninst_orig))
                             output_logger.info("   pre: %s", self.eval_nuninst(nuninst_last_accepted))
                             output_logger.info("   now: %s", self.eval_nuninst(nuninst_after))
+                            if new_cruft:
+                                output_logger.info("   added new cruft items to list: %s",
+                                    " ".join(x.uvname for x in new_cruft))
+
                             if len(selected) <= 20:
                                 output_logger.info("   all: %s", " ".join(x.uvname for x in selected))
                             else:
@@ -993,7 +997,10 @@ class Britney(object):
                 else:
                     # On non-recursive hints check for cruft and purge it proactively in case it "fixes" the hint.
                     cruft = [x for x in upgrade_me if x.is_cruft_removal]
-                    cruft.extend(new_cruft)
+                    if new_cruft:
+                        output_logger.info("Change added new cruft items to list: %s",
+                            " ".join(x.uvname for x in new_cruft))
+                        cruft.extend(new_cruft)
                     if cruft:
                         output_logger.info("Checking if changes enables cruft removal")
                         (nuninst_end, remaining_cruft) = self.iter_packages(cruft,
