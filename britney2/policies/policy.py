@@ -83,7 +83,7 @@ class PolicyEngine(object):
 
 class BasePolicy(object):
 
-    def __init__(self, policy_id, options, suite_info, applicable_suites, src_policy = ApplySrcPolicy.RUN_SRC):
+    def __init__(self, policy_id, options, suite_info, applicable_suites, src_policy=ApplySrcPolicy.RUN_SRC):
         """The BasePolicy constructor
 
         :param policy_id An string identifying the policy.  It will
@@ -275,7 +275,7 @@ class AgePolicy(BasePolicy):
         time_now = time.time()
         if hasattr(self.options, 'fake_runtime'):
             time_now = int(self.options.fake_runtime)
-            self.logger.info("overriding runtime with fake_runtime %d"%time_now)
+            self.logger.info("overriding runtime with fake_runtime %d" % time_now)
 
         self._date_now = int(((time_now / (60*60)) - 19) / 24)
         self._dates = {}
@@ -342,7 +342,7 @@ class AgePolicy(BasePolicy):
                 self.logger.info('Applying bounty for %s granted by %s: %d days',
                                  source_name, bounty, excuse.bounty[bounty])
                 excuse.addhtml('Required age reduced by %d days because of %s' %
-                             (excuse.bounty[bounty], bounty))
+                               (excuse.bounty[bounty], bounty))
                 min_days -= excuse.bounty[bounty]
         if urgency not in self._penalty_immune_urgencies:
             for penalty in excuse.penalty:
@@ -350,12 +350,12 @@ class AgePolicy(BasePolicy):
                     self.logger.info('Applying penalty for %s given by %s: %d days',
                                      source_name, penalty, excuse.penalty[penalty])
                     excuse.addhtml('Required age increased by %d days because of %s' %
-                             (excuse.penalty[penalty], penalty))
+                                   (excuse.penalty[penalty], penalty))
                     min_days += excuse.penalty[penalty]
 
         # the age in BOUNTY_MIN_AGE can be higher than the one associated with
         # the real urgency, so don't forget to take it into account
-        bounty_min_age =  min(self._bounty_min_age, self._min_days[urgency])
+        bounty_min_age = min(self._bounty_min_age, self._min_days[urgency])
         if min_days < bounty_min_age:
             min_days = bounty_min_age
             excuse.addhtml('Required age is not allowed to drop below %d days' % min_days)
@@ -428,11 +428,11 @@ class AgePolicy(BasePolicy):
                         # Ignore comment lines (mostly used for tests)
                         continue
                     # <source> <version> <date>)
-                    l = line.split()
-                    if len(l) != 3:  # pragma: no cover
+                    ln = line.split()
+                    if len(ln) != 3:  # pragma: no cover
                         continue
                     try:
-                        dates[l[0]] = (l[1], int(l[2]))
+                        dates[ln[0]] = (ln[1], int(ln[2]))
                     except ValueError:  # pragma: no cover
                         pass
         except FileNotFoundError:
@@ -463,31 +463,31 @@ class AgePolicy(BasePolicy):
                     # Ignore comment lines (mostly used for tests)
                     continue
                 # <source> <version> <urgency>
-                l = line.split()
-                if len(l) != 3:
+                ln = line.split()
+                if len(ln) != 3:
                     continue
 
                 # read the minimum days associated with the urgencies
-                urgency_old = urgencies.get(l[0], None)
+                urgency_old = urgencies.get(ln[0], None)
                 mindays_old = self._min_days.get(urgency_old, 1000)
-                mindays_new = self._min_days.get(l[2], min_days_default)
+                mindays_new = self._min_days.get(ln[2], min_days_default)
 
                 # if the new urgency is lower (so the min days are higher), do nothing
                 if mindays_old <= mindays_new:
                     continue
 
                 # if the package exists in the target suite and it is more recent, do nothing
-                tsrcv = sources_t.get(l[0], None)
-                if tsrcv and apt_pkg.version_compare(tsrcv.version, l[1]) >= 0:
+                tsrcv = sources_t.get(ln[0], None)
+                if tsrcv and apt_pkg.version_compare(tsrcv.version, ln[1]) >= 0:
                     continue
 
                 # if the package doesn't exist in the primary source suite or it is older, do nothing
-                usrcv = sources_s.get(l[0], None)
-                if not usrcv or apt_pkg.version_compare(usrcv.version, l[1]) < 0:
+                usrcv = sources_s.get(ln[0], None)
+                if not usrcv or apt_pkg.version_compare(usrcv.version, ln[1]) < 0:
                     continue
 
                 # update the urgency for the package
-                urgencies[l[0]] = l[2]
+                urgencies[ln[0]] = ln[2]
 
     def _write_dates_file(self):
         dates = self._dates
@@ -644,14 +644,14 @@ class RCBugPolicy(BasePolicy):
         bugs = {}
         self.logger.info("Loading RC bugs data from %s", filename)
         for line in open(filename, encoding='ascii'):
-            l = line.split()
-            if len(l) != 2:  # pragma: no cover
+            ln = line.split()
+            if len(ln) != 2:  # pragma: no cover
                 self.logger.warning("Malformed line found in line %s", line)
                 continue
-            pkg = l[0]
+            pkg = ln[0]
             if pkg not in bugs:
                 bugs[pkg] = set()
-            bugs[pkg].update(l[1].split(","))
+            bugs[pkg].update(ln[1].split(","))
         return bugs
 
 
@@ -783,7 +783,7 @@ class BuildDependsPolicy(BasePolicy):
         super().initialise(britney)
         self._britney = britney
         if hasattr(self.options, 'all_buildarch'):
-            self._all_buildarch = SuiteContentLoader.config_str_as_list(self.options.all_buildarch,[])
+            self._all_buildarch = SuiteContentLoader.config_str_as_list(self.options.all_buildarch, [])
 
     def apply_src_policy_impl(self, build_deps_info, item, source_data_tdist, source_data_srcdist, excuse,
                               get_dependency_solvers=get_dependency_solvers):
@@ -871,12 +871,12 @@ class BuildDependsPolicy(BasePolicy):
         arch_results = {}
         result_archs = defaultdict(list)
         bestresult = BuildDepResult.FAILED
-        check_archs = self._get_check_archs(relevant_archs,dep_type);
+        check_archs = self._get_check_archs(relevant_archs, dep_type)
         if not check_archs:
             # when the arch list is empty, we check the b-d on any arch, instead of all archs
             # this happens for Build-Depens on a source package that only produces arch: all binaries
             any_arch_ok = True
-            check_archs = self._get_check_archs(self.options.architectures,DependencyType.BUILD_DEPENDS_INDEP);
+            check_archs = self._get_check_archs(self.options.architectures, DependencyType.BUILD_DEPENDS_INDEP)
 
         for arch in check_archs:
             # retrieve the binary package from the specified suite and arch
@@ -933,14 +933,18 @@ class BuildDependsPolicy(BasePolicy):
 
         if any_arch_ok:
             arch = result_archs[bestresult][0]
-            excuse.addhtml("Checking %s on %s"%(dep_type.get_description(),arch))
+            excuse.addhtml("Checking %s on %s" % (dep_type.get_description(), arch))
             key = "check-%s-on-arch" % dep_type.get_reason()
             build_deps_info[key] = arch
-            verdict = self._add_info_for_arch(arch, excuses_info, blockers, arch_results, dep_type, target_suite, source_suite, excuse, verdict)
+            verdict = self._add_info_for_arch(
+                arch, excuses_info, blockers, arch_results,
+                dep_type, target_suite, source_suite, excuse, verdict)
 
         else:
             for arch in check_archs:
-                verdict = self._add_info_for_arch(arch, excuses_info, blockers, arch_results, dep_type, target_suite, source_suite, excuse, verdict)
+                verdict = self._add_info_for_arch(
+                    arch, excuses_info, blockers, arch_results,
+                    dep_type, target_suite, source_suite, excuse, verdict)
 
             if unsat_bd:
                 build_deps_info['unsatisfiable-arch-build-depends'] = unsat_bd
@@ -1246,4 +1250,3 @@ class BuiltOnBuilddPolicy(BasePolicy):
             signerinfo = json.load(fd)
 
         return signerinfo
-
