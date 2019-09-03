@@ -394,19 +394,15 @@ class ExcuseFinder(object):
             if is_valid:
                 continue
 
-            binary_u = all_binaries[pkg_id]
-            # There is an issue with the package.  If it is arch:any, then _excuse_unsat_deps will have
-            # handled everything for us correctly.  However, arch:all have some special-casing IRT
-            # nobreakall that we deal with ourselves here.
-            if binary_u.architecture == 'all' and pkg_id.architecture in self.options.nobreakall_arches:
-                # We sometimes forgive uninstallable arch:all packages on nobreakall architectures
-                # (e.g. we sometimes force-hint in arch:all packages that are only installable on
-                #  on a subset of all nobreak architectures).
-                # This forgivness is only done if the package is already in testing AND it is broken
-                # in testing on this architecture already.  Anything else would be a regression
-                if target_suite.is_pkg_in_the_suite(pkg_id) and not target_suite.is_installable(pkg_id):
-                    # It is a regression.
-                    excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            # TODO actually reject items that are not valid based on the
+            # result of _excuse_unsat_deps. However:
+            # - the calculation from _excuse_unsat_deps isn't correct when
+            #   multiple source suites are required:
+            #   * bin in unstable needs bin from (t)pu
+            #   * bin in (t)pu needs bin from unstable
+            # - when a binary is already uninstallable in testing, a newer
+            #   version of that binary is allowed to migrate, even if it is
+            #   uninstallable
 
         # at this point, we check the status of the builds on all the supported architectures
         # to catch the out-of-date ones
