@@ -156,7 +156,7 @@ class T(TestBase):
             with open(os.path.join(self.data.path, 'data/testing/state/autopkgtest-pending.json')) as f:
                 self.pending_requests = json.load(f)
         except IOError:
-                self.pending_requests = None
+            self.pending_requests = None
 
         self.assertNotIn('FIXME', out)
 
