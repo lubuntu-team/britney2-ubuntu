@@ -78,12 +78,22 @@ class ExcuseFinder(object):
 
             # if no package can satisfy the dependency, add this information to the excuse
             if not packages:
-                excuse.addhtml("%s/%s unsatisfiable Depends: %s" % (pkg, arch, block_txt.strip()))
-                excuse.add_unsatisfiable_dep(block_txt.strip(), arch)
-                excuse.addreason("depends")
+                # still list this dep as unsatifiable, even if it is arch:all
+                # on a non-nobreakall arch, because the autopkgtest policy
+                # uses this to determine of the autopkgtest can run.
+                # TODO this should probably be handled in a smarter way
                 excuse.add_unsatisfiable_on_arch(arch)
-                if arch not in self.options.break_arches:
-                    is_all_ok = False
+                if binary_u.architecture != 'all' or arch in self.options.nobreakall_arches:
+                    if arch not in self.options.break_arches:
+                        # when the result of this function is changed to
+                        # actually block items, this should be changed to
+                        # add_verdict_info
+                        excuse.addinfo("%s/%s unsatisfiable Depends: %s" % (pkg, arch, block_txt.strip()))
+                        excuse.add_unsatisfiable_dep(block_txt.strip(), arch)
+                        excuse.addreason("depends")
+                        # TODO this should only be considered a failure if it
+                        # is a regression wrt testing
+                        is_all_ok = False
                 continue
 
             # for the solving packages, update the excuse to add the dependencies
