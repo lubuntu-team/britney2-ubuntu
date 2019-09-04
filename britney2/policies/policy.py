@@ -945,7 +945,7 @@ class BuildDependsPolicy(BasePolicy):
 
         if any_arch_ok:
             arch = result_archs[bestresult][0]
-            excuse.addinfo("Checking %s on %s" % (dep_type.get_description(), arch))
+            excuse.add_detailed_info("Checking %s on %s" % (dep_type.get_description(), arch))
             key = "check-%s-on-arch" % dep_type.get_reason()
             build_deps_info[key] = arch
             verdict = self._add_info_for_arch(
