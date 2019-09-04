@@ -400,6 +400,7 @@ class AgePolicy(BasePolicy):
                 age_min_req = new_req
             else:
                 excuse.addinfo("Too young, but urgency pushed by %s" % who)
+                age_min_req = 0
         excuse.setdaysold(age_info['current-age'], age_min_req)
 
         if age_min_req == 0:
