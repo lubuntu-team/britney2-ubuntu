@@ -754,6 +754,15 @@ def find_smooth_updateable_binaries(binaries_to_check,
                 combined = set(smoothbins)
                 combined.add(pkg_id)
                 for rdep in rdeps:
+                    # each dependency clause has a set of possible
+                    # alternatives that can satisfy that dependency.
+                    # if any of them is outside the set of smoothbins, the
+                    # dependency can be satisfied even if this binary was
+                    # removed, so there is no need to keep it around for a
+                    # smooth update
+                    # if not, only this binary can satisfy the dependency, so
+                    # we should keep it around until the rdep is no longer in
+                    # testing
                     for dep_clause in pkg_universe.dependencies_of(rdep):
                         # filter out cruft binaries from unstable, because
                         # they will not be added to the set of packages that
