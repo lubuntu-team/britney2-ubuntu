@@ -189,10 +189,6 @@ class Excuse(object):
             return True
         return False
 
-    def addhtml(self, note):
-        """Add a note in HTML"""
-        self.htmlline.append(note)
-
     def addinfo(self, note):
         """Add a note in HTML"""
         self.infoline.append(note)
