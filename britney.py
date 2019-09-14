@@ -1098,7 +1098,10 @@ class Britney(object):
             else:
                 output_logger.info("FAILED\n")
                 if not transaction:
-                    return
+                    # if we 'FAILED', but we cannot rollback, we will probably
+                    # leave a broken state behind
+                    # this should not happen
+                    raise AssertionError("do_all FAILED but no transaction to rollback")
                 transaction.rollback()
                 if self.options.check_consistency_level >= 2:
                     target_suite.check_suite_source_pkg_consistency('do_all after rollback')
