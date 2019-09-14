@@ -324,6 +324,9 @@ class Britney(object):
         target_suite = self.suite_info.target_suite
         target_suite.inst_tester = self._inst_tester
 
+        self.allow_uninst = {}
+        for arch in self.options.architectures:
+            self.allow_uninst[arch] = set()
         self._migration_item_factory = MigrationItemFactory(self.suite_info)
         self._hint_parser = HintParser(self._migration_item_factory)
         self._migration_manager = MigrationManager(self.options, self.suite_info, self.all_binaries, self.pkg_universe,
@@ -736,6 +739,13 @@ class Britney(object):
                         hint2.set_active(False)
 
                 z[package][architecture] = key
+
+        for hint in hints['allow-uninst']:
+            if hint.architecture == 'source':
+                for arch in self.options.architectures:
+                    self.allow_uninst[arch].add(hint.package)
+            else:
+                self.allow_uninst[hint.architecture].add(hint.package)
 
         # Sanity check the hints hash
         if len(hints["block"]) == 0 and len(hints["block-udeb"]) == 0:

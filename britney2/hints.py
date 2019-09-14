@@ -50,7 +50,7 @@ class HintCollection(object):
 
 
 class Hint(object):
-    NO_VERSION = [ 'block', 'block-all', 'block-udeb', 'allow-archall-maintainer-upload' ]
+    NO_VERSION = [ 'block', 'block-all', 'block-udeb', 'allow-archall-maintainer-upload', 'allow-uninst' ]
 
     def __init__(self, user, hint_type, packages):
         self._user = user
@@ -168,6 +168,7 @@ class HintParser(object):
             # Other
             'remove': (1, split_into_one_hint_per_package),
             'force': (1, split_into_one_hint_per_package),
+            'allow-uninst': (1, split_into_one_hint_per_package),
         }
         self._aliases = {
             'approve': 'unblock',
