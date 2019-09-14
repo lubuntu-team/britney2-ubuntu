@@ -25,8 +25,9 @@ def compute_eqv_set(pkg_universe, updates, rms):
     return eqv_set
 
 
-def is_nuninst_worse(must_be_installable, nuninst_now_arch, nuninst_after_arch):
-    if len(nuninst_after_arch) > len(nuninst_now_arch):
+def is_nuninst_worse(must_be_installable, nuninst_now_arch, nuninst_after_arch, allow_uninst):
+    if len(nuninst_after_arch - allow_uninst) > \
+            len(nuninst_now_arch - allow_uninst):
         return True
 
     regression = nuninst_after_arch - nuninst_now_arch
@@ -37,12 +38,13 @@ def is_nuninst_worse(must_be_installable, nuninst_now_arch, nuninst_after_arch):
 
 class MigrationManager(object):
 
-    def __init__(self, options, suite_info, all_binaries, pkg_universe, constraints, migration_item_factory):
+    def __init__(self, options, suite_info, all_binaries, pkg_universe, constraints, allow_uninst, migration_item_factory):
         self.options = options
         self.suite_info = suite_info
         self.all_binaries = all_binaries
         self.pkg_universe = pkg_universe
         self.constraints = constraints
+        self.allow_uninst = allow_uninst
         self._transactions = []
         self._all_architectures = frozenset(self.options.architectures)
         self._migration_item_factory = migration_item_factory
@@ -450,7 +452,7 @@ class MigrationManager(object):
 
             # if the uninstallability counter is worse than before, break the loop
             if stop_on_first_regression:
-                worse = is_nuninst_worse(must_be_installable, nuninst_now[arch], nuninst_after[arch])
+                worse = is_nuninst_worse(must_be_installable, nuninst_now[arch], nuninst_after[arch], self.allow_uninst[arch])
 
                 # ... except for a few special cases
                 if worse and ((not is_source_migration and arch not in new_arches) or

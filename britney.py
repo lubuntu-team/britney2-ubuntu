@@ -330,7 +330,7 @@ class Britney(object):
         self._migration_item_factory = MigrationItemFactory(self.suite_info)
         self._hint_parser = HintParser(self._migration_item_factory)
         self._migration_manager = MigrationManager(self.options, self.suite_info, self.all_binaries, self.pkg_universe,
-                                                   self.constraints, self._migration_item_factory)
+                                                   self.constraints, self.allow_uninst, self._migration_item_factory)
 
         if not self.options.nuninst_cache:
             self.logger.info("Building the list of non-installable packages for the full archive")
@@ -1071,6 +1071,7 @@ class Britney(object):
                     # This usually only happens with hints
                     break_arches = set()
                 better = is_nuninst_asgood_generous(self.constraints,
+                                                    self.allow_uninst,
                                                     self.options.architectures,
                                                     self.nuninst_orig,
                                                     nuninst_end,

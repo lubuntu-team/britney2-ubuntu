@@ -334,7 +334,7 @@ def old_libraries(mi_factory, suite_info, outofsync_arches=frozenset()):
     return removals
 
 
-def is_nuninst_asgood_generous(constraints, architectures, old, new, break_arches=frozenset()):
+def is_nuninst_asgood_generous(constraints, allow_uninst, architectures, old, new, break_arches=frozenset()):
     """Compares the nuninst counters and constraints to see if they improved
 
     Given a list of architectures, the previous and the current nuninst
@@ -355,7 +355,9 @@ def is_nuninst_asgood_generous(constraints, architectures, old, new, break_arche
     for arch in architectures:
         if arch in break_arches:
             continue
-        diff = diff + (len(new[arch]) - len(old[arch]))
+        diff = diff + \
+            (len(new[arch] - allow_uninst[arch])
+                - len(old[arch] - allow_uninst[arch]))
     if diff > 0:
         return False
     must_be_installable = constraints['keep-installable']
