@@ -65,6 +65,9 @@ Other than source and binary packages, Britney loads the following data:
   * Blocks, which contains user-supplied blocks read from Launchpad bugs
     (see LPBlockBugPolicy).
 
+  * ExcuseBugs, which contains user-supplied update-excuse read from
+    Launchpad bugs (see LPExcuseBugsPolicy).
+
 For a more detailed explanation about the format of these files, please read
 the documentation of the related methods. The exact meaning of them will be
 instead explained in the chapter "Excuses Generation".
@@ -219,6 +222,7 @@ from britney2.policies.policy import (AgePolicy,
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.policies.sourceppa import SourcePPAPolicy
 from britney2.policies.email import EmailPolicy
+from britney2.policies.lpexcusebugs import LPExcuseBugsPolicy
 from britney2.utils import (log_and_format_old_libraries,
                             read_nuninst, write_nuninst, write_heidi,
                             format_and_log_uninst, newly_uninst,
@@ -526,6 +530,7 @@ class Britney(object):
         if getattr(self.options, 'check_buildd', 'no') == 'yes':
             self._policy_engine.add_policy(BuiltOnBuilddPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(LPBlockBugPolicy(self.options, self.suite_info))
+        self._policy_engine.add_policy(LPExcuseBugsPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(SourcePPAPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(LinuxPolicy(self.options, self.suite_info))
         add_email_policy = getattr(self.options, 'email_enable', 'no')
