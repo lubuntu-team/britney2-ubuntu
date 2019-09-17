@@ -65,6 +65,9 @@ Other than source and binary packages, Britney loads the following data:
   * Blocks, which contains user-supplied blocks read from Launchpad bugs
     (see LPBlockBugPolicy).
 
+  * ExcuseBugs, which contains user-supplied update-excuse read from
+    Launchpad bugs (see LPExcuseBugsPolicy).
+
 For a more detailed explanation about the format of these files, please read
 the documentation of the related methods. The exact meaning of them will be
 instead explained in the chapter "Excuses Generation".
@@ -202,7 +205,7 @@ from britney2.hints import HintParser
 from britney2.installability.builder import build_installability_tester, ma_parse_depends
 from britney2.migrationitem import MigrationItem
 from britney2.policies.policy import AgePolicy, RCBugPolicy, PiupartsPolicy, PolicyVerdict
-from britney2.policies.policy import LPBlockBugPolicy
+from britney2.policies.policy import LPBlockBugPolicy, LPExcuseBugsPolicy
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.policies.sourceppa import SourcePPAPolicy
 from britney2.policies.sruadtregression import SRUADTRegressionPolicy
@@ -536,6 +539,7 @@ class Britney(object):
         # Piuparts is noisy & not used by Ubuntu (LP: #1651537)
         # self.policies.append(PiupartsPolicy(self.options, self.suite_info))
         self.policies.append(LPBlockBugPolicy(self.options, self.suite_info))
+        self.policies.append(LPExcuseBugsPolicy(self.options, self.suite_info))
         if getattr(self.options, 'adt_enable') == 'yes':
             self.policies.append(AutopkgtestPolicy(self.options, self.suite_info))
         self.policies.append(SourcePPAPolicy(self.options, self.suite_info))

@@ -698,3 +698,48 @@ class LPBlockBugPolicy(BasePolicy):
         excuse.addreason('block')
 
         return PolicyVerdict.REJECTED_PERMANENTLY
+
+class LPExcuseBugsPolicy(BasePolicy):
+    """update-excuse Launchpad bug policy to link to a bug report, does not prevent migration
+
+    This policy will read an user-supplied "ExcuseBugs" file from the unstable
+    directory (provided by an external script) with rows of the following
+    format:
+
+        <source-name> <bug> <date>
+
+    The dates are expressed as the number of seconds from the Unix epoch
+    (1970-01-01 00:00:00 UTC).
+    """
+    def __init__(self, options, suite_info):
+        super().__init__('update-excuse', options, suite_info, {'unstable'})
+
+    def initialise(self, britney):
+        super().initialise(britney)
+        self.excuse_bugs = {}  # srcpkg -> [(bug, date), ...]
+
+        filename = os.path.join(self.options.unstable, "ExcuseBugs")
+        self.log("Loading user-supplied excuse bug data from %s" % filename)
+        for line in open(filename):
+            l = line.split()
+            if len(l) != 3:
+                self.log("ExcuseBugs, ignoring malformed line %s" % line, type='W')
+                continue
+            try:
+                self.excuse_bugs.setdefault(l[0], [])
+                self.excuse_bugs[l[0]].append((l[1], int(l[2])))
+            except ValueError:
+                self.log("ExcuseBugs, unable to parse \"%s\"" % line, type='E')
+
+    def apply_policy_impl(self, excuse_bugs_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
+        try:
+            excuse_bug = self.excuse_bugs[source_name]
+        except KeyError:
+            return PolicyVerdict.PASS
+
+        for bug, date in excuse_bug:
+            excuse_bugs_info[bug] = date
+            excuse.addhtml("Also see <a href=\"https://launchpad.net/bugs/%s\">bug %s</a> last updated on %s" %
+                           (bug, bug, time.asctime(time.gmtime(date))))
+
+        return PolicyVerdict.PASS
