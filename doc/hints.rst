@@ -229,6 +229,15 @@ Migration can still be blocked or delayed for other reasons (like age,
 dependencies, piuparts regressions, etc).
 
 
+allow-archall-maintainer-upload `<action list>
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Allow the arch: all binaries of the sources specified in `<action list>` to be
+maintainer uploads.
+
+The items in `<action list>` are unversioned source package names.
+
+
 Migration selection hints
 -------------------------
 
@@ -299,12 +308,27 @@ desirable than the resulting breakage.
 
 *Caveat*: Be sure to test the outcome of these hints.  A last minute
 change can have long lasting undesirable consequences on the end
-result.
+result. Consider using an `allow-uninst` hint instead.
 
 Other hints
 -----------
 
 This section cover hints that have no other grouping.
+
+
+allow-uninst `<action list>`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When trying migration of items, don't consider the uninstallability of binary
+packages in the `<action list>`. This means that items can still migrate if
+they cause these packages to become uninstallable.
+
+The `<action list>` is a list of unversioned binary packages. If an
+architecture is specified, it only applies to the specific architecture.
+Please note that the specified architecture is the architecture where Britney
+does the installability test. For arch: all package, this means that all
+relevant (`nobreakall`) architectures need to be specified, not `all`.
+
 
 remove `<action list>`
 ^^^^^^^^^^^^^^^^^^^^^^
