@@ -229,8 +229,8 @@ Migration can still be blocked or delayed for other reasons (like age,
 dependencies, piuparts regressions, etc).
 
 
-allow-archall-maintainer-upload `<action list>
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+allow-archall-maintainer-upload `<action list>`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Allow the arch: all binaries of the sources specified in `<action list>` to be
 maintainer uploads.
