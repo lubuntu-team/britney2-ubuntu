@@ -726,7 +726,6 @@ def find_smooth_updateable_binaries(binaries_to_check,
     for pkg_id in binaries_to_check:
         binary, _, parch = pkg_id
 
-        cruft = False
         cruftbins = set()
 
         # Not a candidate for smooth up date (newer non-cruft version in unstable)
@@ -734,10 +733,9 @@ def find_smooth_updateable_binaries(binaries_to_check,
             if binaries_s[parch][binary].source_version == source_data.version:
                 continue
             cruftbins.add(binaries_s[parch][binary].pkg_id)
-            cruft = True
 
         # Maybe a candidate (cruft or removed binary): check if config allows us to smooth update it.
-        if cruft or 'ALL' in smooth_updates or binaries_t[parch][binary].section in smooth_updates:
+        if 'ALL' in smooth_updates or binaries_t[parch][binary].section in smooth_updates:
             # if the package has reverse-dependencies which are
             # built from other sources, it's a valid candidate for
             # a smooth update.  if not, it may still be a valid
