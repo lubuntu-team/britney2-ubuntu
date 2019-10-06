@@ -577,6 +577,11 @@ class Britney(object):
                 src_data.binaries.add(pkg_id)
                 target_suite.binaries[arch][pkg_name] = bin_data
                 pri_source_suite.binaries[arch][pkg_name] = bin_data
+
+                # register provided packages with the target suite provides table
+                for provided_pkg, provided_version, _ in bin_data.provides:
+                    target_suite.provides_table[arch][provided_pkg].add((pkg_name, provided_version))
+
                 self.all_binaries[pkg_id] = bin_data
 
     def _load_constraints(self, constraints_file):
