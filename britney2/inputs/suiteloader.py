@@ -134,6 +134,17 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         # building items/keys - by intern strings we reduce memory (considerably).
         self._architectures = [sys.intern(arch) for arch in allarches]
 
+    def _get_suite_name(self, suite, release_file):
+        for name in ('Suite', 'Codename'):
+            try:
+                return release_file[name]
+            except KeyError:
+                pass
+        self.logger.warning("Either of the fields \"Suite\" or \"Codename\" should be present in a release file.")
+        self.logger.error("Release file for suite %s is missing both the \"Suite\" and the \"Codename\" fields.",
+                          suite.name)
+        raise KeyError('Suite')
+
     def _update_suite_name(self, suite):
         try:
             release_file = read_release_file(suite.path)
@@ -143,8 +154,8 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
             release_file = None
 
         if release_file is not None:
-            suite.name = release_file['Suite']
-            self.logger.info("Using suite name from Release file: %s", release_file['Suite'])
+            suite.name = self._get_suite_name(suite, release_file)
+            self.logger.info("Using suite name from Release file: %s", suite.name)
 
     def _check_release_file(self, target_suite, missing_config_msg):
         try:
