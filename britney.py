@@ -1346,7 +1346,6 @@ class Britney(object):
 
         output_logger = self.output_logger
 
-        suites = self.suite_info
         self.logger.info("> Processing '%s' hint from %s", hinttype, who)
         output_logger.info("Trying %s from %s: %s", hinttype, who,
                            " ".join("%s/%s" % (x.uvname, x.version) for x in pkgvers)
