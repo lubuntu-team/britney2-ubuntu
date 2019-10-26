@@ -243,7 +243,7 @@ class MigrationManager(object):
         """
         undo = {'binaries': {}, 'sources': {}, 'virtual': {}}
 
-        affected_direct = set()
+        affected_all = set()
         updated_binaries = set()
 
         # local copies for better performance
@@ -288,8 +288,8 @@ class MigrationManager(object):
             if pkey not in eqv_set:
                 # all the reverse dependencies are affected by
                 # the change
-                affected_direct.update(pkg_universe.reverse_dependencies_of(rm_pkg_id))
-                affected_direct.update(pkg_universe.negative_dependencies_of(rm_pkg_id))
+                affected_all.update(pkg_universe.reverse_dependencies_of(rm_pkg_id))
+                affected_all.update(pkg_universe.negative_dependencies_of(rm_pkg_id))
 
             # remove the provided virtual packages
             for provided_pkg, prov_version, _ in pkg_data.provides:
@@ -319,7 +319,7 @@ class MigrationManager(object):
 
                 # obviously, added/modified packages are affected
                 if not equivalent_replacement:
-                    affected_direct.add(updated_pkg_id)
+                    affected_all.add(updated_pkg_id)
                 # if the binary already exists in testing, it is currently
                 # built by another source package. we therefore remove the
                 # version built by the other source package, after marking
@@ -331,7 +331,7 @@ class MigrationManager(object):
                     undo['binaries'][key] = old_pkg_id
                     if not equivalent_replacement:
                         # all the reverse conflicts
-                        affected_direct.update(pkg_universe.reverse_dependencies_of(old_pkg_id))
+                        affected_all.update(pkg_universe.reverse_dependencies_of(old_pkg_id))
                     target_suite.remove_binary(old_pkg_id)
                 elif transaction and transaction.parent_transaction:
                     # the binary isn't in the target suite, but it may have been at
@@ -347,7 +347,7 @@ class MigrationManager(object):
                     for (tundo, tpkg) in transaction.parent_transaction.undo_items:
                         if key in tundo['binaries']:
                             tpkg_id = tundo['binaries'][key]
-                            affected_direct.update(pkg_universe.reverse_dependencies_of(tpkg_id))
+                            affected_all.update(pkg_universe.reverse_dependencies_of(tpkg_id))
 
                 # add/update the binary package from the source suite
                 new_pkg_data = packages_s[parch][binary]
@@ -365,23 +365,22 @@ class MigrationManager(object):
                     provides_t_a[provided_pkg].add((binary, prov_version))
                 if not equivalent_replacement:
                     # all the reverse dependencies are affected by the change
-                    affected_direct.add(updated_pkg_id)
-                    affected_direct.update(pkg_universe.negative_dependencies_of(updated_pkg_id))
+                    affected_all.add(updated_pkg_id)
+                    affected_all.update(pkg_universe.negative_dependencies_of(updated_pkg_id))
 
         # Also include the transitive rdeps of the packages found so far
-        affected_all = affected_direct.copy()
         compute_reverse_tree(pkg_universe, affected_all)
         if transaction:
             transaction.add_undo_item(undo, updated_binaries)
         # return the affected packages (direct and than all)
-        return (affected_direct, affected_all, smooth_updates)
+        return (affected_all, smooth_updates)
 
     def _apply_multiple_items_to_target_suite(self, items):
         is_source_migration = False
         if len(items) == 1:
             item = items[0]
             # apply the changes
-            affected_direct, affected_all, smooth_updates = self._apply_item_to_target_suite(item)
+            affected_all, smooth_updates = self._apply_item_to_target_suite(item)
             if item.architecture == 'source':
                 affected_architectures = self._all_architectures
                 is_source_migration = True
@@ -390,7 +389,6 @@ class MigrationManager(object):
         else:
             affected_architectures = set()
             removals = set()
-            affected_direct = set()
             affected_all = set()
             smooth_updates = set()
             for item in items:
@@ -403,13 +401,12 @@ class MigrationManager(object):
                 is_source_migration = True
 
             for item in items:
-                item_affected_direct, item_affected_all, item_smooth = self._apply_item_to_target_suite(item,
-                                                                                                        removals=removals)
-                affected_direct.update(item_affected_direct)
+                item_affected_all, item_smooth = self._apply_item_to_target_suite(item,
+                                                                                  removals=removals)
                 affected_all.update(item_affected_all)
                 smooth_updates.update(item_smooth)
 
-        return is_source_migration, affected_architectures, affected_direct, affected_all, smooth_updates
+        return is_source_migration, affected_architectures, affected_all, smooth_updates
 
     def migrate_items_to_target_suite(self, items, nuninst_now, stop_on_first_regression=True):
         is_accepted = True
@@ -421,17 +418,8 @@ class MigrationManager(object):
         break_arches = self.options.break_arches
         arch = None
 
-        is_source_migration, affected_architectures, affected_direct, affected_all, smooth_updates = \
+        is_source_migration, affected_architectures, affected_all, smooth_updates = \
             self._apply_multiple_items_to_target_suite(items)
-
-        # Optimise the test if we may revert directly.
-        # - The automatic-revert is needed since some callers (notably via hints) may
-        #   accept the outcome of this migration and expect nuninst to be updated.
-        #   (e.g. "force-hint" or "hint")
-        if stop_on_first_regression:
-            affected_all -= affected_direct
-        else:
-            affected_direct = set()
 
         # Copy nuninst_comp - we have to deep clone affected
         # architectures.
@@ -447,7 +435,7 @@ class MigrationManager(object):
         for arch in affected_architectures:
             check_archall = arch in nobreakall_arches
 
-            check_installability(target_suite, packages_t, arch, affected_direct, affected_all,
+            check_installability(target_suite, packages_t, arch, affected_all,
                                  check_archall, nuninst_after)
 
             # if the uninstallability counter is worse than before, break the loop

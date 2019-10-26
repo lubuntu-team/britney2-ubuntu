@@ -427,47 +427,11 @@ def test_installability(target_suite, pkg_name, pkg_id, broken, nuninst_arch):
     return c
 
 
-def check_installability(target_suite, binaries, arch, updates, affected, check_archall, nuninst):
+def check_installability(target_suite, binaries, arch, updates, check_archall, nuninst):
     broken = nuninst[arch + "+all"]
     packages_t_a = binaries[arch]
-    improvement = 0
 
-    # broken packages (first round)
     for pkg_id in (x for x in updates if x.architecture == arch):
-        name, version, parch = pkg_id
-        if name not in packages_t_a:
-            continue
-        pkgdata = packages_t_a[name]
-        if version != pkgdata.version:
-            # Not the version in testing right now, ignore
-            continue
-        actual_arch = pkgdata.architecture
-        nuninst_arch = None
-        # only check arch:all packages if requested
-        if check_archall or actual_arch != 'all':
-            nuninst_arch = nuninst[parch]
-        else:
-            nuninst[parch].discard(name)
-        result = test_installability(target_suite, name, pkg_id, broken, nuninst_arch)
-        if improvement > 0 or not result:
-            # Any improvement could in theory fix all of its rdeps, so
-            # stop updating "improvement" after that.
-            continue
-        if result > 0:
-            # Any improvement (even in arch:all packages) could fix any
-            # number of rdeps
-            improvement = 1
-            continue
-        if check_archall or actual_arch != 'all':
-            # We cannot count arch:all breakage (except on no-break-arch-all arches)
-            # because the nuninst check do not consider them regressions.
-            improvement += result
-
-    if improvement < 0:
-        # The early round is sufficient to disprove the situation
-        return
-
-    for pkg_id in (x for x in affected if x.architecture == arch):
         name, version, parch = pkg_id
         if name not in packages_t_a:
             continue
