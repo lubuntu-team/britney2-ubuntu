@@ -250,11 +250,46 @@ class SourcePackage(object):
         return getattr(self, self.__slots__[item])
 
 
-BinaryPackageId = namedtuple('BinaryPackageId', [
-    'package_name',
-    'version',
-    'architecture',
-])
+class PackageId(namedtuple(
+    'PackageId',
+        [
+            'package_name',
+            'version',
+            'architecture',
+        ])):
+    """Represent a source or binary package"""
+
+    def __init__(self, package_name, version, architecture):
+        assert self.architecture != 'all', "all not allowed for PackageId (%s)" % (self.name)
+
+    def __repr__(self):
+        return ('PID(%s)' % (self.name))
+
+    @property
+    def name(self):
+        if self.architecture == "source":
+            return ('%s/%s' % (self.package_name, self.version))
+        else:
+            return ('%s/%s/%s' % (self.package_name, self.version, self.architecture))
+
+    @property
+    def uvname(self):
+        if self.architecture == "source":
+            return ('%s' % (self.package_name))
+        else:
+            return ('%s/%s' % (self.package_name, self.architecture))
+
+
+class BinaryPackageId(PackageId):
+    """Represent a binary package"""
+
+    def __init__(self, package_name, version, architecture):
+        assert self.architecture != 'source', "Source not allowed for BinaryPackageId (%s)" % (self.name)
+        super().__init__(package_name, version, architecture)
+
+    def __repr__(self):
+        return ('BPID(%s)' % (self.name))
+
 
 BinaryPackage = namedtuple('BinaryPackage', [
     'version',
