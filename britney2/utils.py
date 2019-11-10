@@ -30,7 +30,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from functools import partial
-from itertools import filterfalse
+from itertools import filterfalse, chain
 
 import yaml
 
@@ -123,6 +123,25 @@ def compute_reverse_tree(pkg_universe, affected):
         pkg_id = remain.pop()
         new_pkg_ids = pkg_universe.reverse_dependencies_of(pkg_id) - affected
         affected.update(new_pkg_ids)
+        remain.extend(new_pkg_ids)
+    return None
+
+
+def add_transitive_dependencies_flatten(pkg_universe, initial_set):
+    """Find and include all transitive dependencies
+
+    This method updates the initial_set parameter to include all transitive
+    dependencies. The first argument is an instance of the BinaryPackageUniverse
+    and the second argument are a set of BinaryPackageId.
+
+    The set of initial packages will be updated in place and must
+    therefore be mutable.
+    """
+    remain = list(initial_set)
+    while remain:
+        pkg_id = remain.pop()
+        new_pkg_ids = [x for x in chain.from_iterable(pkg_universe.dependencies_of(pkg_id)) if x not in initial_set]
+        initial_set.update(new_pkg_ids)
         remain.extend(new_pkg_ids)
     return None
 

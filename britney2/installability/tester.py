@@ -17,7 +17,7 @@ from functools import partial
 import logging
 from itertools import chain, filterfalse
 
-from britney2.utils import iter_except
+from britney2.utils import iter_except, add_transitive_dependencies_flatten
 
 
 class InstallabilityTester(object):
@@ -52,11 +52,15 @@ class InstallabilityTester(object):
         # are essential and packages that will always follow.
         #
         # It may not be a complete essential set, since alternatives
-        # are not always resolved.  Noticably cases like "awk" may be
+        # are not always resolved.  Noticeably cases like "awk" may be
         # left out (since it could be either gawk, mawk or
         # original-awk) unless something in this sets depends strictly
         # on one of them
         self._cache_ess = {}
+
+        essential_w_transitive_deps = set(universe.essential_packages)
+        add_transitive_dependencies_flatten(universe, essential_w_transitive_deps)
+        self._cache_essential_transitive_dependencies = essential_w_transitive_deps
 
     def compute_installability(self):
         """Computes the installability of all the packages in the suite
@@ -137,8 +141,8 @@ class InstallabilityTester(object):
                 # Re-add broken packages as some of them may now be installable
                 self._suite_contents |= self._cache_broken
                 self._cache_broken = set()
-            if pkg_id in self._universe.essential_packages and pkg_id.architecture in self._cache_ess:
-                # Adds new essential => "pseudo-essential" set needs to be
+            if pkg_id in self._cache_essential_transitive_dependencies and pkg_id.architecture in self._cache_ess:
+                # Adds new possibly pseudo-essential => "pseudo-essential" set needs to be
                 # recomputed
                 del self._cache_ess[pkg_id.architecture]
 
