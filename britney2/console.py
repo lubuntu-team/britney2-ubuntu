@@ -29,4 +29,3 @@ Locals available
         console.interact(banner=banner, exitmsg='')
     except SubInterpreterExit:
         pass
-
