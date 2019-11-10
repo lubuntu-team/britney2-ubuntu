@@ -1306,6 +1306,13 @@ class Britney(object):
 
         known_hints = self._hint_parser.registered_hints
 
+        print("Britney hint tester")
+        print()
+        print("Besides inputting known britney hints, the follow commands are also available")
+        print(" * quit/exit      - terminates the shell")
+        print(" * python-console - jump into an interactive python shell (with the current loaded dataset)")
+        print()
+
         while True:
             # read the command from the command line
             try:
@@ -1319,6 +1326,14 @@ class Britney(object):
             # quit the hint tester
             if user_input and user_input[0] in ('quit', 'exit'):
                 break
+            elif user_input and user_input[0] == 'python-console':
+                try:
+                    import britney2.console
+                except ImportError as e:
+                    print("Failed to import britney.console module: %s" % repr(e))
+                    continue
+                britney2.console.run_python_console(self)
+                print("Returning to the britney hint-tester console")
                 # run a hint
             elif user_input and user_input[0] in ('easy', 'hint', 'force-hint'):
                 mi_factory = self._migration_item_factory

@@ -33,7 +33,7 @@ class Completer(object):
         self.cmds = ['easy', 'hint', 'force-hint', 'force', 'remove',
                      'force', 'age-days', 'urgent', 'block-all',
                      'block', 'block-udeb', 'unblock', 'unblock-udeb',
-                     'approve', 'exit', 'quit']
+                     'approve', 'exit', 'quit', 'python-console']
         self.britney = britney
         suite_info = britney.suite_info
         # generate a completion list from excuses.
