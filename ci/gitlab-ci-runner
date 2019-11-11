@@ -24,7 +24,7 @@ py.test-3 -v $PYTEST_COV_OPTIONS || err=$?
 echo
 britney2-tests/bin/runtests "$BRITNEY" britney2-tests/t test-out || err=$?
 
-if [ $err = 0 ] && [ "x$1" = "x--with-coverage" ]; then
+if [ "x$1" = "x--with-coverage" ]; then
     python3-coverage report -m
     echo
     python3-coverage html -d coverage
