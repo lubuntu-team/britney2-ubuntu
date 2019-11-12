@@ -19,6 +19,7 @@
 import calendar
 import collections
 from copy import deepcopy
+from datetime import datetime
 from enum import Enum
 import os
 import json
@@ -961,6 +962,7 @@ class AutopkgtestPolicy(BasePolicy):
             qname = 'debci-huge-%s-%s' % (self.options.series, arch)
         else:
             qname = 'debci-%s-%s' % (self.options.series, arch)
+        params['submit-time'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S%z')
         params = json.dumps(params)
 
         if self.amqp_channel:
