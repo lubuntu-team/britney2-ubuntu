@@ -16,6 +16,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 
+from datetime import datetime
 import os
 import json
 import tarfile
@@ -615,6 +616,7 @@ class AutopkgtestPolicy(BasePolicy):
             qname = 'debci-huge-%s-%s' % (self.options.series, arch)
         else:
             qname = 'debci-%s-%s' % (self.options.series, arch)
+        params['submit-time'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S%z')
         params = json.dumps(params)
 
         if self.amqp_channel:
