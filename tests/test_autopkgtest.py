@@ -153,7 +153,14 @@ class TestAutopkgtestBase(TestBase):
         try:
             with open(self.fake_amqp) as f:
                 for line in f:
-                    self.amqp_requests.add(line.strip())
+                    # debci-series-amd64:darkgreen {"triggers": ["darkgreen/2"], "submit-time": "2020-01-16 09:47:12"}
+                    # strip the submit time from the requests we're testing; it
+                    # is only for info for people reading the queue
+                    (queuepkg, data) = line.split(' ', 1)
+                    data_json = json.loads(data)
+                    del data_json["submit-time"]
+                    self.amqp_requests.add("{} {}".format(queuepkg,
+                                                          json.dumps(data_json)))
             os.unlink(self.fake_amqp)
         except IOError:
             pass
