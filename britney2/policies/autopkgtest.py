@@ -1080,7 +1080,7 @@ class AutopkgtestPolicy(BasePolicy):
                         self.request_test_if_not_queued(src, arch, REF_TRIG)
                         result = 'RUNNING-REFERENCE'
                     else:
-                        result = 'ALWAYSFAIL'
+                        result = 'REGRESSION'
                 else:
                     result = 'REGRESSION'
             else:
