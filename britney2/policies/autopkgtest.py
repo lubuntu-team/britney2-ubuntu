@@ -467,7 +467,7 @@ class AutopkgtestPolicy(BasePolicy):
     #
 
     @classmethod
-    def has_autodep8(kls, srcinfo, binaries):
+    def has_autodep8(kls, srcinfo):
         '''Check if package  is covered by autodep8
 
         srcinfo is an item from self.britney.sources
@@ -478,14 +478,6 @@ class AutopkgtestPolicy(BasePolicy):
             if t.startswith('autopkgtest-pkg'):
                 return True
 
-        # DKMS: some binary depends on "dkms"
-        for pkg_id in srcinfo.binaries:
-            try:
-                bininfo = binaries[pkg_id.package_name]
-            except KeyError:
-                continue
-            if 'dkms' in (bininfo.depends or ''):
-                return True
         return False
 
     def request_tests_for_source(self, item, arch, source_data_srcdist, pkg_arch_result):
@@ -638,7 +630,7 @@ class AutopkgtestPolicy(BasePolicy):
 
         # we want to test the package itself, if it still has a test in unstable
         srcinfo = source_suite.sources[src]
-        if 'autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo, binaries_info):
+        if 'autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo):
             reported_pkgs.add(src)
             tests.append((src, ver))
 
@@ -673,7 +665,7 @@ class AutopkgtestPolicy(BasePolicy):
                     continue
 
                 rdep_src_info = sources_info[rdep_src]
-                if 'autopkgtest' in rdep_src_info.testsuite or self.has_autodep8(rdep_src_info, binaries_info):
+                if 'autopkgtest' in rdep_src_info.testsuite or self.has_autodep8(rdep_src_info):
                     if rdep_src not in reported_pkgs:
                         tests.append((rdep_src, rdep_src_info.version))
                         reported_pkgs.add(rdep_src)
@@ -684,7 +676,7 @@ class AutopkgtestPolicy(BasePolicy):
                         tdep_src_info = sources_info[tdep_src]
                     except KeyError:
                         continue
-                    if 'autopkgtest' in tdep_src_info.testsuite or self.has_autodep8(tdep_src_info, binaries_info):
+                    if 'autopkgtest' in tdep_src_info.testsuite or self.has_autodep8(tdep_src_info):
                         for pkg_id in tdep_src_info.binaries:
                             if pkg_id.architecture == arch:
                                 tests.append((tdep_src, tdep_src_info.version))

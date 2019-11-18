@@ -1951,7 +1951,7 @@ class T(TestBase):
         '''DKMS packages are autopkgtested (via autodep8)'''
 
         self.data.add('dkms', False, {})
-        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'}, testsuite='autopkgtest-pkg-dkms')
 
         self.swift.set_results({'autopkgtest-testing': {
             'testing/i386/f/fancy/20150101_100101@': (0, 'fancy 0.1', tr('passedbefore/1'))
@@ -1966,7 +1966,7 @@ class T(TestBase):
         '''DKMS packages get triggered by kernel uploads'''
 
         self.data.add('dkms', False, {})
-        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'}, testsuite='autopkgtest-pkg-dkms')
 
         self.run_it(
             [('linux-image-generic', {'Source': 'linux-meta'}, None),
@@ -1997,7 +1997,7 @@ class T(TestBase):
         '''DKMS results get mapped to the triggering kernel version'''
 
         self.data.add('dkms', False, {})
-        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'}, testsuite='autopkgtest-pkg-dkms')
 
         # works against linux-meta and -64only, fails against grumpy i386, no
         # result yet for grumpy amd64
@@ -2026,7 +2026,7 @@ class T(TestBase):
         '''DKMS results get mapped to the triggering kernel version, old results'''
 
         self.data.add('dkms', False, {})
-        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'}, testsuite='autopkgtest-pkg-dkms')
 
         # works against linux-meta and -64only, fails against grumpy i386, no
         # result yet for grumpy amd64
