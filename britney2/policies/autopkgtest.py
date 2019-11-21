@@ -1064,7 +1064,7 @@ class AutopkgtestPolicy(BasePolicy):
                     test_in_target = False
                     try:
                         srcinfo = self.suite_info.target_suite.sources[src]
-                        if 'autopkgtest' in srcinfo.testsuite:
+                        if 'autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo):
                             test_in_target = True
                     except KeyError:
                         pass
