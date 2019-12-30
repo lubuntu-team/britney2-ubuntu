@@ -77,7 +77,6 @@ class Excuse(object):
 
         self.all_invalid_deps = {}
         self.all_deps = {}
-        self.sane_deps = []
         self.break_deps = []
         self.unsatisfiable_on_archs = []
         self.unsat_deps = defaultdict(set)
@@ -152,11 +151,6 @@ class Excuse(object):
             if DependencyType.DEPENDS in self.all_deps[dep]:
                 deps.add(dep)
         return deps
-
-    def add_sane_dep(self, name):
-        """Add a sane dependency"""
-        if name not in self.sane_deps:
-            self.sane_deps.append(name)
 
     def add_break_dep(self, name, arch):
         """Add a break dependency"""

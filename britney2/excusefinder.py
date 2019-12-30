@@ -64,7 +64,6 @@ class ExcuseFinder(object):
                 for p in packages:
                     if p.pkg_id.package_name not in binaries_s_a:
                         continue
-                    excuse.add_sane_dep(p.source)
                 continue
 
             # check if the block can be satisfied in the source suite, and list the solving packages
