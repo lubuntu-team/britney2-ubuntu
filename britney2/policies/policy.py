@@ -772,6 +772,122 @@ class PiupartsPolicy(BasePolicy):
         return summary
 
 
+class DependsPolicy(BasePolicy):
+
+    def __init__(self, options, suite_info):
+        super().__init__('depends', options, suite_info,
+                         {SuiteClass.PRIMARY_SOURCE_SUITE, SuiteClass.ADDITIONAL_SOURCE_SUITE},
+                         ApplySrcPolicy.RUN_ON_EVERY_ARCH_ONLY)
+        self._britney = None
+        self.pkg_universe = None
+        self.broken_packages = None
+        self.all_binaries = None
+        self.nobreakall_arches = None
+        self.new_arches = None
+        self.break_arches = None
+        self.allow_uninst = None
+
+    def initialise(self, britney):
+        super().initialise(britney)
+        self._britney = britney
+        self.pkg_universe = britney.pkg_universe
+        self.broken_packages = britney.pkg_universe.broken_packages
+        self.all_binaries = britney.all_binaries
+        self.nobreakall_arches = self.options.nobreakall_arches
+        self.new_arches = self.options.new_arches
+        self.break_arches = self.options.break_arches
+        self.allow_uninst = britney.allow_uninst
+
+    def apply_srcarch_policy_impl(self, deps_info, item, arch, source_data_tdist,
+                                  source_data_srcdist, excuse):
+        verdict = PolicyVerdict.PASS
+
+        if arch in self.break_arches or arch in self.new_arches:
+            # we don't check these in the policy (TODO - for now?)
+            return verdict
+
+        source_name = item.package
+        source_suite = item.suite
+        s_source = source_suite.sources[source_name]
+        target_suite = self.suite_info.target_suite
+
+        packages_s_a = source_suite.binaries[arch]
+        packages_t_a = target_suite.binaries[arch]
+
+        my_bins = sorted(excuse.packages[arch])
+
+        for pkg_id in my_bins:
+            pkg_name = pkg_id.package_name
+            binary_u = packages_s_a[pkg_name]
+            pkg_arch = binary_u.architecture
+
+            if pkg_arch == 'all' and arch not in self.nobreakall_arches:
+                continue
+
+            if (binary_u.source_version != source_data_srcdist.version):
+                # don't check cruft in unstable
+                continue
+
+            if (item.architecture != 'source' and pkg_arch == 'all'):
+                # we don't care about the existing arch: all binaries when
+                # checking a binNMU item, because the arch: all binaries won't
+                # migrate anyway
+                continue
+
+            if pkg_name in self.allow_uninst[arch]:
+                # this binary is allowed to become uninstallable, so we don't
+                # need to check anything
+                continue
+
+            if pkg_name in packages_t_a:
+                oldbin = packages_t_a[pkg_name]
+                if not target_suite.is_installable(oldbin.pkg_id):
+                    # as the current binary in testing is already
+                    # uninstallable, the newer version is allowed to be
+                    # uninstallable as well, so we don't need to check
+                    # anything
+                    continue
+
+            if pkg_id in self.broken_packages:
+                # dependencies can't be satisfied by all the known binaries -
+                # this certainly won't work
+                verdict = PolicyVerdict.REJECTED_PERMANENTLY
+                excuse.add_verdict_info(verdict, "%s/%s has unsatisfiable dependency" % (
+                    pkg_name, arch))
+                excuse.addreason("depends")
+                # TODO does this also need to happen on non-nobreakarch if the
+                # arch:all packages are uninstallable?
+                excuse.add_unsatisfiable_on_arch(arch)
+
+            deps = self.pkg_universe.dependencies_of(pkg_id)
+
+            for dep in deps:
+                # dep is a list of packages, each of which satisfy the
+                # dependency
+
+                if dep == frozenset():
+                    continue
+                is_ok = False
+                needed_for_dep = set()
+
+                for alternative in dep:
+                    if target_suite.is_pkg_in_the_suite(alternative):
+                        # dep can be satisfied in testing - ok
+                        is_ok = True
+                    elif alternative in my_bins:
+                        # can be satisfied by binary from same item: will be
+                        # ok if item migrates
+                        is_ok = True
+                    else:
+                        needed_for_dep.add(alternative)
+
+                if not is_ok:
+                    spec = DependencySpec(DependencyType.DEPENDS, arch)
+                    excuse.add_package_depends(spec, needed_for_dep)
+
+        return verdict
+
+
 @unique
 class BuildDepResult(IntEnum):
     # relation is satisfied in target

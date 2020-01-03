@@ -200,7 +200,8 @@ from britney2.installability.builder import build_installability_tester
 from britney2.installability.solver import InstallabilitySolver
 from britney2.migration import MigrationManager
 from britney2.migrationitem import MigrationItemFactory
-from britney2.policies.policy import (AgePolicy, RCBugPolicy, PiupartsPolicy, BuildDependsPolicy, PolicyEngine,
+from britney2.policies.policy import (AgePolicy, RCBugPolicy, PiupartsPolicy, DependsPolicy,
+                                      BuildDependsPolicy, PolicyEngine,
                                       BlockPolicy, BuiltUsingPolicy, BuiltOnBuilddPolicy)
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.utils import (log_and_format_old_libraries,
@@ -491,6 +492,7 @@ class Britney(object):
         if not hasattr(self.options, 'adt_retry_url_mech'):
             self.options.adt_retry_url_mech = ''
 
+        self._policy_engine.add_policy(DependsPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(RCBugPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(PiupartsPolicy(self.options, self.suite_info))
         if getattr(self.options, 'adt_enable') == 'yes':
