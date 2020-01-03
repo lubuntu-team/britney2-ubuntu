@@ -92,6 +92,17 @@ class Excuse(object):
         self.infoline = []
         self.detailed_info = []
 
+        # packages (source and binary) that will migrate to testing if the
+        # item from this excuse migrates
+        self.packages = defaultdict(set)
+
+        # for each deptype, there is a set that contains
+        # frozensets of PackageIds (of sources or binaries) that can satisfy
+        # the dep
+        self.depends_packages = defaultdict(set)
+        # contains all PackageIds in any over the sets above
+        self.depends_packages_flattened = set()
+
         self.bounty = {}
         self.penalty = {}
 
@@ -209,6 +220,14 @@ class Excuse(object):
 
     def add_hint(self, hint):
         self.hints.append(hint)
+
+    def add_package(self, pkg_id):
+        self.packages[pkg_id.architecture].add(pkg_id)
+
+    def add_package_depends(self, deptype, depends):
+        """depends is a set of PackageIds (source or binary) that can satisfy the dependency"""
+        self.depends_packages[deptype].add(frozenset(depends))
+        self.depends_packages_flattened |= depends
 
     def _format_verdict_summary(self):
         verdict = self._policy_verdict

@@ -3,7 +3,7 @@ from urllib.parse import quote
 
 import apt_pkg
 
-from britney2 import DependencyType
+from britney2 import DependencyType, PackageId
 from britney2.excuse import Excuse
 from britney2.policies import PolicyVerdict
 from britney2.utils import (invalidate_excuses, find_smooth_updateable_binaries, compute_item_name,
@@ -198,6 +198,8 @@ class ExcuseFinder(object):
         # for every binary package produced by this source in unstable for this architecture
         for pkg_id in sorted(x for x in source_u.binaries if x.architecture == arch):
             pkg_name = pkg_id.package_name
+            # TODO filter binaries based on checks below?
+            excuse.add_package(pkg_id)
 
             # retrieve the testing (if present) and unstable corresponding binary packages
             binary_t = packages_t_a[pkg_name] if pkg_name in packages_t_a else None
@@ -372,6 +374,7 @@ class ExcuseFinder(object):
         excuse.set_vers(source_t and source_t.version or None, source_u.version)
         source_u.maintainer and excuse.set_maint(source_u.maintainer)
         source_u.section and excuse.set_section(source_u.section)
+        excuse.add_package(PackageId(src, source_u.version, "source"))
 
         # if the version in unstable is older, then stop here with a warning in the excuse and return False
         if source_t and apt_pkg.version_compare(source_u.version, source_t.version) < 0:
@@ -437,6 +440,9 @@ class ExcuseFinder(object):
                 # arch:all packages are treated separately from arch:arch
                 if binary_u.architecture != arch:
                     continue
+
+                # TODO filter binaries based on checks below?
+                excuse.add_package(pkg_id)
 
                 # if it wasn't built by the same source, it is out-of-date
                 # if there is at least one binary on this arch which is
