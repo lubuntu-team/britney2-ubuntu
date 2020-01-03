@@ -35,6 +35,7 @@ from itertools import filterfalse, chain
 import yaml
 
 from britney2 import SourcePackage
+from britney2.excusedeps import DependencySpec, ImpossibleDependencyState
 from britney2.policies import PolicyVerdict
 
 
@@ -658,19 +659,50 @@ def invalidate_excuses(excuses, valid, invalid):
     `valid' and `invalid' excuses.
     """
 
-    # build the reverse dependencies
-    allrevdeps = defaultdict(dict)
+    # make a list of all packages (source and binary) that are present in the
+    # excuses we have
+    excuses_packages = defaultdict(set)
     for exc in excuses.values():
-        for d in exc.all_deps:
-            if exc.name not in allrevdeps[d]:
-                allrevdeps[d][exc.name] = set()
-            for deptype in exc.all_deps[d]:
-                allrevdeps[d][exc.name].add(deptype)
+        for arch in exc.packages:
+            for pkg_id in exc.packages[arch]:
+                # note that the same package can be in multiple excuses
+                # eg. when unstable and TPU have the same packages
+                excuses_packages[pkg_id].add(exc.name)
+
+    # create dependencies between excuses based on packages
+    excuses_rdeps = defaultdict(set)
+    for exc in excuses.values():
+        for deptype in exc.all_deps:
+            for d in exc.all_deps[deptype]:
+                excuses_rdeps[d].add(exc.name)
+
+        for pkg_dep in exc.depends_packages:
+            # set of excuses, each of which can satisfy this specific
+            # dependency
+            # if there is a dependency on a package that doesn't exist, the
+            # set will contain an ImpossibleDependencyState
+            dep_exc = set()
+            for pkg_id in pkg_dep.deps:
+                pkg_excuses = excuses_packages[pkg_id]
+                # if the dependency isn't found, we get an empty set
+                if pkg_excuses == frozenset():
+                    imp_dep = ImpossibleDependencyState(
+                            PolicyVerdict.REJECTED_PERMANENTLY,
+                            "%s" % (pkg_id.name))
+                    dep_exc.add(imp_dep)
+
+                else:
+                    dep_exc |= pkg_excuses
+                    for e in pkg_excuses:
+                        excuses_rdeps[e].add(exc.name)
+            if not exc.add_dependency(dep_exc, pkg_dep.spec):
+                valid.discard(exc.name)
+                invalid.add(exc.name)
 
     # loop on the invalid excuses
     for ename in iter_except(invalid.pop, KeyError):
         # if there is no reverse dependency, skip the item
-        if ename not in allrevdeps:
+        if ename not in excuses_rdeps:
             continue
         # if the dependency can be satisfied by a testing-proposed-updates excuse, skip the item
         if (ename + "_tpu") in valid:
@@ -681,21 +713,19 @@ def invalidate_excuses(excuses, valid, invalid):
             rdep_verdict = PolicyVerdict.REJECTED_BLOCKED_BY_ANOTHER_ITEM
 
         # loop on the reverse dependencies
-        if ename in allrevdeps:
-            for x in allrevdeps[ename]:
-                # if the item is valid and it is not marked as `forced', then we invalidate it
-                if x in valid and not excuses[x].forced:
+        for x in excuses_rdeps[ename]:
+            exc = excuses[x]
+            # if the item is valid and it is not marked as `forced', then we
+            # invalidate this specfic dependency
+            if x in valid and not exc.forced:
+                # mark this specific dependency as invalid
+                still_valid = exc.invalidate_dependency(ename, rdep_verdict)
 
-                    if excuses[x].policy_verdict < rdep_verdict:
-                        excuses[x].policy_verdict = rdep_verdict
-                    # otherwise, invalidate the dependency and mark as invalidated and
-                    # remove the depending excuses
-                    excuses[x].invalidate_dependency(ename, rdep_verdict)
+                # if there are no alternatives left for this dependency,
+                # invalidate the excuse
+                if not still_valid:
                     valid.discard(x)
                     invalid.add(x)
-                    for deptype in allrevdeps[ename][x]:
-                        excuses[x].add_verdict_info(rdep_verdict, "Invalidated by %s" % deptype.get_description())
-                        excuses[x].addreason(deptype.get_reason())
 
 
 def compile_nuninst(target_suite, architectures, nobreakall_arches):

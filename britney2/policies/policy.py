@@ -9,12 +9,13 @@ from urllib.parse import quote
 
 import apt_pkg
 
-from britney2 import SuiteClass
+from britney2 import SuiteClass, PackageId
 from britney2.hints import Hint, split_into_one_hint_per_package
 from britney2.inputs.suiteloader import SuiteContentLoader
 from britney2.policies import PolicyVerdict, ApplySrcPolicy
-from britney2.utils import get_dependency_solvers, compute_item_name
+from britney2.utils import get_dependency_solvers
 from britney2 import DependencyType
+from britney2.excusedeps import DependencySpec
 
 
 class PolicyEngine(object):
@@ -841,8 +842,8 @@ class BuildDependsPolicy(BasePolicy):
             # for the solving packages, update the excuse to add the dependencies
             for p in packages:
                 if arch not in self.options.break_arches:
-                    item_name = compute_item_name(sources_t, sources_s, p, arch)
-                    excuse.add_dependency(dep_type, item_name, arch)
+                    spec = DependencySpec(dep_type, arch)
+                    excuse.add_package_depends(spec, {p.pkg_id})
 
         if arch in results:
             if results[arch] == BuildDepResult.FAILED:
@@ -915,11 +916,11 @@ class BuildDependsPolicy(BasePolicy):
 
                 # check if the block can be satisfied in the source suite, and list the solving packages
                 packages = get_dependency_solvers(block, binaries_s_a, provides_s_a, build_depends=True)
-                packages = sorted(p.source for p in packages)
+                sources = sorted(p.source for p in packages)
 
                 # if the dependency can be satisfied by the same source package, skip the block:
                 # obviously both binary packages will enter the target suite together
-                if source_name in packages:
+                if source_name in sources:
                     continue
 
                 # if no package can satisfy the dependency, add this information to the excuse
@@ -1016,12 +1017,15 @@ class BuiltUsingPolicy(BasePolicy):
             s_ver = s_source.version
             if apt_pkg.version_compare(s_ver, bu_version) >= 0:
                 found = True
-                item_name = compute_item_name(sources_t, source_suite.sources, bu_source, arch)
+                dep = PackageId(bu_source, s_ver, "source")
                 if arch in self.options.break_arches:
-                    excuse.add_detailed_info("Ignoring Built-Using for %s/%s on %s" % (pkg_name, arch, item_name))
+                    excuse.add_detailed_info("Ignoring Built-Using for %s/%s on %s" % (
+                        pkg_name, arch, dep.uvname))
                 else:
-                    excuse.add_dependency(DependencyType.BUILT_USING, item_name, arch)
-                    excuse.add_detailed_info("%s/%s has Built-Using on %s" % (pkg_name, arch, item_name))
+                    spec = DependencySpec(DependencyType.BUILT_USING, arch)
+                    excuse.add_package_depends(spec, {dep})
+                    excuse.add_detailed_info("%s/%s has Built-Using on %s" % (
+                        pkg_name, arch, dep.uvname))
 
             return found
 

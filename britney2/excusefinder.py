@@ -5,8 +5,9 @@ import apt_pkg
 
 from britney2 import DependencyType, PackageId
 from britney2.excuse import Excuse
+from britney2.excusedeps import DependencySpec
 from britney2.policies import PolicyVerdict
-from britney2.utils import (invalidate_excuses, find_smooth_updateable_binaries, compute_item_name,
+from britney2.utils import (invalidate_excuses, find_smooth_updateable_binaries,
                             get_dependency_solvers,
                             )
 
@@ -68,11 +69,11 @@ class ExcuseFinder(object):
 
             # check if the block can be satisfied in the source suite, and list the solving packages
             packages = get_dependency_solvers(block, binaries_s_a, provides_s_a)
-            packages = sorted(p.source for p in packages)
+            sources = sorted(p.source for p in packages)
 
             # if the dependency can be satisfied by the same source package, skip the block:
             # obviously both binary packages will enter testing together
-            if src in packages:
+            if src in sources:
                 continue
 
             # if no package can satisfy the dependency, add this information to the excuse
@@ -100,11 +101,10 @@ class ExcuseFinder(object):
                 sources_t = target_suite.sources
                 sources_s = source_suite.sources
                 for p in packages:
-                    item_name = compute_item_name(sources_t, sources_s, p, arch)
-                    excuse.add_dependency(DependencyType.DEPENDS, item_name, arch)
+                    excuse.add_package_depends(DependencyType.DEPENDS, {p.pkg_id})
             else:
                 for p in packages:
-                    excuse.add_break_dep(p, arch)
+                    excuse.add_break_dep(p.source, arch)
 
         return is_all_ok
 
@@ -651,45 +651,6 @@ class ExcuseFinder(object):
 
         # extract the not considered packages, which are in the excuses but not in upgrade_me
         unconsidered = {ename for ename in excuses if ename not in actionable_items}
-
-        # invalidate impossible excuses
-        for e in excuses.values():
-            # parts[0] == package name
-            # parts[1] == optional architecture
-            parts = e.name.split('/')
-            for d in sorted(e.all_deps):
-                for deptype in e.all_deps[d]:
-                    ok = False
-                    # source -> source dependency; both packages must have
-                    # valid excuses
-                    if d in actionable_items or d in unconsidered:
-                        ok = True
-                    # if the excuse is for a binNMU, also consider d/$arch as a
-                    # valid excuse
-                    elif len(parts) == 2:
-                        bd = '%s/%s' % (d, parts[1])
-                        if bd in actionable_items or bd in unconsidered:
-                            ok = True
-                    # if the excuse is for a source package, check each of the
-                    # architectures on which the excuse lists a dependency on d,
-                    # and consider the excuse valid if it is possible on each
-                    # architecture
-                    else:
-                        arch_ok = True
-                        for arch in e.all_deps[d][deptype]:
-                            bd = '%s/%s' % (d, arch)
-                            if bd not in actionable_items and bd not in unconsidered:
-                                arch_ok = False
-                                break
-                        if arch_ok:
-                            ok = True
-                    if not ok:
-                        # TODO this should actually invalidate the excuse
-                        # would that be correct in all cases?
-                        # - arch all on non-nobreakall arch?
-                        # - pkg in testing already uninstallable?
-                        e.addinfo("Impossible %s: %s -> %s" % (deptype, e.name, d))
-                        e.addreason(deptype.get_reason())
 
         invalidate_excuses(excuses, actionable_items, unconsidered)
 

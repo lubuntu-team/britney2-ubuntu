@@ -18,6 +18,7 @@ from collections import defaultdict
 import re
 
 from britney2 import DependencyType
+from britney2.excusedeps import DependencySpec, DependencyState, ImpossibleDependencyState
 from britney2.policies.policy import PolicyVerdict
 
 VERDICT2DESC = {
@@ -38,6 +39,87 @@ VERDICT2DESC = {
     PolicyVerdict.REJECTED_PERMANENTLY:
         'BLOCKED: Rejected/violates migration policy/introduces a regression',
 }
+
+
+class ExcuseDependency(object):
+    """Object to represent a specific dependecy of an excuse on a package
+       (source or binary) or on other excuses"""
+
+    def __init__(self, spec, depstates):
+        """
+        :param: spec: DependencySpec
+        :param: depstates: list of DependencyState, each of which can satisfy
+                           the dependency
+        """
+        self.spec = spec
+        self.depstates = depstates
+
+    @property
+    def deptype(self):
+        return self.spec.deptype
+
+    @property
+    def valid(self):
+        if {d for d in self.depstates if d.valid}:
+            return True
+        else:
+            return False
+
+    @property
+    def deps(self):
+        return {d.dep for d in self.depstates}
+
+    @property
+    def possible(self):
+        if {d for d in self.depstates if d.possible}:
+            return True
+        else:
+            return False
+
+    @property
+    def first_dep(self):
+        """return the first valid dependency, if there is one, otherwise the
+           first possible one
+
+           return None if there are only impossible dependencies
+        """
+        first = None
+        for d in self.depstates:
+            if d.valid:
+                return d.dep
+            elif d.possible and not first:
+                first = d.dep
+        return first
+
+    @property
+    def first_impossible_dep(self):
+        """return the first impossible dependency, if there is one"""
+        first = None
+        for d in self.depstates:
+            if not d.possible:
+                return d.desc
+        return first
+
+    @property
+    def verdict(self):
+        return min({d.verdict for d in self.depstates})
+
+    def invalidate(self, excuse, verdict):
+        """invalidate the dependencies on a specific excuse
+
+        :param excuse: the excuse which is no longer valid
+        :param verdict: the PolicyVerdict causing the invalidation
+        """
+        invalidated_alternative = False
+        valid_alternative_left = False
+        for ds in self.depstates:
+            if ds.dep == excuse:
+                ds.invalidate(verdict)
+                invalidated_alternative = True
+            elif ds.valid:
+                valid_alternative_left = True
+
+        return valid_alternative_left
 
 
 class Excuse(object):
@@ -75,8 +157,7 @@ class Excuse(object):
         self.forced = False
         self._policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
 
-        self.all_invalid_deps = {}
-        self.all_deps = {}
+        self.all_deps = []
         self.break_deps = []
         self.unsatisfiable_on_archs = []
         self.unsat_deps = defaultdict(set)
@@ -91,15 +172,14 @@ class Excuse(object):
         self.verdict_info = defaultdict(list)
         self.infoline = []
         self.detailed_info = []
+        self.dep_info_rendered = False
 
         # packages (source and binary) that will migrate to testing if the
         # item from this excuse migrates
         self.packages = defaultdict(set)
 
-        # for each deptype, there is a set that contains
-        # frozensets of PackageIds (of sources or binaries) that can satisfy
-        # the dep
-        self.depends_packages = defaultdict(set)
+        # list of ExcuseDependency, with dependencies on packages
+        self.depends_packages = []
         # contains all PackageIds in any over the sets above
         self.depends_packages_flattened = set()
 
@@ -144,13 +224,27 @@ class Excuse(object):
         """Set the section of the package"""
         self.section = section
 
-    def add_dependency(self, deptype, name, arch):
-        """Add a dependency of type deptype """
-        if name not in self.all_deps:
-            self.all_deps[name] = {}
-        if deptype not in self.all_deps[name]:
-            self.all_deps[name][deptype] = []
-        self.all_deps[name][deptype].append(arch)
+    def add_dependency(self, dep, spec):
+        """Add a dependency of type deptype
+
+        :param dep: set with names of excuses, each of which satisfies the dep
+        :param spec: DependencySpec
+
+        """
+
+        assert dep != frozenset(), "%s: Adding empty list of dependencies" % self.name
+
+        deps = []
+        for d in dep:
+            if isinstance(d, DependencyState):
+                deps.append(d)
+            else:
+                deps.append(DependencyState(d))
+        ed = ExcuseDependency(spec, deps)
+        self.all_deps.append(ed)
+        if not ed.valid:
+            self.do_invalidate(ed)
+        return ed.valid
 
     def get_deps(self):
         # the autohinter uses the excuses data to query dependencies between
@@ -158,9 +252,12 @@ class Excuse(object):
         # the data that was in the old deps set
         """ Get the dependencies of type DEPENDS """
         deps = set()
-        for dep in self.all_deps:
-            if DependencyType.DEPENDS in self.all_deps[dep]:
-                deps.add(dep)
+        for dep in [d for d in self.all_deps if d.deptype == DependencyType.DEPENDS]:
+            # add the first valid dependency
+            for d in dep.depstates:
+                if d.valid:
+                    deps.add(d.dep)
+                    break
         return deps
 
     def add_break_dep(self, name, arch):
@@ -177,9 +274,24 @@ class Excuse(object):
         """Add an unsatisfiable dependency"""
         self.unsat_deps[arch].add(signature)
 
+    def do_invalidate(self, dep):
+        """
+        param: dep: ExcuseDependency
+        """
+        self.addreason(dep.deptype.get_reason())
+        if self.policy_verdict < dep.verdict:
+            self.policy_verdict = dep.verdict
+
     def invalidate_dependency(self, name, verdict):
         """Invalidate dependency"""
-        self.all_invalid_deps[name] = verdict
+        invalidate = False
+
+        for dep in self.all_deps:
+            if not dep.invalidate(name, verdict):
+                invalidate = True
+                self.do_invalidate(dep)
+
+        return not invalidate
 
     def setdaysold(self, daysold, mindays):
         """Set the number of days from the upload and the minimum number of days for the update"""
@@ -224,9 +336,21 @@ class Excuse(object):
     def add_package(self, pkg_id):
         self.packages[pkg_id.architecture].add(pkg_id)
 
-    def add_package_depends(self, deptype, depends):
-        """depends is a set of PackageIds (source or binary) that can satisfy the dependency"""
-        self.depends_packages[deptype].add(frozenset(depends))
+    def add_package_depends(self, spec, depends):
+        """Add dependency on a package (source or binary)
+
+        :param spec: DependencySpec
+        :param depends: set of PackageIds (source or binary), each of which can satisfy the dependency
+        """
+
+        assert depends != frozenset(), "%s: Adding empty list of package dependencies" % self.name
+
+        # we use DependencyState for consistency with excuse dependencies, but
+        # package dependencies are never invalidated, they are used to add
+        # excuse dependencies (in invalidate_excuses()), and these are
+        # (potentially) invalidated
+        ed = ExcuseDependency(spec, [DependencyState(d) for d in depends])
+        self.depends_packages.append(ed)
         self.depends_packages_flattened |= depends
 
     def _format_verdict_summary(self):
@@ -235,25 +359,32 @@ class Excuse(object):
             return VERDICT2DESC[verdict]
         return "UNKNOWN: Missing description for {0} - Please file a bug against Britney".format(verdict.name)
 
-    def _render_dep_issues(self, dep_issues, invalid_deps):
-        lastdep = ""
-        res = []
-        for x in sorted(dep_issues, key=lambda x: x.split('/')[0]):
-            dep = x.split('/')[0]
-            if dep != lastdep:
-                seen = {}
-            lastdep = dep
-            for deptype in sorted(dep_issues[x], key=lambda y: str(y)):
-                field = deptype
-                if deptype in seen:
-                    continue
-                seen[deptype] = True
-                if x in invalid_deps:
-                    res.append("%s: %s <a href=\"#%s\">%s</a> (not considered)" % (field, self.name, dep, dep))
-                else:
-                    res.append("%s: %s <a href=\"#%s\">%s</a>" % (field, self.name, dep, dep))
+    def _render_dep_issues(self):
+        if self.dep_info_rendered:
+            return
 
-        return res
+        dep_issues = defaultdict(set)
+        for d in self.all_deps:
+            dep = d.first_dep
+            info = ""
+            if d.valid:
+                info = "%s: %s <a href=\"#%s\">%s</a>" % (d.deptype, self.name, dep, dep)
+            elif not d.possible:
+                desc = d.first_impossible_dep
+                info = "Impossible %s: %s -> %s" % (d.deptype, self.name, desc)
+            else:
+                info = "%s: %s <a href=\"#%s\">%s</a> (not considered)" % (d.deptype, self.name, dep, dep)
+                dep_issues[d.verdict].add("Invalidated by %s" % d.deptype.get_description())
+            dep_issues[d.verdict].add(info)
+
+        seen = set()
+        for v in sorted(dep_issues.keys(), reverse=True):
+            for i in sorted(dep_issues[v]):
+                if i not in seen:
+                    self.add_verdict_info(v, i)
+                    seen.add(i)
+
+        self.dep_info_rendered = True
 
     def html(self):
         """Render the excuse in HTML"""
@@ -276,6 +407,7 @@ class Excuse(object):
 
     def _text(self):
         """Render the excuse in text"""
+        self._render_dep_issues()
         res = []
         res.append(
             "Migration status for %s (%s to %s): %s" %
@@ -284,10 +416,6 @@ class Excuse(object):
             res.append("Issues preventing migration:")
         for v in sorted(self.verdict_info.keys(), reverse=True):
             for x in self.verdict_info[v]:
-                res.append("" + x + "")
-            di = [x for x in self.all_invalid_deps.keys() if self.all_invalid_deps[x] == v]
-            ad = {x: self.all_deps[x] for x in di}
-            for x in self._render_dep_issues(ad, di):
                 res.append("" + x + "")
         if self.infoline:
             res.append("Additional info:")
@@ -326,16 +454,21 @@ class Excuse(object):
                 'on-architectures': sorted(self.missing_builds),
                 'on-unimportant-architectures': sorted(self.missing_builds_ood_arch),
             }
-        if self.all_invalid_deps:
+        if {d for d in self.all_deps if not d.valid and d.possible}:
             excusedata['invalidated-by-other-package'] = True
-        if self.all_deps or self.all_invalid_deps.keys() \
+        if self.all_deps \
                 or self.break_deps or self.unsat_deps:
             excusedata['dependencies'] = dep_data = {}
-            migrate_after = sorted(self.all_deps.keys() - self.all_invalid_deps.keys())
-            break_deps = [x for x, _ in self.break_deps if x not in self.all_deps]
+            migrate_after = sorted(set(d.first_dep for d in self.all_deps if d.valid))
+            blocked_by = sorted(set(d.first_dep for d in self.all_deps
+                                    if not d.valid and d.possible))
 
-            if self.all_invalid_deps.keys():
-                dep_data['blocked-by'] = sorted(self.all_invalid_deps.keys())
+            break_deps = [x for x, _ in self.break_deps if
+                          x not in migrate-after and
+                          x not in blocked-by]
+
+            if blocked_by:
+                dep_data['blocked-by'] = blocked_by
             if migrate_after:
                 dep_data['migrate-after'] = migrate_after
             if break_deps:
