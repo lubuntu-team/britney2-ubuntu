@@ -540,7 +540,8 @@ class Britney(object):
             faux_section = 'faux'
             if component != 'main':
                 faux_section = "%s/faux" % component
-            src_data = SourcePackage(version,
+            src_data = SourcePackage(pkg_name,
+                                     version,
                                      sys.intern(faux_section),
                                      set(),
                                      None,
@@ -627,7 +628,8 @@ class Britney(object):
 
             pkg_list = [x.strip() for x in mandatory_field('Package-List').split("\n")
                         if x.strip() != '' and not x.strip().startswith("#")]
-            src_data = SourcePackage(faux_version,
+            src_data = SourcePackage(pkg_name,
+                                     faux_version,
                                      faux_section,
                                      set(),
                                      None,

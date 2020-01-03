@@ -314,7 +314,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                     srcdist[source].binaries.add(pkg_id)
             # if the source package doesn't exist, create a fake one
             else:
-                srcdist[source] = SourcePackage(source_version, 'faux', {pkg_id}, None, True, None, None, [], [])
+                srcdist[source] = SourcePackage(source, source_version, 'faux', {pkg_id}, None, True, None, None, [], [])
 
             # add the resulting dictionary to the package list
             packages[pkg] = dpkg

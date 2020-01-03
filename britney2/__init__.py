@@ -230,11 +230,12 @@ class Suites(object):
 
 class SourcePackage(object):
 
-    __slots__ = ['version', 'section', 'binaries', 'maintainer', 'is_fakesrc', 'build_deps_arch', 'build_deps_indep',
-                 'testsuite', 'testsuite_triggers']
+    __slots__ = ['source', 'version', 'section', 'binaries', 'maintainer', 'is_fakesrc', 'build_deps_arch',
+                 'build_deps_indep', 'testsuite', 'testsuite_triggers']
 
-    def __init__(self, version, section, binaries, maintainer, is_fakesrc, build_deps_arch, build_deps_indep,
-                 testsuite, testsuite_triggers):
+    def __init__(self, source, version, section, binaries, maintainer, is_fakesrc, build_deps_arch,
+                 build_deps_indep, testsuite, testsuite_triggers):
+        self.source = source
         self.version = version
         self.section = section
         self.binaries = binaries

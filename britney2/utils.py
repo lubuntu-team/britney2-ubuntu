@@ -554,7 +554,7 @@ def read_sources_file(filename, sources=None, intern=sys.intern):
         # (in unstable) if some architectures have out-of-date
         # binaries.  We only ever consider the source with the
         # largest version for migration.
-        if pkg in sources and apt_pkg.version_compare(sources[pkg][0], ver) > 0:
+        if pkg in sources and apt_pkg.version_compare(sources[pkg].version, ver) > 0:
             continue
         maint = get_field('Maintainer')
         if maint:
@@ -571,7 +571,8 @@ def read_sources_file(filename, sources=None, intern=sys.intern):
         build_deps_indep = get_field('Build-Depends-Indep')
         if build_deps_indep is not None:
             build_deps_indep = sys.intern(build_deps_indep)
-        sources[intern(pkg)] = SourcePackage(intern(ver),
+        sources[intern(pkg)] = SourcePackage(intern(pkg),
+                                             intern(ver),
                                              section,
                                              set(),
                                              maint,
