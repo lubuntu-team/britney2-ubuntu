@@ -24,90 +24,6 @@ class ExcuseFinder(object):
         self.hints = hints
         self.excuses = {}
 
-    def _excuse_unsat_deps(self, pkg, src, arch, source_suite, excuse, get_dependency_solvers=get_dependency_solvers):
-        """Find unsatisfied dependencies for a binary package
-
-        This method analyzes the dependencies of the binary package specified
-        by the parameter `pkg', built from the source package `src', for the
-        architecture `arch' within the suite `suite'. If the dependency can't
-        be satisfied in testing and/or unstable, it updates the excuse passed
-        as parameter.
-        """
-        # retrieve the binary package from the specified suite and arch
-        target_suite = self.suite_info.target_suite
-        binaries_s_a = source_suite.binaries[arch]
-        provides_s_a = source_suite.provides_table[arch]
-        binaries_t_a = target_suite.binaries[arch]
-        provides_t_a = target_suite.provides_table[arch]
-        binary_u = binaries_s_a[pkg]
-
-        source_s = source_suite.sources[binary_u.source]
-        if (binary_u.source_version != source_s.version):
-            # we don't want cruft to block packages, so if this is cruft, we
-            # can simply ignore it; if the cruft would migrate to testing, the
-            # installability check will catch missing deps
-            return True
-
-        # local copies for better performance
-        parse_depends = apt_pkg.parse_depends
-
-        # analyze the dependency fields (if present)
-        deps = binary_u.depends
-        if not deps:
-            return True
-        is_all_ok = True
-
-        # for every dependency block (formed as conjunction of disjunction)
-        for block, block_txt in zip(parse_depends(deps, False), deps.split(',')):
-            # if the block is satisfied in testing, then skip the block
-            packages = get_dependency_solvers(block, binaries_t_a, provides_t_a)
-            if packages:
-                for p in packages:
-                    if p.pkg_id.package_name not in binaries_s_a:
-                        continue
-                continue
-
-            # check if the block can be satisfied in the source suite, and list the solving packages
-            packages = get_dependency_solvers(block, binaries_s_a, provides_s_a)
-            sources = sorted(p.source for p in packages)
-
-            # if the dependency can be satisfied by the same source package, skip the block:
-            # obviously both binary packages will enter testing together
-            if src in sources:
-                continue
-
-            # if no package can satisfy the dependency, add this information to the excuse
-            if not packages:
-                # still list this dep as unsatifiable, even if it is arch:all
-                # on a non-nobreakall arch, because the autopkgtest policy
-                # uses this to determine of the autopkgtest can run.
-                # TODO this should probably be handled in a smarter way
-                excuse.add_unsatisfiable_on_arch(arch)
-                if binary_u.architecture != 'all' or arch in self.options.nobreakall_arches:
-                    if arch not in self.options.break_arches:
-                        # when the result of this function is changed to
-                        # actually block items, this should be changed to
-                        # add_verdict_info
-                        excuse.addinfo("%s/%s unsatisfiable Depends: %s" % (pkg, arch, block_txt.strip()))
-                        excuse.add_unsatisfiable_dep(block_txt.strip(), arch)
-                        excuse.addreason("depends")
-                        # TODO this should only be considered a failure if it
-                        # is a regression wrt testing
-                        is_all_ok = False
-                continue
-
-            # for the solving packages, update the excuse to add the dependencies
-            if arch not in self.options.break_arches:
-                sources_t = target_suite.sources
-                sources_s = source_suite.sources
-                for p in packages:
-                    excuse.add_package_depends(DependencyType.DEPENDS, {p.pkg_id})
-            else:
-                for p in packages:
-                    excuse.add_break_dep(p.source, arch)
-
-        return is_all_ok
-
     def _should_remove_source(self, item):
         """Check if a source package should be removed from testing
 
@@ -243,9 +159,6 @@ class ExcuseFinder(object):
                     "From wrong source: %s %s (%s not %s)" %
                     (pkg_name, binary_u.version, pkgsv, source_u.version))
                 continue
-
-            # find unsatisfied dependencies for the new binary package
-            self._excuse_unsat_deps(pkg_name, src, arch, source_suite, excuse)
 
             # if the binary is not present in testing, then it is a new binary;
             # in this case, there is something worth doing
@@ -401,20 +314,6 @@ class ExcuseFinder(object):
                 break
 
         all_binaries = self.all_binaries
-        for pkg_id in sorted(source_u.binaries):
-            is_valid = self._excuse_unsat_deps(pkg_id.package_name, src, pkg_id.architecture, source_suite, excuse)
-            if is_valid:
-                continue
-
-            # TODO actually reject items that are not valid based on the
-            # result of _excuse_unsat_deps. However:
-            # - the calculation from _excuse_unsat_deps isn't correct when
-            #   multiple source suites are required:
-            #   * bin in unstable needs bin from (t)pu
-            #   * bin in (t)pu needs bin from unstable
-            # - when a binary is already uninstallable in testing, a newer
-            #   version of that binary is allowed to migrate, even if it is
-            #   uninstallable
 
         # at this point, we check the status of the builds on all the supported architectures
         # to catch the out-of-date ones
