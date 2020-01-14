@@ -862,12 +862,6 @@ def parse_provides(provides_raw, pkg_id=None, logger=None):
     return nprov
 
 
-def compute_item_name(sources_t, sources_s, source_name, parch):
-    if source_name in sources_t and sources_t[source_name].version == sources_s[source_name].version:
-        return "%s/%s" % (source_name, parch)
-    return source_name
-
-
 def parse_builtusing(builtusing_raw, pkg_id=None, logger=None):
     parts = apt_pkg.parse_depends(builtusing_raw, False)
     nbu = []
