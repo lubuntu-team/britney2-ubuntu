@@ -196,6 +196,10 @@ class Excuse(object):
         return self.item.name
 
     @property
+    def source(self):
+        return self.item.package
+
+    @property
     def is_valid(self):
         return False if self._policy_verdict.is_rejected else True
 
@@ -433,17 +437,10 @@ class Excuse(object):
 
     def excusedata(self):
         """Render the excuse in as key-value data"""
-        source = self.name
-        if '_' in source:
-            source = source.split("_")[0]
-        if '/' in source:
-            source = source.split("/")[0]
-        if source[0] == '-':
-            source = source[1:]
         excusedata = {}
         excusedata["excuses"] = self._text()
         excusedata["item-name"] = self.name
-        excusedata["source"] = source
+        excusedata["source"] = self.source
         excusedata["migration-policy-verdict"] = self._policy_verdict.name
         excusedata["old-version"] = self.ver[0]
         excusedata["new-version"] = self.ver[1]
