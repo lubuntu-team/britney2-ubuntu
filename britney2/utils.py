@@ -651,7 +651,7 @@ def get_dependency_solvers(block, binaries_s_a, provides_s_a, *, build_depends=F
     return packages
 
 
-def invalidate_excuses(excuses, valid, invalid):
+def invalidate_excuses(excuses, valid, invalid, invalidated):
     """Invalidate impossible excuses
 
     This method invalidates the impossible excuses, which depend
@@ -701,6 +701,7 @@ def invalidate_excuses(excuses, valid, invalid):
 
     # loop on the invalid excuses
     for ename in iter_except(invalid.pop, KeyError):
+        invalidated.add(ename)
         # if there is no reverse dependency, skip the item
         if ename not in excuses_rdeps:
             continue

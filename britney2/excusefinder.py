@@ -651,8 +651,16 @@ class ExcuseFinder(object):
 
         # extract the not considered packages, which are in the excuses but not in upgrade_me
         unconsidered = {ename for ename in excuses if ename not in actionable_items}
+        invalidated = set()
 
-        invalidate_excuses(excuses, actionable_items, unconsidered)
+        invalidate_excuses(excuses, actionable_items, unconsidered, invalidated)
+
+        # check that the list of actionable items matches the list of valid
+        # excuses
+        assert actionable_items == {x for x in excuses if excuses[x].is_valid}
+
+        # check that the rdeps for all invalid excuses were invalidated
+        assert invalidated == {x for x in excuses if not excuses[x].is_valid}
 
         mi_factory = self._migration_item_factory
         actionable_items = {mi_factory.parse_item(x, versioned=False, auto_correct=False) for x in actionable_items}
