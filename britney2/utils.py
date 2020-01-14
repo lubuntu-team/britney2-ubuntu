@@ -705,9 +705,6 @@ def invalidate_excuses(excuses, valid, invalid, invalidated):
         # if there is no reverse dependency, skip the item
         if ename not in excuses_rdeps:
             continue
-        # if the dependency can be satisfied by a testing-proposed-updates excuse, skip the item
-        if (ename + "_tpu") in valid:
-            continue
 
         rdep_verdict = PolicyVerdict.REJECTED_WAITING_FOR_ANOTHER_ITEM
         if excuses[ename].policy_verdict.is_blocked:
