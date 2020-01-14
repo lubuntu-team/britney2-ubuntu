@@ -139,13 +139,13 @@ class Excuse(object):
     # Regular expression for removing the email address
     reemail = re.compile(r" *<.*?>")
 
-    def __init__(self, name):
+    def __init__(self, migrationitem):
         """Class constructor
 
         This method initializes the excuse with the specified name and
         the default values.
         """
-        self.name = name
+        self.item = migrationitem
         self.ver = ("-", "-")
         self.maint = None
         self.daysold = None
@@ -190,6 +190,10 @@ class Excuse(object):
         if self.daysold is None:
             return (-1, self.name)
         return (self.daysold, self.name)
+
+    @property
+    def name(self):
+        return self.item.name
 
     @property
     def is_valid(self):

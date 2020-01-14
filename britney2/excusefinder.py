@@ -6,6 +6,7 @@ import apt_pkg
 from britney2 import DependencyType, PackageId
 from britney2.excuse import Excuse
 from britney2.excusedeps import DependencySpec
+from britney2.migrationitem import MigrationItem
 from britney2.policies import PolicyVerdict
 from britney2.utils import (invalidate_excuses, find_smooth_updateable_binaries,
                             get_dependency_solvers,
@@ -44,7 +45,7 @@ class ExcuseFinder(object):
             return False
         # otherwise, add a new excuse for its removal
         src = item.suite.sources[pkg]
-        excuse = Excuse(item.name)
+        excuse = Excuse(item)
         excuse.addinfo("Package not in %s, will try to remove" % source_suite.name)
         excuse.set_vers(src.version, None)
         src.maintainer and excuse.set_maint(src.maintainer)
@@ -85,7 +86,7 @@ class ExcuseFinder(object):
         source_t = target_suite.sources[src]
         source_u = source_suite.sources[src]
 
-        excuse = Excuse(item.name)
+        excuse = Excuse(item)
         excuse.set_vers(source_t.version, source_t.version)
         source_u.maintainer and excuse.set_maint(source_u.maintainer)
         source_u.section and excuse.set_section(source_u.section)
@@ -283,7 +284,7 @@ class ExcuseFinder(object):
         else:
             source_t = None
 
-        excuse = Excuse(item.name)
+        excuse = Excuse(item)
         excuse.set_vers(source_t and source_t.version or None, source_u.version)
         source_u.maintainer and excuse.set_maint(source_u.maintainer)
         source_u.section and excuse.set_section(source_u.section)
@@ -477,7 +478,7 @@ class ExcuseFinder(object):
             if pkg not in sources_ps:
                 item = mi_factory.parse_item("-" + pkg, versioned=False, auto_correct=False)
                 if should_remove_source(item):
-                    actionable_items_add(item.name)
+                    actionable_items_add(item)
 
         # for every source package in the source suites, check if it should be upgraded
         for suite in chain((pri_source_suite, *suite_info.additional_source_suites)):
@@ -493,7 +494,7 @@ class ExcuseFinder(object):
                     item = mi_factory.parse_item("%s%s" % (pkg, item_suffix), versioned=False, auto_correct=False)
                     # check if the source package should be upgraded
                     if should_upgrade_src(item):
-                        actionable_items_add(item.name)
+                        actionable_items_add(item)
                 else:
                     # package has same version in source and target suite; check if any of the
                     # binaries have changed on the various architectures
@@ -501,7 +502,7 @@ class ExcuseFinder(object):
                         item = mi_factory.parse_item("%s/%s%s" % (pkg, arch, item_suffix),
                                                      versioned=False, auto_correct=False)
                         if should_upgrade_srcarch(item):
-                            actionable_items_add(item.name)
+                            actionable_items_add(item)
 
         # process the `remove' hints, if the given package is not yet in actionable_items
         for hint in self.hints['remove']:
@@ -515,7 +516,8 @@ class ExcuseFinder(object):
                 continue
 
             # add the removal of the package to actionable_items and build a new excuse
-            excuse = Excuse("-%s" % (src))
+            item = mi_factory.parse_item("-" + src, versioned=False, auto_correct=False)
+            excuse = Excuse(item)
             excuse.set_vers(tsrcv, None)
             excuse.addinfo("Removal request by %s" % (hint.user))
             # if the removal of the package is blocked, skip it
@@ -533,7 +535,7 @@ class ExcuseFinder(object):
                 excuses[excuse.name] = excuse
                 continue
 
-            actionable_items_add("-%s" % (src))
+            actionable_items_add(item)
             excuse.addinfo("Package is broken, will try to remove")
             excuse.add_hint(hint)
             # Using "PASS" here as "Created by a hint" != "accepted due to hint".  In a future
@@ -547,20 +549,20 @@ class ExcuseFinder(object):
     def find_actionable_excuses(self):
         excuses = self.excuses
         actionable_items = self._compute_excuses_and_initial_actionable_items()
+        valid = {x.name for x in actionable_items}
 
         # extract the not considered packages, which are in the excuses but not in upgrade_me
-        unconsidered = {ename for ename in excuses if ename not in actionable_items}
+        unconsidered = {ename for ename in excuses if ename not in valid}
         invalidated = set()
 
-        invalidate_excuses(excuses, actionable_items, unconsidered, invalidated)
+        invalidate_excuses(excuses, valid, unconsidered, invalidated)
 
         # check that the list of actionable items matches the list of valid
         # excuses
-        assert actionable_items == {x for x in excuses if excuses[x].is_valid}
+        assert valid == {x for x in excuses if excuses[x].is_valid}
 
         # check that the rdeps for all invalid excuses were invalidated
         assert invalidated == {x for x in excuses if not excuses[x].is_valid}
 
-        mi_factory = self._migration_item_factory
-        actionable_items = {mi_factory.parse_item(x, versioned=False, auto_correct=False) for x in actionable_items}
+        actionable_items = {x for x in actionable_items if x.name in valid}
         return excuses, actionable_items
