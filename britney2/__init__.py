@@ -111,30 +111,6 @@ class TargetSuite(Suite):
         logger_name = ".".join((self.__class__.__module__, self.__class__.__name__))
         self._logger = logging.getLogger(logger_name)
 
-    def any_of_these_are_in_the_suite(self, pkg_ids):
-        """Test if at least one package of a given set is in the suite
-
-        :param pkg_ids: A set of BinaryPackageId
-        :return: True if any of the packages in pkgs are currently in the suite
-        """
-        return self.inst_tester.any_of_these_are_in_the_suite(pkg_ids)
-
-    def is_pkg_in_the_suite(self, pkg_id):
-        """Test if the package of is in testing
-
-        :param pkg_id: A BinaryPackageId
-        :return: True if the pkg is currently in the suite
-        """
-        return self.inst_tester.is_pkg_in_the_suite(pkg_id)
-
-    def which_of_these_are_in_the_suite(self, pkgs):
-        """Iterate over all packages that are in the suite
-
-        :param pkgs: An iterable of package ids
-        :return: An iterable of package ids that are in the suite
-        """
-        yield from self.inst_tester.which_of_these_are_in_the_suite(pkgs)
-
     def is_installable(self, pkg_id):
         """Determine whether the given package can be installed in the suite
 
