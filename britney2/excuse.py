@@ -196,6 +196,10 @@ class Excuse(object):
         return self.item.name
 
     @property
+    def uvname(self):
+        return self.item.uvname
+
+    @property
     def source(self):
         return self.item.package
 
@@ -376,12 +380,12 @@ class Excuse(object):
             dep = d.first_dep
             info = ""
             if d.valid:
-                info = "%s: %s <a href=\"#%s\">%s</a>" % (d.deptype, self.name, dep, dep)
+                info = "%s: %s <a href=\"#%s\">%s</a>" % (d.deptype, self.uvname, dep, dep)
             elif not d.possible:
                 desc = d.first_impossible_dep
-                info = "Impossible %s: %s -> %s" % (d.deptype, self.name, desc)
+                info = "Impossible %s: %s -> %s" % (d.deptype, self.uvname, desc)
             else:
-                info = "%s: %s <a href=\"#%s\">%s</a> (not considered)" % (d.deptype, self.name, dep, dep)
+                info = "%s: %s <a href=\"#%s\">%s</a> (not considered)" % (d.deptype, self.uvname, dep, dep)
                 dep_issues[d.verdict].add("Invalidated by %s" % d.deptype.get_description())
             dep_issues[d.verdict].add(info)
 
@@ -397,7 +401,7 @@ class Excuse(object):
     def html(self):
         """Render the excuse in HTML"""
         res = "<a id=\"%s\" name=\"%s\">%s</a> (%s to %s)\n<ul>\n" % \
-            (self.name, self.name, self.name, self.ver[0], self.ver[1])
+            (self.uvname, self.uvname, self.uvname, self.ver[0], self.ver[1])
         info = self._text()
         for l in info:
             res += "<li>%s\n" % l
@@ -419,7 +423,7 @@ class Excuse(object):
         res = []
         res.append(
             "Migration status for %s (%s to %s): %s" %
-            (self.name, self.ver[0], self.ver[1], self._format_verdict_summary()))
+            (self.uvname, self.ver[0], self.ver[1], self._format_verdict_summary()))
         if not self.is_valid:
             res.append("Issues preventing migration:")
         for v in sorted(self.verdict_info.keys(), reverse=True):
@@ -439,7 +443,7 @@ class Excuse(object):
         """Render the excuse in as key-value data"""
         excusedata = {}
         excusedata["excuses"] = self._text()
-        excusedata["item-name"] = self.name
+        excusedata["item-name"] = self.uvname
         excusedata["source"] = self.source
         excusedata["migration-policy-verdict"] = self._policy_verdict.name
         excusedata["old-version"] = self.ver[0]
