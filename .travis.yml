@@ -1,11 +1,11 @@
 language: c
 sudo: required
-dist: trusty
+dist: xenial
 before_install:
     # update package list
     - sudo apt-get update -qq
-    - git clone https://anonscm.debian.org/git/collab-maint/britney2-tests.git britney2-tests
-    - git clone https://anonscm.debian.org/git/collab-maint/britney-tests-live-data.git britney2-tests/live-data
+    - git clone https://salsa.debian.org/debian/britney2-tests.git britney2-tests
+    - git clone https://salsa.debian.org/debian/britney-tests-live-data.git britney2-tests/live-data
     - rm -f .coverage
 
 install:
