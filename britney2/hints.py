@@ -83,7 +83,8 @@ class Hint(object):
         if self.type != other.type:
             return False
         else:
-            return frozenset(self.packages) == frozenset(other.packages)
+            # we can't use sets, because unversioned items cannot be hashed
+            return sorted(self.packages) == sorted(other.packages)
 
     @property
     def type(self):

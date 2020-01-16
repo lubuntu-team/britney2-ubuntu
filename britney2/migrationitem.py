@@ -76,6 +76,10 @@ class MigrationItem(object):
         return isequal
 
     def __hash__(self):
+        if not self.version:
+            raise AssertionError("trying to hash unversioned MigrationItem: %s" %
+                                 (self.name))
+
         return hash((self.uvname, self.version))
 
     def __lt__(self, other):
