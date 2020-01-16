@@ -479,7 +479,11 @@ class ExcuseFinder(object):
         # for every source package in testing, check if it should be removed
         for pkg in sources_t:
             if pkg not in sources_ps:
-                item = mi_factory.parse_item("-" + pkg, versioned=False, auto_correct=False)
+                src = sources_t[pkg]
+                item = MigrationItem(package=pkg,
+                                     version=src.version,
+                                     suite=suite_info.target_suite,
+                                     is_removal=True)
                 if should_remove_source(item):
                     actionable_items_add(item)
 
@@ -494,7 +498,9 @@ class ExcuseFinder(object):
                 src_t_data = sources_t.get(pkg)
 
                 if src_t_data is None or apt_pkg.version_compare(src_s_data.version, src_t_data.version) != 0:
-                    item = mi_factory.parse_item("%s%s" % (pkg, item_suffix), versioned=False, auto_correct=False)
+                    item = MigrationItem(package=pkg,
+                                         version=src_s_data.version,
+                                         suite=suite)
                     # check if the source package should be upgraded
                     if should_upgrade_src(item):
                         actionable_items_add(item)
@@ -502,24 +508,36 @@ class ExcuseFinder(object):
                     # package has same version in source and target suite; check if any of the
                     # binaries have changed on the various architectures
                     for arch in architectures:
-                        item = mi_factory.parse_item("%s/%s%s" % (pkg, arch, item_suffix),
-                                                     versioned=False, auto_correct=False)
+                        item = MigrationItem(package=pkg,
+                                             version=src_s_data.version,
+                                             architecture=arch,
+                                             suite=suite)
                         if should_upgrade_srcarch(item):
                             actionable_items_add(item)
 
         # process the `remove' hints, if the given package is not yet in actionable_items
         for hint in self.hints['remove']:
             src = hint.package
-            if src not in sources_t or src in actionable_items or ("-" + src in actionable_items):
+            if src not in sources_t:
                 continue
 
-            # check if the version specified in the hint is the same as the considered package
+            existing_items = set(x for x in actionable_items if x.package == src)
+            if existing_items:
+                self.logger.info("removal hint '%s' ignored due to existing item(s) %s" %
+                                 (hint, [i.name for i in existing_items]))
+                continue
+
             tsrcv = sources_t[src].version
+            item = MigrationItem(package=src,
+                                 version=tsrcv,
+                                 suite=suite_info.target_suite,
+                                 is_removal=True)
+
+            # check if the version specified in the hint is the same as the considered package
             if tsrcv != hint.version:
                 continue
 
             # add the removal of the package to actionable_items and build a new excuse
-            item = mi_factory.parse_item("-" + src, versioned=False, auto_correct=False)
             excuse = Excuse(item)
             excuse.set_vers(tsrcv, None)
             excuse.addinfo("Removal request by %s" % (hint.user))
