@@ -188,8 +188,8 @@ class Excuse(object):
 
     def sortkey(self):
         if self.daysold is None:
-            return (-1, self.name)
-        return (self.daysold, self.name)
+            return (-1, self.uvname)
+        return (self.daysold, self.uvname)
 
     @property
     def name(self):
