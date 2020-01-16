@@ -787,12 +787,11 @@ class Britney(object):
         # write excuses to the output file
         if not self.options.dry_run:
             self.logger.info("> Writing Excuses to %s", self.options.excuses_output)
-            sorted_excuses = sorted(excuses.values(), key=lambda x: x.sortkey())
-            write_excuses(sorted_excuses, self.options.excuses_output,
+            write_excuses(excuses, self.options.excuses_output,
                           output_format="legacy-html")
             if hasattr(self.options, 'excuses_yaml_output'):
                 self.logger.info("> Writing YAML Excuses to %s", self.options.excuses_yaml_output)
-                write_excuses(sorted_excuses, self.options.excuses_yaml_output,
+                write_excuses(excuses, self.options.excuses_yaml_output,
                               output_format="yaml")
 
         self.logger.info("Update Excuses generation completed")

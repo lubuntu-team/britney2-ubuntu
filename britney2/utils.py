@@ -300,16 +300,17 @@ def write_heidi_delta(filename, all_selected):
                                            item.version, item.architecture))
 
 
-def write_excuses(excuselist, dest_file, output_format="yaml"):
+def write_excuses(excuses, dest_file, output_format="yaml"):
     """Write the excuses to dest_file
 
     Writes a list of excuses in a specified output_format to the
     path denoted by dest_file.  The output_format can either be "yaml"
     or "legacy-html".
     """
+    excuselist = sorted(excuses.values(), key=lambda x: x.sortkey())
     if output_format == "yaml":
         with open(dest_file, 'w', encoding='utf-8') as f:
-            edatalist = [e.excusedata() for e in excuselist]
+            edatalist = [e.excusedata(excuses) for e in excuselist]
             excusesdata = {
                 'sources': edatalist,
                 'generated-date': datetime.utcnow(),
@@ -323,7 +324,7 @@ def write_excuses(excuselist, dest_file, output_format="yaml"):
             f.write("<p>Generated: " + time.strftime("%Y.%m.%d %H:%M:%S %z", time.gmtime(time.time())) + "</p>\n")
             f.write("<ul>\n")
             for e in excuselist:
-                f.write("<li>%s" % e.html())
+                f.write("<li>%s" % e.html(excuses))
             f.write("</ul></body></html>\n")
     else:   # pragma: no cover
         raise ValueError('Output format must be either "yaml or "legacy-html"')

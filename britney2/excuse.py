@@ -371,7 +371,7 @@ class Excuse(object):
             return VERDICT2DESC[verdict]
         return "UNKNOWN: Missing description for {0} - Please file a bug against Britney".format(verdict.name)
 
-    def _render_dep_issues(self):
+    def _render_dep_issues(self, excuses):
         if self.dep_info_rendered:
             return
 
@@ -379,14 +379,16 @@ class Excuse(object):
         for d in self.all_deps:
             dep = d.first_dep
             info = ""
-            if d.valid:
-                info = "%s: %s <a href=\"#%s\">%s</a>" % (d.deptype, self.uvname, dep, dep)
-            elif not d.possible:
+            if not d.possible:
                 desc = d.first_impossible_dep
                 info = "Impossible %s: %s -> %s" % (d.deptype, self.uvname, desc)
             else:
-                info = "%s: %s <a href=\"#%s\">%s</a> (not considered)" % (d.deptype, self.uvname, dep, dep)
-                dep_issues[d.verdict].add("Invalidated by %s" % d.deptype.get_description())
+                duv = excuses[dep].uvname
+                if d.valid:
+                    info = "%s: %s <a href=\"#%s\">%s</a>" % (d.deptype, self.uvname, duv, duv)
+                else:
+                    info = "%s: %s <a href=\"#%s\">%s</a> (not considered)" % (d.deptype, self.uvname, duv, duv)
+                    dep_issues[d.verdict].add("Invalidated by %s" % d.deptype.get_description())
             dep_issues[d.verdict].add(info)
 
         seen = set()
@@ -398,11 +400,11 @@ class Excuse(object):
 
         self.dep_info_rendered = True
 
-    def html(self):
+    def html(self, excuses):
         """Render the excuse in HTML"""
         res = "<a id=\"%s\" name=\"%s\">%s</a> (%s to %s)\n<ul>\n" % \
             (self.uvname, self.uvname, self.uvname, self.ver[0], self.ver[1])
-        info = self._text()
+        info = self._text(excuses)
         for l in info:
             res += "<li>%s\n" % l
         res = res + "</ul>\n"
@@ -417,9 +419,9 @@ class Excuse(object):
         """"adding reason"""
         self.reason[reason] = 1
 
-    def _text(self):
+    def _text(self, excuses):
         """Render the excuse in text"""
-        self._render_dep_issues()
+        self._render_dep_issues(excuses)
         res = []
         res.append(
             "Migration status for %s (%s to %s): %s" %
@@ -439,10 +441,10 @@ class Excuse(object):
                 res.append("" + x + "")
         return res
 
-    def excusedata(self):
+    def excusedata(self, excuses):
         """Render the excuse in as key-value data"""
         excusedata = {}
-        excusedata["excuses"] = self._text()
+        excusedata["excuses"] = self._text(excuses)
         excusedata["item-name"] = self.uvname
         excusedata["source"] = self.source
         excusedata["migration-policy-verdict"] = self._policy_verdict.name
@@ -464,20 +466,24 @@ class Excuse(object):
         if self.all_deps \
                 or self.break_deps or self.unsat_deps:
             excusedata['dependencies'] = dep_data = {}
-            migrate_after = sorted(set(d.first_dep for d in self.all_deps if d.valid))
-            blocked_by = sorted(set(d.first_dep for d in self.all_deps
-                                    if not d.valid and d.possible))
+
+            migrate_after = set(d.first_dep for d in self.all_deps if d.valid)
+            blocked_by = set(d.first_dep for d in self.all_deps
+                             if not d.valid and d.possible)
 
             break_deps = [x for x, _ in self.break_deps if
                           x not in migrate-after and
                           x not in blocked-by]
 
+            def sorted_uvnames(deps):
+                return sorted(excuses[d].uvname for d in deps)
+
             if blocked_by:
-                dep_data['blocked-by'] = blocked_by
+                dep_data['blocked-by'] = sorted_uvnames(blocked_by)
             if migrate_after:
-                dep_data['migrate-after'] = migrate_after
+                dep_data['migrate-after'] = sorted_uvnames(migrate_after)
             if break_deps:
-                dep_data['unimportant-dependencies'] = sorted(break_deps)
+                dep_data['unimportant-dependencies'] = sorted_uvnames(break_deps)
             if self.unsat_deps:
                 dep_data['unsatisfiable-dependencies'] = {x: sorted(self.unsat_deps[x]) for x in self.unsat_deps}
         if self.needs_approval:
