@@ -336,6 +336,15 @@ class AutopkgtestPolicy(BasePolicy):
 
         # we want to test the package itself, if it still has a test in unstable
         srcinfo = self.britney.sources['unstable'][src]
+        test_for_arch = False
+        for pkg_id in srcinfo.binaries:
+            if pkg_id.architecture in (arch, 'all'):
+                test_for_arch = True
+        # If the source package builds no binaries for this architecture,
+        # don't try to trigger tests for it.
+        if not test_for_arch:
+            return []
+
         if 'autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo, binaries_info):
             reported_pkgs.add(src)
             tests.append((src, ver))
