@@ -19,17 +19,45 @@ from britney2 import SuiteClass
 
 class MigrationItem(object):
 
-    def __init__(self, package=None, version=None, architecture=None, uvname=None, suite=None, is_cruft_removal=False):
-        self._uvname = uvname
+    def __init__(self, package=None, version=None, architecture=None,
+                 suite=None, is_removal=False, is_cruft_removal=False):
+
+        if architecture is None:
+            architecture = 'source'
+
+        if is_cruft_removal:
+            is_removal = True
+
         self._package = package
         self._version = version
         self._architecture = architecture
         self._suite = suite
+        self._is_removal = is_removal
         self._is_cruft_removal = is_cruft_removal
-        if version is not None:
-            self._name = "%s/%s" % (uvname, version)
-        else:
-            self._name = uvname
+        self._uvname = self.get_uvname()
+        self._name = self.get_name()
+
+    def get_name(self):
+        name = self._package
+        if self._architecture != "source":
+            name = "%s/%s" % (name, self._architecture)
+        if self._version:
+            name = "%s/%s" % (name, self._version)
+        if self._suite.excuses_suffix:
+            name = "%s_%s" % (name, self._suite.excuses_suffix)
+        if self._is_removal:
+            name = "-%s" % (name)
+        return name
+
+    def get_uvname(self):
+        name = self._package
+        if self._architecture != "source":
+            name = "%s/%s" % (name, self._architecture)
+        if self._suite.excuses_suffix:
+            name = "%s_%s" % (name, self._suite.excuses_suffix)
+        if self._is_removal:
+            name = "-%s" % (name)
+        return name
 
     def __str__(self):
         if self.version is not None:
@@ -59,7 +87,7 @@ class MigrationItem(object):
 
     @property
     def is_removal(self):
-        return self._name.startswith('-')
+        return self._is_removal
 
     @property
     def architecture(self):
@@ -95,11 +123,9 @@ class MigrationItemFactory(object):
         self.logger = logging.getLogger(logger_name)
 
     def generate_removal_for_cruft_item(self, pkg_id):
-        uvname = "-%s/%s" % (pkg_id.package_name, pkg_id.architecture)
         return MigrationItem(package=pkg_id.package_name,
                              version=pkg_id.version,
                              architecture=pkg_id.architecture,
-                             uvname=uvname,
                              suite=self._suites.target_suite,
                              is_cruft_removal=True,
                              )
@@ -181,27 +207,12 @@ class MigrationItemFactory(object):
         else:
             suite = self._find_suite_for_item(suites, suite_name, package_name, version, auto_correct)
 
-        uvname = self._canonicalise_uvname(item_text, package_name, architecture, suite, is_removal)
-
         return MigrationItem(package=package_name,
                              version=version,
                              architecture=architecture,
-                             uvname=uvname,
                              suite=suite,
+                             is_removal=is_removal,
                              )
 
     def parse_items(self, *args, **kwargs):
         return [self.parse_item(x, **kwargs) for x in args]
-
-    @staticmethod
-    def _canonicalise_uvname(item_text_sans_removal, package, architecture, suite, is_removal):
-        parts = item_text_sans_removal.split('/', 3)
-        if len(parts) == 1 or architecture == 'source':
-            uvname = package
-        else:
-            uvname = "%s/%s" % (package, architecture)
-        if suite.suite_class.is_additional_source:
-            uvname = '%s_%s' % (uvname, suite.suite_short_name)
-        if is_removal:
-            uvname = '-%s' % (uvname)
-        return uvname
