@@ -2,6 +2,7 @@ from itertools import chain
 from urllib.parse import quote
 
 import apt_pkg
+import logging
 
 from britney2 import DependencyType, PackageId
 from britney2.excuse import Excuse
@@ -16,6 +17,8 @@ from britney2.utils import (invalidate_excuses, find_smooth_updateable_binaries,
 class ExcuseFinder(object):
 
     def __init__(self, options, suite_info, all_binaries, pkg_universe, policy_engine, mi_factory, hints):
+        logger_name = ".".join((self.__class__.__module__, self.__class__.__name__))
+        self.logger = logging.getLogger(logger_name)
         self.options = options
         self.suite_info = suite_info
         self.all_binaries = all_binaries
