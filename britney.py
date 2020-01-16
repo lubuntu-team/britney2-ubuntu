@@ -1412,10 +1412,24 @@ class Britney(object):
         sources_t = self.suite_info.target_suite.sources
         excuses = self.excuses
 
+        def excuse_still_valid(excuse):
+            source = excuse.source
+            arch = excuse.item.architecture
+            # TODO for binNMUs, this check is always ok, even if the item
+            # migrated already
+            valid = (arch != 'source' or
+                     source not in sources_t or
+                     sources_t[source].version != excuse.ver[1])
+            # TODO migrated items should be removed from upgrade_me, so this
+            # should not happen
+            if not valid:
+                raise AssertionError("excuse no longer valid %s" % (item))
+            return valid
+
         # consider only excuses which are valid candidates and still relevant.
-        valid_excuses = frozenset(y.uvname for y in upgrade_me
-                                  if not y.is_cruft_removal and
-                                  (y not in sources_t or sources_t[y].version != excuses[y].ver[1]))
+        valid_excuses = frozenset(e.name for n, e in excuses.items()
+                                  if e.item in upgrade_me
+                                  and excuse_still_valid(e))
         excuses_deps = {name: valid_excuses.intersection(excuse.get_deps())
                         for name, excuse in excuses.items() if name in valid_excuses}
         excuses_rdeps = defaultdict(set)
@@ -1426,7 +1440,7 @@ class Britney(object):
         def find_related(e, hint, circular_first=False):
             excuse = excuses[e]
             if not circular_first:
-                hint[e] = excuse.ver[1]
+                hint.add(excuse.item)
             if not excuse.get_deps():
                 return hint
             for p in excuses_deps[e]:
@@ -1443,22 +1457,22 @@ class Britney(object):
         for e in valid_excuses:
             excuse = excuses[e]
             if excuse.get_deps():
-                hint = find_related(e, {}, True)
+                hint = find_related(e, set(), True)
                 if isinstance(hint, dict) and e in hint:
-                    h = frozenset(hint.items())
+                    h = frozenset(hint)
                     if h not in seen_hints:
                         candidates.append(h)
                         seen_hints.add(h)
             else:
-                items = [(e, excuse.ver[1])]
+                items = [excuse.item]
                 orig_size = 1
                 looped = False
                 seen_items = set()
                 seen_items.update(items)
 
-                for item, ver in items:
+                for item in items:
                     # excuses which depend on "item" or are depended on by it
-                    new_items = {(x, excuses[x].ver[1]) for x in chain(excuses_deps[item], excuses_rdeps[item])}
+                    new_items = {excuses[x].item for x in chain(excuses_deps[item.name], excuses_rdeps[item.name])}
                     new_items -= seen_items
                     items.extend(new_items)
                     seen_items.update(new_items)
@@ -1481,8 +1495,7 @@ class Britney(object):
         mi_factory = self._migration_item_factory
         for l in self.get_auto_hinter_hints(self.upgrade_me):
             for hint in l:
-                self.do_hint("easy", "autohinter", [mi_factory.parse_item("%s/%s" % (x[0], x[1]), auto_correct=False)
-                                                    for x in sorted(hint)])
+                self.do_hint("easy", "autohinter", sorted(hint))
 
     def nuninst_arch_report(self, nuninst, arch):
         """Print a report of uninstallable packages for one architecture."""
