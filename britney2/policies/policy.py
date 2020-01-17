@@ -2,6 +2,7 @@ import json
 import os
 import time
 from abc import abstractmethod
+from collections import defaultdict
 from urllib.parse import quote
 
 import apt_pkg
@@ -699,6 +700,7 @@ class LPBlockBugPolicy(BasePolicy):
 
         return PolicyVerdict.REJECTED_PERMANENTLY
 
+
 class LPExcuseBugsPolicy(BasePolicy):
     """update-excuse Launchpad bug policy to link to a bug report, does not prevent migration
 
@@ -716,26 +718,25 @@ class LPExcuseBugsPolicy(BasePolicy):
 
     def initialise(self, britney):
         super().initialise(britney)
-        self.excuse_bugs = {}  # srcpkg -> [(bug, date), ...]
+        self.excuse_bugs = defaultdict(list)  # srcpkg -> [(bug, date), ...]
 
         filename = os.path.join(self.options.unstable, "ExcuseBugs")
         self.log("Loading user-supplied excuse bug data from %s" % filename)
-        for line in open(filename):
-            l = line.split()
-            if len(l) != 3:
-                self.log("ExcuseBugs, ignoring malformed line %s" % line, type='W')
-                continue
-            try:
-                self.excuse_bugs.setdefault(l[0], [])
-                self.excuse_bugs[l[0]].append((l[1], int(l[2])))
-            except ValueError:
-                self.log("ExcuseBugs, unable to parse \"%s\"" % line, type='E')
+        try:
+            for line in open(filename):
+                l = line.split()
+                if len(l) != 3:
+                    self.log("ExcuseBugs, ignoring malformed line %s" % line, type='W')
+                    continue
+                try:
+                    self.excuse_bugs[l[0]].append((l[1], int(l[2])))
+                except ValueError:
+                    self.log("ExcuseBugs, unable to parse \"%s\"" % line, type='E')
+        except FileNotFoundError:
+            self.log("ExcuseBugs, data file not found, no bugs will be recorded" % filename)
 
     def apply_policy_impl(self, excuse_bugs_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
-        try:
-            excuse_bug = self.excuse_bugs[source_name]
-        except KeyError:
-            return PolicyVerdict.PASS
+        excuse_bug = self.excuse_bugs[source_name]
 
         for bug, date in excuse_bug:
             excuse_bugs_info[bug] = date
