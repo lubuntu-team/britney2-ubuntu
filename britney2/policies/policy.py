@@ -733,7 +733,7 @@ class LPExcuseBugsPolicy(BasePolicy):
                 except ValueError:
                     self.log("ExcuseBugs, unable to parse \"%s\"" % line, type='E')
         except FileNotFoundError:
-            self.log("ExcuseBugs, data file not found, no bugs will be recorded" % filename)
+            self.log("ExcuseBugs, data file not found, no bugs will be recorded")
 
     def apply_policy_impl(self, excuse_bugs_info, suite, source_name, source_data_tdist, source_data_srcdist, excuse):
         excuse_bug = self.excuse_bugs[source_name]
