@@ -87,6 +87,7 @@ class T(TestBase):
             'linux-meta': {'0.2': '', '1': '', '2': ''},
             'linux': {'2': ''},
             'newgreen': {'2': ''},
+            'purple': {'2': ''},
         }
 
         self.email_cache = {}
@@ -218,6 +219,33 @@ class T(TestBase):
             upgrade_out = f.read()
         self.assertNotIn('accepted:', upgrade_out)
         self.assertIn('SUCCESS (0/0)', upgrade_out)
+
+    def test_no_request_for_excluded_arch(self):
+        '''
+        Does not request a test on an architecture for which the package
+        produces no binaries
+        '''
+
+        # The package has passed before on i386
+        self.swift.set_results({'autopkgtest-series': {
+            'series/i386/p/purple/20150101_100000@': (0, 'purple 1', tr('purple/1')),
+            'series/amd64/p/purple/20150101_100000@': (0, 'purple 1', tr('purple/1')),
+            'series/amd64/p/purple/20200101_100000@': (0, 'purple 2', tr('purple/2')),
+        }})
+
+        exc = self.do_test(
+            [('libpurple1', {'Source': 'purple', 'Version': '2', 'Architecture': 'amd64'},
+             'autopkgtest')],
+            {'purple': (True, {'purple/2': {'amd64': 'PASS'}})},
+        )[1]
+
+        self.assertEqual(self.pending_requests, {})
+        self.assertEqual(self.amqp_requests, set())
+
+        with open(os.path.join(self.data.path, 'output', 'series', 'output.txt')) as f:
+            upgrade_out = f.read()
+        self.assertIn('accepted: purple', upgrade_out)
+        self.assertIn('SUCCESS (1/0)', upgrade_out)
 
     def test_no_wait_for_always_failed_test(self):
         '''We do not need to wait for results for tests which have always failed'''
