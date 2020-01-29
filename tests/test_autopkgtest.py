@@ -174,14 +174,14 @@ class T(TestBase):
         exc = self.run_it(
             # uninstallable unstable version
             [('lightgreen', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1 (>= 2)'}, 'autopkgtest')],
-            {'lightgreen': (False, {})},
+            {'lightgreen': (True, {})},
             {'lightgreen': [('old-version', '1'), ('new-version', '1.1~beta'),
                             ('reason', 'depends'),
                             ('excuses', 'lightgreen/amd64 unsatisfiable Depends: libgreen1 (>= 2)')
                             ]
              })[1]
         # autopkgtest should not be triggered for uninstallable pkg
-        self.assertEqual(exc['lightgreen']['policy_info']['autopkgtest'], {'verdict': 'REJECTED_TEMPORARILY'})
+        self.assertEqual(exc['lightgreen']['policy_info']['autopkgtest'], {'verdict': 'PASS'})
 
         self.assertEqual(self.pending_requests, {})
         self.assertEqual(self.amqp_requests, set())
@@ -189,7 +189,6 @@ class T(TestBase):
         with open(os.path.join(self.data.path, 'output', 'output.txt')) as f:
             upgrade_out = f.read()
         self.assertNotIn('accepted:', upgrade_out)
-        self.assertIn('SUCCESS (0/0)', upgrade_out)
 
     def test_no_wait_for_always_failed_test(self):
         '''We do not need to wait for results for tests which have always failed'''
@@ -880,7 +879,7 @@ class T(TestBase):
         exc = self.run_it(
             [('brokengreen', {'Version': '1', 'Depends': 'libgreen1, nonexisting'}, 'autopkgtest')],
             {'green': (True, {'green/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
-             'brokengreen': (False, {}),
+             'brokengreen': (True, {}),
              },
             {'green': [('old-version', '1'), ('new-version', '2')],
              'brokengreen': [('old-version', '-'), ('new-version', '1'),
@@ -888,8 +887,6 @@ class T(TestBase):
                              ('excuses', 'brokengreen/amd64 unsatisfiable Depends: nonexisting')],
              })[1]
         # autopkgtest should not be triggered for uninstallable pkg
-        self.assertEqual(exc['brokengreen']['policy_info']['autopkgtest'], {'verdict': 'REJECTED_TEMPORARILY'})
-
         self.assertEqual(self.amqp_requests, set())
 
     def test_rdepends_unbuilt_new_version_result(self):
