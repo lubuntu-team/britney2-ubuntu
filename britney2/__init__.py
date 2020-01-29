@@ -62,12 +62,21 @@ class Suite(object):
 
     @property
     def binaries(self):
+        # TODO some callers modify this structure, which doesn't invalidate
+        # the self._all_binaries_in_suite cache
         return self._binaries
 
     @binaries.setter
     def binaries(self, binaries):
         self._binaries = binaries
-        self._all_binaries_in_suite = {x.pkg_id: x for a in binaries for x in binaries[a].values()}
+        self._all_binaries_in_suite = None
+
+    @property
+    def all_binaries_in_suite(self):
+        if not self._all_binaries_in_suite:
+            self._all_binaries_in_suite = {x.pkg_id: x for a in self._binaries
+                    for x in self._binaries[a].values()}
+        return self._all_binaries_in_suite
 
     def any_of_these_are_in_the_suite(self, pkgs):
         """Test if at least one package of a given set is in the suite
@@ -75,7 +84,7 @@ class Suite(object):
         :param pkgs: A set of BinaryPackageId
         :return: True if any of the packages in pkgs are currently in the suite
         """
-        return not self._all_binaries_in_suite.isdisjoint(pkgs)
+        return not self.all_binaries_in_suite.keys().isdisjoint(pkgs)
 
     def is_pkg_in_the_suite(self, pkg_id):
         """Test if the package of is in testing
@@ -83,7 +92,7 @@ class Suite(object):
         :param pkg_id: A BinaryPackageId
         :return: True if the pkg is currently in the suite
         """
-        return pkg_id in self._all_binaries_in_suite
+        return pkg_id in self.all_binaries_in_suite
 
     def which_of_these_are_in_the_suite(self, pkgs):
         """Iterate over all packages that are in the suite
@@ -91,7 +100,7 @@ class Suite(object):
         :param pkgs: An iterable of package ids
         :return: An iterable of package ids that are in the suite
         """
-        yield from (x for x in pkgs if x in self._all_binaries_in_suite)
+        yield from (x for x in pkgs if x in self.all_binaries_in_suite)
 
 
 class TargetSuite(Suite):
@@ -142,7 +151,12 @@ class TargetSuite(Suite):
 
         :param pkg_id The id of the package
         """
+
+        # TODO The calling code currently manually updates the contents of
+        # target_suite.binaries when this is called. It would probably make
+        # more sense to do that here instead
         self.inst_tester.add_binary(pkg_id)
+        self._all_binaries_in_suite = None
 
     def remove_binary(self, pkg_id):
         """Remove a binary from the suite
@@ -151,7 +165,12 @@ class TargetSuite(Suite):
         If the package is not known, this method will throw an
         KeyError.
         """
+
+        # TODO The calling code currently manually updates the contents of
+        # target_suite.binaries when this is called. It would probably make
+        # more sense to do that here instead
         self.inst_tester.remove_binary(pkg_id)
+        self._all_binaries_in_suite = None
 
     def check_suite_source_pkg_consistency(self, comment):
         sources_t = self.sources
