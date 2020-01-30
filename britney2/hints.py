@@ -32,25 +32,24 @@ class HintCollection(object):
     def __getitem__(self, type=None):
         return self.search(type)
 
-    def search(self, type=None, onlyactive=True, package=None, \
-       version=None, architecture=None, suite=None, removal=None):
+    def search(self, type=None, onlyactive=True, package=None,
+               version=None, architecture=None, suite=None, removal=None):
 
-        return [ hint for hint in self._hints if
-                 (type is None or type == hint.type) and
-                 (hint.active or not onlyactive) and
-                 (package is None or package == hint.packages[0].package) and
-                 (version is None or version == hint.packages[0].version) and
-                 (architecture is None or architecture == hint.packages[0].architecture) and
-                 (suite is None or suite == hint.packages[0].suite) and
-                 (removal is None or removal == hint.packages[0].is_removal)
-               ]
+        return [hint for hint in self._hints if
+                (type is None or type == hint.type) and
+                (hint.active or not onlyactive) and
+                (package is None or package == hint.packages[0].package) and
+                (version is None or version == hint.packages[0].version) and
+                (architecture is None or architecture == hint.packages[0].architecture) and
+                (suite is None or suite == hint.packages[0].suite) and
+                (removal is None or removal == hint.packages[0].is_removal)]
 
     def add_hint(self, hint):
         self._hints.append(hint)
 
 
 class Hint(object):
-    NO_VERSION = [ 'block', 'block-all', 'block-udeb', 'allow-archall-maintainer-upload', 'allow-uninst' ]
+    NO_VERSION = ['block', 'block-all', 'block-udeb', 'allow-archall-maintainer-upload', 'allow-uninst']
 
     def __init__(self, user, hint_type, packages):
         self._user = user
@@ -155,7 +154,7 @@ class HintParser(object):
             'remark': (0, lambda *x: None),
 
             # Migration grouping hints
-            'easy': (2, single_hint_taking_list_of_packages), # Easy needs at least 2 to make sense
+            'easy': (2, single_hint_taking_list_of_packages),  # Easy needs at least 2 to make sense
             'force-hint': (1, single_hint_taking_list_of_packages),
             'hint': (1, single_hint_taking_list_of_packages),
 
@@ -226,11 +225,11 @@ class HintParser(object):
             line_no += 1
             if line == "" or line.startswith('#'):
                 continue
-            l = line.split()
-            hint_name = l[0]
+            ln = line.split()
+            hint_name = ln[0]
             if hint_name in aliases:
                 hint_name = aliases[hint_name]
-                l[0] = hint_name
+                ln[0] = hint_name
             if hint_name == 'finished':
                 break
             if hint_name not in hint_table:
@@ -242,12 +241,12 @@ class HintParser(object):
                                  hint_name, who, filename, line_no, reason)
                 continue
             min_args, hint_parser_impl = hint_table[hint_name]
-            if len(l) - 1 < min_args:
+            if len(ln) - 1 < min_args:
                 self.logger.warning("Malformed hint found in %s (line %d): Needs at least %d argument(s), got %d",
-                                    filename, line_no, min_args, len(l) - 1)
+                                    filename, line_no, min_args, len(ln) - 1)
                 continue
             try:
-                hint_parser_impl(mi_factory, hints, who, *l)
+                hint_parser_impl(mi_factory, hints, who, *ln)
             except MalformedHintException as e:
                 self.logger.warning("Malformed hint found in %s (line %d): \"%s\"", filename, line_no, e.args[0])
                 continue

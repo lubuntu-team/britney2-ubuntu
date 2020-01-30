@@ -13,7 +13,7 @@ EXCEPTIONS_BY_FILE = {
     'britney.py': 0,
     'britney2/excuse.py': 0,
     'britney2/excusefinder.py': 0,
-    'britney2/hints.py': 8,
+    'britney2/hints.py': 0,
     'britney2/installability/tester.py': 4,
     'britney2/policies/__init__.py': 0,
     'britney2/policies/policy.py': 0,
