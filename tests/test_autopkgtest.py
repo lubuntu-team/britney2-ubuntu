@@ -174,10 +174,10 @@ class T(TestBase):
         exc = self.run_it(
             # uninstallable unstable version
             [('lightgreen', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1 (>= 2)'}, 'autopkgtest')],
-            {'lightgreen': (True, {})},
+            {'lightgreen': (False, {})},
             {'lightgreen': [('old-version', '1'), ('new-version', '1.1~beta'),
                             ('reason', 'depends'),
-                            ('excuses', 'lightgreen/amd64 unsatisfiable Depends: libgreen1 (>= 2)')
+                            ('excuses', 'uninstallable on arch amd64, not running autopkgtest there')
                             ]
              })[1]
         # autopkgtest should not be triggered for uninstallable pkg
@@ -879,12 +879,12 @@ class T(TestBase):
         exc = self.run_it(
             [('brokengreen', {'Version': '1', 'Depends': 'libgreen1, nonexisting'}, 'autopkgtest')],
             {'green': (True, {'green/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
-             'brokengreen': (True, {}),
+             'brokengreen': (False, {}),
              },
             {'green': [('old-version', '1'), ('new-version', '2')],
              'brokengreen': [('old-version', '-'), ('new-version', '1'),
                              ('reason', 'depends'),
-                             ('excuses', 'brokengreen/amd64 unsatisfiable Depends: nonexisting')],
+                             ('excuses', 'uninstallable on arch amd64, not running autopkgtest there')],
              })[1]
         # autopkgtest should not be triggered for uninstallable pkg
         self.assertEqual(self.amqp_requests, set())
