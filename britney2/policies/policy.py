@@ -821,9 +821,6 @@ class DependsPolicy(BasePolicy):
             binary_u = packages_s_a[pkg_name]
             pkg_arch = binary_u.architecture
 
-            if pkg_arch == 'all' and arch not in self.nobreakall_arches:
-                continue
-
             if (binary_u.source_version != source_data_srcdist.version):
                 # don't check cruft in unstable
                 continue
@@ -850,14 +847,21 @@ class DependsPolicy(BasePolicy):
 
             if pkg_id in self.broken_packages:
                 # dependencies can't be satisfied by all the known binaries -
-                # this certainly won't work
+                # this certainly won't work...
+                excuse.add_unsatisfiable_on_arch(arch)
+                if pkg_arch == 'all' and arch not in self.nobreakall_arches:
+                    # ...but if the binary is arch all on a non-nobreakarch
+                    # all, we don't care
+                    # we still wan't the binary to be listed as uninstallable,
+                    # so the autopkgtest policy knows not to try to run tests
+                    continue
                 verdict = PolicyVerdict.REJECTED_PERMANENTLY
                 excuse.add_verdict_info(verdict, "%s/%s has unsatisfiable dependency" % (
                     pkg_name, arch))
                 excuse.addreason("depends")
-                # TODO does this also need to happen on non-nobreakarch if the
-                # arch:all packages are uninstallable?
-                excuse.add_unsatisfiable_on_arch(arch)
+
+            if pkg_arch == 'all' and arch not in self.nobreakall_arches:
+                continue
 
             deps = self.pkg_universe.dependencies_of(pkg_id)
 
