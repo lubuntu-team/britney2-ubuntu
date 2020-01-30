@@ -113,16 +113,7 @@ class YamlTest(TestBase):
                6)
 
         excuse = self.do_test([pkg])
-        self.assertIn('notavailable (>= 2)', excuse['libc6']['dependencies']['unsatisfiable-dependencies']['amd64'])
-
-    def test_epoch_in_deps(self):
-        """Test dependencies listing with epoch in versioned dep"""
-        pkg = ('libc6', {'Version': '2',
-                         'Depends': 'datefudge (>= 99:1.0-0.1ubuntu8)'},
-               6)
-
-        excuse = self.do_test([pkg])
-        self.assertIn('datefudge', list(excuse['libc6']['dependencies']['unsatisfiable-dependencies']['amd64'])[0])
+        assert excuse['libc6']['policy_info']['depends']['verdict'] == 'REJECTED_PERMANENTLY'
 
 
 if __name__ == '__main__':
