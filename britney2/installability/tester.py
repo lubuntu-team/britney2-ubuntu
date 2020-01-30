@@ -605,9 +605,9 @@ class InstallabilityStats(object):
             "Requests - is_installable: {is_installable_calls}",
             "Cache - hits: {cache_hits}, misses: {cache_misses}, drops: {cache_drops}",
             "Choices - pre-solved: {choice_presolved}, No RP: {choice_resolved_without_restore_point}",
-            "Backtrace - RP created: {backtrace_restore_point_created}, RP used: {backtrace_restore_point_used}, reached last option: {backtrace_last_option}",
-            "Solved - installable: {solved_installable}, uninstallable: {solved_uninstallable}, conflicts essential: {conflicts_essential}",
-            "Eqv - times used: {eqv_table_times_used}, perfect reductions: {eqv_table_reduced_to_one}, failed reductions: {eqv_table_reduced_by_zero}, total no. of alternatives pruned: {eqv_table_total_number_of_alternatives_eliminated}",
+            "Backtrace - RP created: {backtrace_restore_point_created}, RP used: {backtrace_restore_point_used}, reached last option: {backtrace_last_option}",  # nopep8
+            "Solved - installable: {solved_installable}, uninstallable: {solved_uninstallable}, conflicts essential: {conflicts_essential}",  # nopep8
+            "Eqv - times used: {eqv_table_times_used}, perfect reductions: {eqv_table_reduced_to_one}, failed reductions: {eqv_table_reduced_by_zero}, total no. of alternatives pruned: {eqv_table_total_number_of_alternatives_eliminated}",  # nopep8
         ]
         return [x.format(**self.__dict__) for x in formats]
 
@@ -667,4 +667,3 @@ class ArchStats(object):
         self._list_stats('dependency-clauses', sorted_no_dep_edges)
         self._list_stats('dependency-clause-alternatives', sorted_size_dep_edges, average_per_node=True)
         self._list_stats('negative-dependency-clauses', sorted_no_con_edges)
-
