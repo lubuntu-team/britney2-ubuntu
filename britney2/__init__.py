@@ -74,8 +74,8 @@ class Suite(object):
     @property
     def all_binaries_in_suite(self):
         if not self._all_binaries_in_suite:
-            self._all_binaries_in_suite = {x.pkg_id: x for a in self._binaries
-                    for x in self._binaries[a].values()}
+            self._all_binaries_in_suite = \
+                {x.pkg_id: x for a in self._binaries for x in self._binaries[a].values()}
         return self._all_binaries_in_suite
 
     def any_of_these_are_in_the_suite(self, pkgs):
