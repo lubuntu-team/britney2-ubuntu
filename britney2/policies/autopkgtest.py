@@ -784,6 +784,7 @@ class AutopkgtestPolicy(BasePolicy):
         hints = self.britney.hints.search('force-reset-test', package=src)
 
         if hints:
+            self.log('Checking hints for %s/%s/%s: %s' % (src, ver, arch, [str(h) for h in hints]))
             for hint in hints:
                 for mi in hint.packages:
                     if (mi.architecture in ['source', arch] and
