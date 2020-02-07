@@ -532,6 +532,10 @@ class AutopkgtestPolicy(BasePolicy):
             depends = pkg_universe.dependencies_of(binary)
             # depends is a frozenset{frozenset{BinaryPackageId, ..}}
             for deps_of_bin in depends:
+                if target_suite.any_of_these_are_in_the_suite(deps_of_bin):
+                    # if any of the alternative dependencies is already
+                    # satisfied in the target suite, we can just ignore it
+                    continue
                 # We'll figure out which version later
                 bin_new.update(added_pkgs_compared_to_target_suite(deps_of_bin, target_suite))
 
