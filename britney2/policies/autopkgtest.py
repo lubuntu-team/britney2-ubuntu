@@ -482,6 +482,7 @@ class AutopkgtestPolicy(BasePolicy):
     def request_tests_for_source(self, item, arch, source_data_srcdist, pkg_arch_result):
         pkg_universe = self.britney.pkg_universe
         target_suite = self.suite_info.target_suite
+        source_suite = item.suite
         sources_s = item.suite.sources
         packages_s_a = item.suite.binaries[arch]
         source_name = item.package
@@ -548,8 +549,17 @@ class AutopkgtestPolicy(BasePolicy):
         for binary in bin_triggers:
             # broken is a frozenset{BinaryPackageId, ..}
             broken = pkg_universe.negative_dependencies_of(binary)
-            # We'll figure out which version later
-            bin_broken.update(added_pkgs_compared_to_target_suite(broken, target_suite, invert=True))
+            broken_in_target = {p.package_name for p in target_suite.which_of_these_are_in_the_suite(broken)}
+            broken_in_source = {p.package_name for p in source_suite.which_of_these_are_in_the_suite(broken)}
+            # We want packages with a newer version in the source suite that
+            # no longer has the conflict. This is an approximation
+            broken_filtered = set(
+                p for p in broken if
+                p.package_name in broken_in_target and
+                p.package_name not in broken_in_source)
+            # We add the version in the target suite, but the code below will
+            # change it to the version in the source suite
+            bin_broken.update(broken_filtered)
         bin_triggers.update(bin_broken)
 
         triggers = set()
