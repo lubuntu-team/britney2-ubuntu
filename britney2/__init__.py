@@ -102,6 +102,15 @@ class Suite(object):
         """
         yield from (x for x in pkgs if x in self.all_binaries_in_suite)
 
+    def is_cruft(self, pkg):
+        """Check if the package is cruft in the suite
+
+        :param pkg: BinaryPackage to check
+                    Note that this package is assumed to be in the suite
+        """
+        newest_src_in_suite = self.sources[pkg.source]
+        return pkg.source_version != newest_src_in_suite.version
+
 
 class TargetSuite(Suite):
 
