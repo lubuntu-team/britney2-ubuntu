@@ -34,7 +34,7 @@ from itertools import filterfalse, chain
 
 import yaml
 
-from britney2 import SourcePackage
+from britney2 import SourcePackage, SuiteClass, PackageId
 from britney2.excusedeps import DependencySpec, ImpossibleDependencyState
 from britney2.policies import PolicyVerdict
 
@@ -838,6 +838,61 @@ def find_smooth_updateable_binaries(binaries_to_check,
         check = [x for x in check if x not in smoothbins]
 
     return smoothbins
+
+
+def find_newer_binaries(suite_info, pkg, add_source_for_dropped_bin=False):
+    """
+    Find newer binaries for pkg in any of the source suites.
+
+    :param pkg BinaryPackage (is assumed to be in the target suite)
+
+    :param add_source_for_dropped_bin If True, newer versions of the
+      source of pkg will be added if they don't have the binary pkg
+    """
+
+    source = pkg.source
+    newer_versions = []
+    for suite in suite_info:
+        if suite.suite_class == SuiteClass.TARGET_SUITE:
+            continue
+
+        suite_binaries_on_arch = suite.binaries.get(pkg.pkg_id.architecture)
+        if not suite_binaries_on_arch:
+            continue
+
+        newerbin = None
+        if pkg.pkg_id.package_name in suite_binaries_on_arch:
+            newerbin = suite_binaries_on_arch[pkg.pkg_id.package_name]
+            if suite.is_cruft(newerbin):
+                # We pretend the cruft binary doesn't exist.
+                # We handle this as if the source didn't have the binary
+                # (see below)
+                newerbin = None
+            elif apt_pkg.version_compare(newerbin.version, pkg.version) <= 0:
+                continue
+        else:
+            if source not in suite.sources:
+                # bin and source not in suite: no newer version
+                continue
+
+        if not newerbin:
+            if not add_source_for_dropped_bin:
+                continue
+            # We only get here if there is a newer version of the source,
+            # which doesn't have the binary anymore (either it doesn't
+            # exist, or it's cruft and we pretend it doesn't exist).
+            # Add the new source instead.
+            nsrc = suite.sources[source]
+            n_id = PackageId(source, nsrc.version, "source")
+            overs = pkg.source_version
+            if apt_pkg.version_compare(nsrc.version, overs) <= 0:
+                continue
+        else:
+            n_id = newerbin.pkg_id
+
+        newer_versions.append((n_id, suite))
+
+    return newer_versions
 
 
 def parse_provides(provides_raw, pkg_id=None, logger=None):
