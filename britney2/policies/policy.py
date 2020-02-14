@@ -821,6 +821,11 @@ class DependsPolicy(BasePolicy):
             binary_u = packages_s_a[pkg_name]
             pkg_arch = binary_u.architecture
 
+            # in some cases, we want to track the uninstallability of a
+            # package (because the autopkgtest policy uses this), but we still
+            # want to allow the package to be uninstallable
+            skip_dep_check = False
+
             if (binary_u.source_version != source_data_srcdist.version):
                 # don't check cruft in unstable
                 continue
@@ -829,12 +834,15 @@ class DependsPolicy(BasePolicy):
                 # we don't care about the existing arch: all binaries when
                 # checking a binNMU item, because the arch: all binaries won't
                 # migrate anyway
-                continue
+                skip_dep_check = True
+
+            if pkg_arch == 'all' and arch not in self.nobreakall_arches:
+                skip_dep_check = True
 
             if pkg_name in self.allow_uninst[arch]:
                 # this binary is allowed to become uninstallable, so we don't
                 # need to check anything
-                continue
+                skip_dep_check = True
 
             if pkg_name in packages_t_a:
                 oldbin = packages_t_a[pkg_name]
@@ -843,16 +851,16 @@ class DependsPolicy(BasePolicy):
                     # uninstallable, the newer version is allowed to be
                     # uninstallable as well, so we don't need to check
                     # anything
-                    continue
+                    skip_dep_check = True
 
             if pkg_id in self.broken_packages:
                 # dependencies can't be satisfied by all the known binaries -
                 # this certainly won't work...
                 excuse.add_unsatisfiable_on_arch(arch)
-                if pkg_arch == 'all' and arch not in self.nobreakall_arches:
-                    # ...but if the binary is arch all on a non-nobreakarch
-                    # all, we don't care
-                    # we still wan't the binary to be listed as uninstallable,
+                if skip_dep_check:
+                    # ...but if the binary is allowed to become uninstallable,
+                    # we don't care
+                    # we still want the binary to be listed as uninstallable,
                     # so the autopkgtest policy knows not to try to run tests
                     continue
                 verdict = PolicyVerdict.REJECTED_PERMANENTLY
@@ -860,7 +868,7 @@ class DependsPolicy(BasePolicy):
                     pkg_name, arch))
                 excuse.addreason("depends")
 
-            if pkg_arch == 'all' and arch not in self.nobreakall_arches:
+            if skip_dep_check:
                 continue
 
             deps = self.pkg_universe.dependencies_of(pkg_id)
