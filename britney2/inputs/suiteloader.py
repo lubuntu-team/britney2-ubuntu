@@ -19,6 +19,8 @@ class SuiteContentLoader(object):
     def __init__(self, base_config):
         self._base_config = base_config
         self._architectures = SuiteContentLoader.config_str_as_list(base_config.architectures)
+        assert 'all' not in self._architectures, "all not allowed in architectures"
+
         self._nobreakall_arches = SuiteContentLoader.config_str_as_list(base_config.nobreakall_arches, [])
         self._outofsync_arches = SuiteContentLoader.config_str_as_list(base_config.outofsync_arches, [])
         self._break_arches = SuiteContentLoader.config_str_as_list(base_config.break_arches, [])
