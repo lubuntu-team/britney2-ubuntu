@@ -366,7 +366,7 @@ class AutopkgtestPolicy(BasePolicy):
                     self.logger.info('%s is uninstallable on arch %s, not running autopkgtest there', source_name, arch)
                     excuse.addinfo("uninstallable on arch %s, not running autopkgtest there" % arch)
                 else:
-                    self.request_tests_for_source(item, arch, source_data_srcdist, pkg_arch_result)
+                    self.request_tests_for_source(item, arch, source_data_srcdist, pkg_arch_result, excuse)
 
             # add test result details to Excuse
             cloud_url = self.options.adt_ci_url + "packages/%(h)s/%(s)s/%(r)s/%(a)s"
@@ -479,7 +479,7 @@ class AutopkgtestPolicy(BasePolicy):
 
         return False
 
-    def request_tests_for_source(self, item, arch, source_data_srcdist, pkg_arch_result):
+    def request_tests_for_source(self, item, arch, source_data_srcdist, pkg_arch_result, excuse):
         pkg_universe = self.britney.pkg_universe
         target_suite = self.suite_info.target_suite
         source_suite = item.suite
@@ -488,7 +488,7 @@ class AutopkgtestPolicy(BasePolicy):
         source_name = item.package
         source_version = source_data_srcdist.version
         # request tests (unless they were already requested earlier or have a result)
-        tests = self.tests_for_source(source_name, source_version, arch)
+        tests = self.tests_for_source(source_name, source_version, arch, excuse)
         is_huge = False
         try:
             is_huge = len(tests) > int(self.options.adt_huge)
@@ -598,7 +598,7 @@ class AutopkgtestPolicy(BasePolicy):
             (result, real_ver, run_id, url) = self.pkg_test_result(testsrc, testver, arch, trigger)
             pkg_arch_result[(testsrc, real_ver)][arch] = (result, run_id, url)
 
-    def tests_for_source(self, src, ver, arch):
+    def tests_for_source(self, src, ver, arch, excuse):
         '''Iterate over all tests that should be run for given source and arch'''
 
         source_suite = self.suite_info.primary_source_suite
@@ -642,8 +642,10 @@ class AutopkgtestPolicy(BasePolicy):
             return []
 
         # we want to test the package itself, if it still has a test in unstable
+        # but only if the package actually exists on this arch
         srcinfo = source_suite.sources[src]
-        if 'autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo):
+        if ('autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo)) and \
+           len(excuse.packages[arch]) > 0:
             reported_pkgs.add(src)
             tests.append((src, ver))
 

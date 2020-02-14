@@ -68,8 +68,11 @@ def initialize_policy(test_name, policy_class, *args, **kwargs):
     return policy
 
 
-def create_excuse(name):
-    return Excuse(name)
+def create_excuse(name, pkgs):
+    excuse = Excuse(name)
+    for pkg_id in pkgs:
+        excuse.add_package(pkg_id)
+    return excuse
 
 
 def create_source_package(name, version, section='devel', binaries=None):
@@ -100,11 +103,11 @@ def create_bin_package(pkg_id, source_name=None, depends=None, conflicts=None):
         )
 
 
-def create_policy_objects(source_name, target_version='1.0', source_version='2.0'):
+def create_policy_objects(source_name, target_version='1.0', source_version='2.0', pkgs={}):
     return (
         create_source_package(source_name, target_version),
         create_source_package(source_name, source_version),
-        create_excuse(source_name),
+        create_excuse(source_name, pkgs),
     )
 
 
@@ -113,7 +116,7 @@ def apply_src_policy(policy, expected_verdict, src_name, *, suite='unstable', ta
     if src_name in suite_info[suite].sources:
         src_u = suite_info[suite].sources[src_name]
         src_t = suite_info.target_suite.sources.get(src_name)
-        _, _, excuse = create_policy_objects(src_name)
+        _, _, excuse = create_policy_objects(src_name, pkgs=src_u.binaries)
     else:
         src_t, src_u, excuse = create_policy_objects(src_name, target_version, source_version)
     suite_info.target_suite.sources[src_name] = src_t
