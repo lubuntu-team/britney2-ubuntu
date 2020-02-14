@@ -19,8 +19,6 @@ class SuiteContentLoader(object):
     def __init__(self, base_config):
         self._base_config = base_config
         self._architectures = SuiteContentLoader.config_str_as_list(base_config.architectures)
-        assert 'all' not in self._architectures, "all not allowed in architectures"
-
         self._nobreakall_arches = SuiteContentLoader.config_str_as_list(base_config.nobreakall_arches, [])
         self._outofsync_arches = SuiteContentLoader.config_str_as_list(base_config.outofsync_arches, [])
         self._break_arches = SuiteContentLoader.config_str_as_list(base_config.break_arches, [])
@@ -135,6 +133,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         # Intern architectures for efficiency; items in this list will be used for lookups and
         # building items/keys - by intern strings we reduce memory (considerably).
         self._architectures = [sys.intern(arch) for arch in allarches]
+        assert 'all' not in self._architectures, "all not allowed in architectures"
 
     def _get_suite_name(self, suite, release_file):
         for name in ('Suite', 'Codename'):
