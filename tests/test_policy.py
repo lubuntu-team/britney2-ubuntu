@@ -583,6 +583,7 @@ class TestAutopkgtestPolicy(unittest.TestCase):
             AutopkgtestPolicy,
             adt_amqp=self.amqp,
             adt_retry_older_than=1,
+            adt_baseline='reference',
             pkg_universe=simple_universe,
             inst_tester=simple_inst_tester)
         autopkgtest_policy_info = apply_src_policy(policy, PolicyVerdict.PASS, src_name)
@@ -593,6 +594,26 @@ class TestAutopkgtestPolicy(unittest.TestCase):
             'packages/' + src_name[0] + '/' + src_name + '/testing/amd64'
         amqp = self.read_amqp()
         assert len(amqp) == 0
+
+    def test_fail_reference_too_old(self):
+        src_name = 'pkg'
+        policy = initialize_policy(
+            'autopkgtest/fail-to-fail',
+            AutopkgtestPolicy,
+            adt_amqp=self.amqp,
+            adt_retry_older_than=1,
+            adt_baseline='reference',
+            adt_reference_max_age=1,
+            pkg_universe=simple_universe,
+            inst_tester=simple_inst_tester)
+        autopkgtest_policy_info = apply_src_policy(policy, PolicyVerdict.REJECTED_TEMPORARILY, src_name)
+        assert autopkgtest_policy_info[src_name + '/2.0'][ARCH][0] == 'RUNNING-REFERENCE'
+        assert autopkgtest_policy_info[src_name + '/2.0'][ARCH][1] == \
+            'data/autopkgtest/testing/amd64/' + src_name[0] + '/' + src_name + '/2/log.gz'
+        assert autopkgtest_policy_info[src_name + '/2.0'][ARCH][2] == \
+            'packages/' + src_name[0] + '/' + src_name + '/testing/amd64'
+        amqp = self.read_amqp()
+        assert 'migration-reference/0' in amqp
 
 
 if __name__ == '__main__':

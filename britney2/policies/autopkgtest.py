@@ -159,6 +159,12 @@ class AutopkgtestPolicy(BasePolicy):
             # Make adt_baseline optional
             setattr(self.options, 'adt_baseline', None)
 
+        if not hasattr(self.options, 'adt_reference_max_age'):
+            self.options.adt_reference_max_age = float('inf')
+        else:
+            self.options.adt_reference_max_age = \
+              int(self.options.adt_reference_max_age) * SECPERDAY
+
         # read the cached results that we collected so far
         if os.path.exists(self.results_cache_file):
             with open(self.results_cache_file) as f:
@@ -168,9 +174,10 @@ class AutopkgtestPolicy(BasePolicy):
 
             # The cache can contain results against versions of packages that
             # are not in any suite anymore. Strip those out, as we don't want
-            # to use those results.
+            # to use those results. Additionally, old references may be
+            # filtered out.
             if self.options.adt_baseline == 'reference':
-                self.filter_results_for_old_versions()
+                self.filter_old_results()
 
         else:
             self.logger.info('%s does not exist, re-downloading all results from swift', self.results_cache_file)
@@ -266,8 +273,13 @@ class AutopkgtestPolicy(BasePolicy):
                 result.append(self._now)
         return test_results
 
-    def filter_results_for_old_versions(self):
-        '''Remove results for old versions from the cache'''
+    def filter_old_results(self):
+        '''Remove results for old versions and reference runs from the cache.
+
+        For now, only delete reference runs. If we delete regular
+        results after a while, packages with lots of triggered tests may
+        never have all the results at the same time.
+'''
 
         test_results = self.test_results
         test_results_new = deepcopy(test_results)
@@ -275,6 +287,9 @@ class AutopkgtestPolicy(BasePolicy):
         for (trigger, trigger_data) in test_results.items():
             for (src, results) in trigger_data.items():
                 for (arch, result) in results.items():
+                    if trigger == REF_TRIG and \
+                      result[3] < self._now - self.options.adt_reference_max_age:
+                        del test_results_new[trigger][src][arch]
                     if not self.test_version_in_any_suite(src, result[1]):
                         del test_results_new[trigger][src][arch]
                 if len(test_results_new[trigger][src]) == 0:
@@ -873,6 +888,11 @@ class AutopkgtestPolicy(BasePolicy):
             self.logger.debug(
                 "Ignoring result for source %s and trigger %s as the tested version %s isn't found in any suite",
                 src, trigger, ver)
+            return
+        if trigger == REF_TRIG and \
+           seen < self._now - self.options.adt_reference_max_age:
+            self.logger.debug(
+                "Ignoring reference result for source %s as it's too old", src)
             return
 
         result = self.test_results.setdefault(trigger, {}).setdefault(
