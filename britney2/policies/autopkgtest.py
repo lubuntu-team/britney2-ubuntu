@@ -290,7 +290,7 @@ class AutopkgtestPolicy(BasePolicy):
                     if trigger == REF_TRIG and \
                       result[3] < self._now - self.options.adt_reference_max_age:
                         del test_results_new[trigger][src][arch]
-                    if not self.test_version_in_any_suite(src, result[1]):
+                    elif not self.test_version_in_any_suite(src, result[1]):
                         del test_results_new[trigger][src][arch]
                 if len(test_results_new[trigger][src]) == 0:
                     del test_results_new[trigger][src]
