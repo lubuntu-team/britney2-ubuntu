@@ -673,9 +673,9 @@ def invalidate_excuses(excuses, valid, invalid, invalidated):
     # create dependencies between excuses based on packages
     excuses_rdeps = defaultdict(set)
     for exc in excuses.values():
-        for deptype in exc.all_deps:
-            for d in exc.all_deps[deptype]:
-                excuses_rdeps[d].add(exc.name)
+        # Note that excuses_rdeps is only populated by dependencies generated
+        # based on packages below. There are currently no dependencies between
+        # excuses that are added directly, so this is ok.
 
         for pkg_dep in exc.depends_packages:
             # set of excuses, each of which can satisfy this specific
