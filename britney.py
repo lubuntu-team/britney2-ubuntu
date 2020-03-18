@@ -200,9 +200,17 @@ from britney2.installability.builder import build_installability_tester
 from britney2.installability.solver import InstallabilitySolver
 from britney2.migration import MigrationManager
 from britney2.migrationitem import MigrationItemFactory
-from britney2.policies.policy import (AgePolicy, RCBugPolicy, PiupartsPolicy, DependsPolicy,
-                                      BuildDependsPolicy, PolicyEngine,
-                                      BlockPolicy, BuiltUsingPolicy, BuiltOnBuilddPolicy)
+from britney2.policies.policy import (AgePolicy,
+                                      RCBugPolicy,
+                                      PiupartsPolicy,
+                                      DependsPolicy,
+                                      BuildDependsPolicy,
+                                      PolicyEngine,
+                                      BlockPolicy,
+                                      BuiltUsingPolicy,
+                                      BuiltOnBuilddPolicy,
+                                      ImplicitDependencyPolicy,
+                                      )
 from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.utils import (log_and_format_old_libraries,
                             read_nuninst, write_nuninst, write_heidi,
@@ -501,6 +509,7 @@ class Britney(object):
         self._policy_engine.add_policy(BuildDependsPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(BlockPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(BuiltUsingPolicy(self.options, self.suite_info))
+        self._policy_engine.add_policy(ImplicitDependencyPolicy(self.options, self.suite_info))
         if getattr(self.options, 'check_buildd', 'no') == 'yes':
             self._policy_engine.add_policy(BuiltOnBuilddPolicy(self.options, self.suite_info))
 

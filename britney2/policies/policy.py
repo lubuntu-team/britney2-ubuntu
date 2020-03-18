@@ -13,7 +13,7 @@ from britney2 import SuiteClass, PackageId
 from britney2.hints import Hint, split_into_one_hint_per_package
 from britney2.inputs.suiteloader import SuiteContentLoader
 from britney2.policies import PolicyVerdict, ApplySrcPolicy
-from britney2.utils import get_dependency_solvers
+from britney2.utils import get_dependency_solvers, find_newer_binaries
 from britney2 import DependencyType
 from britney2.excusedeps import DependencySpec
 
@@ -1397,3 +1397,315 @@ class BuiltOnBuilddPolicy(BasePolicy):
             signerinfo = json.load(fd)
 
         return signerinfo
+
+
+class ImplicitDependencyPolicy(BasePolicy):
+    """Implicit Dependency policy
+
+    Upgrading a package pkg-a can break the installability of a package pkg-b.
+    A newer version (or the removal) of pkg-b might fix the issue. In that
+    case, pkg-a has an 'implicit dependency' on pkg-b, because pkg-a can only
+    migrate if pkg-b also migrates.
+
+    This policy tries to discover a few common cases, and adds the relevant
+    info to the excuses. If another item is needed to fix the
+    uninstallability, a dependency is added. If no newer item can fix it, this
+    excuse will be blocked.
+
+    Note that the migration step will check the installability of every
+    package, so this policy doesn't need to handle every corner case. It
+    must, however, make sure that no excuse is unnecessarily blocked.
+
+    Some cases that should be detected by this policy:
+
+    * pkg-a is upgraded from 1.0-1 to 2.0-1, while
+      pkg-b has "Depends: pkg-a (<< 2.0)"
+      This typically happens if pkg-b has a strict dependency on pkg-a because
+      it uses some non-stable internal interface (examples are glibc,
+      binutils, python3-defaults, ...)
+
+    * pkg-a is upgraded from 1.0-1 to 2.0-1, and
+      pkg-a 1.0-1 has "Provides: provides-1",
+      pkg-a 2.0-1 has "Provides: provides-2",
+      pkg-b has "Depends: provides-1"
+      This typically happens when pkg-a has an interface that changes between
+      versions, and a virtual package is used to identify the version of this
+      interface (e.g. perl-api-x.y)
+
+    """
+
+    def __init__(self, options, suite_info):
+        super().__init__('implicit-deps', options, suite_info,
+                         {SuiteClass.PRIMARY_SOURCE_SUITE, SuiteClass.ADDITIONAL_SOURCE_SUITE},
+                         ApplySrcPolicy.RUN_ON_EVERY_ARCH_ONLY)
+        self._pkg_universe = None
+        self._all_binaries = None
+        self._smooth_updates = None
+        self._nobreakall_arches = None
+        self._new_arches = None
+        self._break_arches = None
+        self._allow_uninst = None
+
+    def initialise(self, britney):
+        super().initialise(britney)
+        self._pkg_universe = britney.pkg_universe
+        self._all_binaries = britney.all_binaries
+        self._smooth_updates = britney.options.smooth_updates
+        self._nobreakall_arches = self.options.nobreakall_arches
+        self._new_arches = self.options.new_arches
+        self._break_arches = self.options.break_arches
+        self._allow_uninst = britney.allow_uninst
+
+    def can_be_removed(self, pkg):
+        src = pkg.source
+        target_suite = self.suite_info.target_suite
+
+        # TODO these conditions shouldn't be hardcoded here
+        # ideally, we would be able to look up excuses to see if the removal
+        # is in there, but in the current flow, this policy is called before
+        # all possible excuses exist, so there is no list for us to check
+
+        if src not in self.suite_info.primary_source_suite.sources:
+            # source for pkg not in unstable: candidate for removal
+            return True
+
+        source_t = target_suite.sources[src]
+        for hint in self.hints.search('remove', package=src, version=source_t.version):
+            # removal hint for the source in testing: candidate for removal
+            return True
+
+        if target_suite.is_cruft(pkg):
+            # if pkg is cruft in testing, removal will be tried
+            return True
+
+        # the case were the newer version of the source no longer includes the
+        # binary (or includes a cruft version of the binary) will be handled
+        # separately (in that case there might be an implicit dependency on
+        # the newer source)
+
+        return False
+
+    def should_skip_rdep(self, pkg, source_name, myarch):
+        target_suite = self.suite_info.target_suite
+
+        if not target_suite.is_pkg_in_the_suite(pkg.pkg_id):
+            # it is not in the target suite, migration cannot break anything
+            return True
+
+        if pkg.source == source_name:
+            # if it is built from the same source, it will be upgraded
+            # with the source
+            return True
+
+        if self.can_be_removed(pkg):
+            # could potentially be removed, so if that happens, it won't be
+            # broken
+            return True
+
+        if pkg.architecture == 'all' and \
+                myarch not in self._nobreakall_arches:
+            # arch all on non nobreakarch is allowed to become uninstallable
+            return True
+
+        if pkg.pkg_id.package_name in self._allow_uninst[myarch]:
+            # there is a hint to allow this binary to become uninstallable
+            return True
+
+        if not target_suite.is_installable(pkg.pkg_id):
+            # it is already uninstallable in the target suite, migration
+            # cannot break anything
+            return True
+
+        return False
+
+    def breaks_installability(self, pkg_id_t, pkg_id_s, pkg_to_check):
+        """
+        Check if upgrading pkg_id_t to pkg_id_s breaks the installability of
+        pkg_to_check.
+
+        To check if removing pkg_id_t breaks pkg_to_check, set pkg_id_s to
+        None.
+        """
+
+        pkg_universe = self._pkg_universe
+        negative_deps = pkg_universe.negative_dependencies_of(pkg_to_check)
+
+        for dep in pkg_universe.dependencies_of(pkg_to_check):
+            if pkg_id_t not in dep:
+                # this depends doesn't have pkg_id_t as alternative, so
+                # upgrading pkg_id_t cannot break this dependency clause
+                continue
+
+            # We check all the alternatives for this dependency, to find one
+            # that can satisfy it when pkg_id_t is upgraded to pkg_id_s
+            found_alternative = False
+            for d in dep:
+                if d in negative_deps:
+                    # If this alternative dependency conflicts with
+                    # pkg_to_check, it cannot be used to satisfy the
+                    # dependency.
+                    # This commonly happens when breaks are added to pkg_id_s.
+                    continue
+
+                if d.package_name != pkg_id_t.package_name:
+                    # a binary different from pkg_id_t can satisfy the dep, so
+                    # upgrading pkg_id_t won't break this dependency
+                    found_alternative = True
+                    break
+
+                if d != pkg_id_s:
+                    # We want to know the impact of the upgrade of
+                    # pkg_id_t to pkg_id_s. If pkg_id_s migrates to the
+                    # target suite, any other version of this binary will
+                    # not be there, so it cannot satisfy this dependency.
+                    # This includes pkg_id_t, but also other versions.
+                    continue
+
+                # pkg_id_s can satisfy the dep
+                found_alternative = True
+
+            if not found_alternative:
+                return True
+
+    def check_upgrade(self, pkg_id_t, pkg_id_s, source_name, myarch, broken_binaries, excuse):
+        verdict = PolicyVerdict.PASS
+
+        pkg_universe = self._pkg_universe
+        all_binaries = self._all_binaries
+
+        # check all rdeps of the package in testing
+        rdeps_t = pkg_universe.reverse_dependencies_of(pkg_id_t)
+
+        for rdep_pkg in sorted(rdeps_t):
+            rdep_p = all_binaries[rdep_pkg]
+
+            # check some cases where the rdep won't become uninstallable, or
+            # where we don't care if it does
+            if self.should_skip_rdep(rdep_p, source_name, myarch):
+                continue
+
+            if not self.breaks_installability(pkg_id_t, pkg_id_s, rdep_pkg):
+                # if upgrading pkg_id_t to pkg_id_s doesn't break rdep_pkg,
+                # there is no implicit dependency
+                continue
+
+            # The upgrade breaks the installability of the rdep. We need to
+            # find out if there is a newer version of the rdep that solves the
+            # uninstallability. If that is the case, there is an implicit
+            # dependency. If not, the upgrade will fail.
+
+            # check source versions
+            newer_versions = find_newer_binaries(self.suite_info, rdep_p,
+                                                 add_source_for_dropped_bin=True)
+            good_newer_versions = set()
+            for npkg, suite in newer_versions:
+                if npkg.architecture == 'source':
+                    # When a newer version of the source package doesn't have
+                    # the binary, we get the source as 'newer version'. In
+                    # this case, the binary will not be uninstallable if the
+                    # newer source migrates, because it is no longer there.
+                    good_newer_versions.add(npkg)
+                    continue
+                if not self.breaks_installability(pkg_id_t, pkg_id_s, npkg):
+                    good_newer_versions.add(npkg)
+
+            if good_newer_versions:
+                spec = DependencySpec(DependencyType.IMPLICIT_DEPENDENCY, myarch)
+                excuse.add_package_depends(spec, good_newer_versions)
+            else:
+                # no good newer versions: no possible solution
+                broken_binaries.add(rdep_pkg.name)
+                if pkg_id_s:
+                    action = "migrating %s to %s" % (
+                        pkg_id_s.name,
+                        self.suite_info.target_suite.name)
+                else:
+                    action = "removing %s from %s" % (
+                        pkg_id_t.name,
+                        self.suite_info.target_suite.name)
+                info = "%s makes %s uninstallable" % (
+                    action, rdep_pkg.name)
+                verdict = PolicyVerdict.REJECTED_PERMANENTLY
+                excuse.add_verdict_info(verdict, info)
+
+        return verdict
+
+    def apply_srcarch_policy_impl(self, implicit_dep_info, item, arch, source_data_tdist,
+                                  source_data_srcdist, excuse):
+        verdict = PolicyVerdict.PASS
+
+        if not source_data_tdist:
+            # this item is not currently in testing: no implicit dependency
+            return verdict
+
+        source_suite = item.suite
+        source_name = item.package
+        target_suite = self.suite_info.target_suite
+        sources_t = target_suite.sources
+        all_binaries = self._all_binaries
+
+        # we check all binaries for this excuse that are currently in testing
+        relevant_binaries = [x for x in source_data_tdist.binaries if (arch == 'source' or x.architecture == arch)
+                             and x.package_name in target_suite.binaries[x.architecture]
+                             and x.architecture not in self._new_arches
+                             and x.architecture not in self._break_arches]
+
+        broken_binaries = set()
+
+        for pkg_id_t in sorted(relevant_binaries):
+            mypkg = pkg_id_t.package_name
+            myarch = pkg_id_t.architecture
+            binaries_t_a = target_suite.binaries[myarch]
+            binaries_s_a = source_suite.binaries[myarch]
+
+            if target_suite.is_cruft(all_binaries[pkg_id_t]):
+                # this binary is cruft in testing: it will stay around as long
+                # as necessary to satisfy dependencies, so we don't need to
+                # care
+                continue
+
+            if mypkg in binaries_s_a:
+                mybin = binaries_s_a[mypkg]
+                pkg_id_s = mybin.pkg_id
+                if mybin.source != source_name:
+                    # hijack: this is too complicated to check, so we ignore
+                    # it (the migration code will check the installability
+                    # later anyway)
+                    pass
+                elif mybin.source_version != source_data_srcdist.version:
+                    # cruft in source suite: pretend the binary doesn't exist
+                    pkg_id_s = None
+                elif pkg_id_t == pkg_id_s:
+                    # same binary (probably arch: all from a binNMU):
+                    # 'upgrading' doesn't change anything, for this binary, so
+                    # it won't break anything
+                    continue
+            else:
+                pkg_id_s = None
+
+            if not pkg_id_s and (
+                    'ALL' in self._smooth_updates or
+                    binaries_t_a[mypkg].section in self._smooth_updates):
+                # the binary isn't in the new version (or is cruft there), and
+                # smooth updates are allowed: the binary can stay around if
+                # that is necessary to satisfy dependencies, so we don't need
+                # to check it
+                continue
+
+            v = self.check_upgrade(pkg_id_t, pkg_id_s, source_name, myarch, broken_binaries, excuse)
+
+            if v > verdict:
+                verdict = v
+
+        # each arch is processed separately, so if we already have info from
+        # other archs, we need to merge the info from this arch
+        broken_old = set()
+        if 'implicit-deps' not in implicit_dep_info:
+            implicit_dep_info['implicit-deps'] = {}
+        else:
+            broken_old = set(implicit_dep_info['implicit-deps']['broken-binaries'])
+
+        implicit_dep_info['implicit-deps']['broken-binaries'] = \
+            sorted(broken_old | broken_binaries)
+
+        return verdict
