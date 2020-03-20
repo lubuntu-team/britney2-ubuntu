@@ -1638,6 +1638,14 @@ class ImplicitDependencyPolicy(BasePolicy):
             # this item is not currently in testing: no implicit dependency
             return verdict
 
+        if excuse.hasreason("missingbuild"):
+            # if the build is missing, the policy would treat this as if the
+            # binaries would be removed, which would give incorrect (and
+            # confusing) info
+            info = "missing build, not checking implict dependencies on %s" % (arch)
+            excuse.add_detailed_info(info)
+            return verdict
+
         source_suite = item.suite
         source_name = item.package
         target_suite = self.suite_info.target_suite
