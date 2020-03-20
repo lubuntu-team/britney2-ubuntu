@@ -419,6 +419,9 @@ class Excuse(object):
         """"adding reason"""
         self.reason[reason] = 1
 
+    def hasreason(self, reason):
+        return reason in self.reason
+
     def _text(self, excuses):
         """Render the excuse in text"""
         self._render_dep_issues(excuses)
