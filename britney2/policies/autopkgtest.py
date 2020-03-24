@@ -24,7 +24,7 @@ import io
 import re
 import sys
 import urllib.parse
-from urllib.request import urlopen
+import requests
 
 import apt_pkg
 import amqplib.client_0_8 as amqp
@@ -83,6 +83,8 @@ class AutopkgtestPolicy(BasePolicy):
             self.results_cache_file = self.options.adt_shared_results_cache
         else:
             self.results_cache_file = os.path.join(self.test_state_dir, 'results.cache')
+
+        self.session = requests.Session()
 
         try:
             self.options.adt_ppas = self.options.adt_ppas.strip().split()
@@ -484,29 +486,22 @@ class AutopkgtestPolicy(BasePolicy):
         # request new results from swift
         url = os.path.join(swift_url, self.swift_container)
         url += '?' + urllib.parse.urlencode(query)
-        try:
-            f = urlopen(url, timeout=30)
-            if f.getcode() == 200:
-                result_paths = f.read().decode().strip().splitlines()
-            elif f.getcode() == 204:  # No content
-                result_paths = []
-            else:
-                # we should not ever end up here as we expect a HTTPError in
-                # other cases; e. g. 3XX is something that tells us to adjust
-                # our URLS, so fail hard on those
-                raise NotImplementedError('fetch_swift_results(%s): cannot handle HTTP code %i' %
-                                          (url, f.getcode()))
-            f.close()
-        except IOError as e:
+
+        resp = self.session.get(url, timeout=30)
+        if resp.status_code == 200:
+            result_paths = resp.text.strip().splitlines()
+        elif resp.status_code == 204:  # No content
+            result_paths = []
+        elif resp.status_code == 401:
             # 401 "Unauthorized" is swift's way of saying "container does not exist"
-            if hasattr(e, 'code') and e.code == 401:
-                self.log('fetch_swift_results: %s does not exist yet or is inaccessible' % url)
-                return
+            self.log('fetch_swift_results: %s does not exist yet or is inaccessible' % url)
+            return
+        else:
             # Other status codes are usually a transient
             # network/infrastructure failure. Ignoring this can lead to
             # re-requesting tests which we already have results for, so
             # fail hard on this and let the next run retry.
-            self.log('FATAL: Failure to fetch swift results from %s: %s' % (url, str(e)), 'E')
+            self.log('FATAL: Failure to fetch swift results from %s: got error code %s' % (url, resp.status_code))
             sys.exit(1)
 
         for p in result_paths:
@@ -520,20 +515,15 @@ class AutopkgtestPolicy(BasePolicy):
 
         Remove matching pending_tests entries.
         '''
-        try:
-            f = urlopen(url, timeout=30)
-            if f.getcode() == 200:
-                tar_bytes = io.BytesIO(f.read())
-                f.close()
-            else:
-                raise NotImplementedError('fetch_one_result(%s): cannot handle HTTP code %i' %
-                                          (url, f.getcode()))
-        except IOError as e:
-            self.log('Failure to fetch %s: %s' % (url, str(e)), 'E')
-            # we tolerate "not found" (something went wrong on uploading the
-            # result), but other things indicate infrastructure problems
-            if hasattr(e, 'code') and e.code == 404:
-                return
+        resp = self.session.get(url, timeout=30)
+        if resp.status_code == 200:
+            tar_bytes = io.BytesIO(resp.content)
+        # we tolerate "not found" (something went wrong on uploading the
+        # result), but other things indicate infrastructure problems
+        elif resp.status_code == 404:
+            return
+        else:
+            self.log('Failure to fetch %s: error code %s' % (url, resp.status_code))
             sys.exit(1)
 
         try:
