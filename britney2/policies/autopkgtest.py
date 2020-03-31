@@ -25,6 +25,8 @@ import re
 import sys
 import urllib.parse
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 import apt_pkg
 import amqplib.client_0_8 as amqp
@@ -85,6 +87,10 @@ class AutopkgtestPolicy(BasePolicy):
             self.results_cache_file = os.path.join(self.test_state_dir, 'results.cache')
 
         self.session = requests.Session()
+        retry = Retry(total=3, read=3, connect=3)
+        adapter = HTTPAdapter(max_retries=retry)
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
 
         try:
             self.options.adt_ppas = self.options.adt_ppas.strip().split()
