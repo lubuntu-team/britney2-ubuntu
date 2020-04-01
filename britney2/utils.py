@@ -764,7 +764,8 @@ def compile_nuninst(target_suite, architectures, nobreakall_arches):
 def is_smooth_update_allowed(binary, smooth_updates):
     if 'ALL' in smooth_updates:
         return True
-    if binary.section in smooth_updates:
+    section = binary.section.split('/')[-1]
+    if section in smooth_updates:
         return True
     return False
 
