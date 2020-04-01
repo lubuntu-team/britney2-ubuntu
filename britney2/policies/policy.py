@@ -13,7 +13,7 @@ from britney2 import SuiteClass, PackageId
 from britney2.hints import Hint, split_into_one_hint_per_package
 from britney2.inputs.suiteloader import SuiteContentLoader
 from britney2.policies import PolicyVerdict, ApplySrcPolicy
-from britney2.utils import get_dependency_solvers, find_newer_binaries
+from britney2.utils import get_dependency_solvers, find_newer_binaries, is_smooth_update_allowed
 from britney2 import DependencyType
 from britney2.excusedeps import DependencySpec
 
@@ -1691,9 +1691,8 @@ class ImplicitDependencyPolicy(BasePolicy):
             else:
                 pkg_id_s = None
 
-            if not pkg_id_s and (
-                    'ALL' in self._smooth_updates or
-                    binaries_t_a[mypkg].section in self._smooth_updates):
+            if not pkg_id_s and \
+                    is_smooth_update_allowed(binaries_t_a[mypkg], self._smooth_updates):
                 # the binary isn't in the new version (or is cruft there), and
                 # smooth updates are allowed: the binary can stay around if
                 # that is necessary to satisfy dependencies, so we don't need
