@@ -330,6 +330,19 @@ does the installability test. For arch: all package, this means that all
 relevant (`nobreakall`) architectures need to be specified, not `all`.
 
 
+allow-smooth-update `<action list>`
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This hint allows the binaries from the sources listed in `<action list>` to
+stay in testing as a `smooth update`, even when the britney configuration
+wouldn't allow this otherwise.
+
+The `<action list>` is a list of versioned source packages.
+
+*Please note:* this hint expects the source version of the packages in
+testing, not in unstable.
+
+
 remove `<action list>`
 ^^^^^^^^^^^^^^^^^^^^^^
 
