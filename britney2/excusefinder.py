@@ -215,7 +215,8 @@ class ExcuseFinder(object):
                                                                  binaries_t,
                                                                  source_suite.binaries,
                                                                  frozenset(),
-                                                                 self.options.smooth_updates)
+                                                                 self.options.smooth_updates,
+                                                                 self.hints)
 
                 # for every binary package produced by this source in testing for this architecture
                 for pkg_id in sorted(x for x in source_t.binaries if x.architecture == arch):

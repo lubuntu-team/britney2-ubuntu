@@ -169,6 +169,7 @@ class HintParser(object):
             'remove': (1, split_into_one_hint_per_package),
             'force': (1, split_into_one_hint_per_package),
             'allow-uninst': (1, split_into_one_hint_per_package),
+            'allow-smooth-update': (1, split_into_one_hint_per_package),
         }
         self._aliases = {
             'approve': 'unblock',

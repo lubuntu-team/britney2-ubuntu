@@ -1692,7 +1692,7 @@ class ImplicitDependencyPolicy(BasePolicy):
                 pkg_id_s = None
 
             if not pkg_id_s and \
-                    is_smooth_update_allowed(binaries_t_a[mypkg], self._smooth_updates):
+                    is_smooth_update_allowed(binaries_t_a[mypkg], self._smooth_updates, self.hints):
                 # the binary isn't in the new version (or is cruft there), and
                 # smooth updates are allowed: the binary can stay around if
                 # that is necessary to satisfy dependencies, so we don't need

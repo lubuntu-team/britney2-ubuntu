@@ -38,13 +38,15 @@ def is_nuninst_worse(must_be_installable, nuninst_now_arch, nuninst_after_arch, 
 
 class MigrationManager(object):
 
-    def __init__(self, options, suite_info, all_binaries, pkg_universe, constraints, allow_uninst, migration_item_factory):
+    def __init__(self, options, suite_info, all_binaries, pkg_universe,
+                 constraints, allow_uninst, migration_item_factory, hints):
         self.options = options
         self.suite_info = suite_info
         self.all_binaries = all_binaries
         self.pkg_universe = pkg_universe
         self.constraints = constraints
         self.allow_uninst = allow_uninst
+        self.hints = hints
         self._transactions = []
         self._all_architectures = frozenset(self.options.architectures)
         self._migration_item_factory = migration_item_factory
@@ -206,7 +208,8 @@ class MigrationManager(object):
                                                          binaries_t,
                                                          binaries_s,
                                                          removals,
-                                                         self.options.smooth_updates)
+                                                         self.options.smooth_updates,
+                                                         self.hints)
         else:
             smoothbins = set()
 

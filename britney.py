@@ -339,7 +339,8 @@ class Britney(object):
         self._migration_item_factory = MigrationItemFactory(self.suite_info)
         self._hint_parser = HintParser(self._migration_item_factory)
         self._migration_manager = MigrationManager(self.options, self.suite_info, self.all_binaries, self.pkg_universe,
-                                                   self.constraints, self.allow_uninst, self._migration_item_factory)
+                                                   self.constraints, self.allow_uninst, self._migration_item_factory,
+                                                   self.hints)
 
         if not self.options.nuninst_cache:
             self.logger.info("Building the list of non-installable packages for the full archive")

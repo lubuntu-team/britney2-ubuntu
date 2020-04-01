@@ -761,11 +761,14 @@ def compile_nuninst(target_suite, architectures, nobreakall_arches):
     return nuninst
 
 
-def is_smooth_update_allowed(binary, smooth_updates):
+def is_smooth_update_allowed(binary, smooth_updates, hints):
     if 'ALL' in smooth_updates:
         return True
     section = binary.section.split('/')[-1]
     if section in smooth_updates:
+        return True
+    if hints.search('allow-smooth-update', package=binary.source, version=binary.source_version):
+        # note that this needs to match the source version *IN TESTING*
         return True
     return False
 
@@ -777,7 +780,8 @@ def find_smooth_updateable_binaries(binaries_to_check,
                                     binaries_t,
                                     binaries_s,
                                     removals,
-                                    smooth_updates):
+                                    smooth_updates,
+                                    hints):
     check = set()
     smoothbins = set()
 
@@ -793,7 +797,7 @@ def find_smooth_updateable_binaries(binaries_to_check,
             cruftbins.add(binaries_s[parch][binary].pkg_id)
 
         # Maybe a candidate (cruft or removed binary): check if config allows us to smooth update it.
-        if is_smooth_update_allowed(binaries_t[parch][binary], smooth_updates):
+        if is_smooth_update_allowed(binaries_t[parch][binary], smooth_updates, hints):
             # if the package has reverse-dependencies which are
             # built from other sources, it's a valid candidate for
             # a smooth update.  if not, it may still be a valid
