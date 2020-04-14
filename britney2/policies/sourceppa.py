@@ -87,6 +87,14 @@ class SourcePPAPolicy(BasePolicy, Rest):
         if not [team for team in INCLUDE if team in sourceppa]:
             return PolicyVerdict.PASS
 
+        # check for a force hint; we have to check here in addition to
+        # checking in britney.py, otherwise /this/ package will later be
+        # considered valid candidate but all the /others/ from the ppa will
+        # be invalidated via this policy and not fixed by the force hint.
+        if self.hints.search('force', package=source_name,
+                             version=source_data_srcdist.version):
+            accept = True
+
         shortppa = sourceppa.replace(LAUNCHPAD_URL, '')
         sourceppa_info[source_name] = shortppa
         # Check for other packages that might invalidate this one
