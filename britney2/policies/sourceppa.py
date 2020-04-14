@@ -91,8 +91,14 @@ class SourcePPAPolicy(BasePolicy, Rest):
         # checking in britney.py, otherwise /this/ package will later be
         # considered valid candidate but all the /others/ from the ppa will
         # be invalidated via this policy and not fixed by the force hint.
-        if self.hints.search('force', package=source_name,
-                             version=source_data_srcdist.version):
+        forces = self.hints.search('force', package=source_name,
+                                   version=source_data_srcdist.version)
+        if forces:
+            excuse.dontinvalidate = True
+            if not excuse.is_valid:
+                excuse.addhtml("Should ignore, but forced by %s" % (forces[0].user))
+                excuse.force()
+                excuse.is_valid = True
             accept = True
 
         shortppa = sourceppa.replace(LAUNCHPAD_URL, '')
