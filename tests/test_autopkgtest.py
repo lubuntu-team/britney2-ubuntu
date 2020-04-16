@@ -267,7 +267,6 @@ class T(TestBase):
         self.sourceppa_cache['pink'] = {'1': ''}
         self.swift.set_results({'autopkgtest-series': {
             'series/amd64/p/pink/20150101_100000@': (0, 'pink 0.1', tr('pink/0.1')),
-            'series/ppc64el/p/pink/20150101_100000@': (0, 'pink 0.1', tr('pink/0.1'))
         }})
 
         self.data.add_src('pink', True, {'Version': '1', 'Testsuite': 'autopkgtest'})
