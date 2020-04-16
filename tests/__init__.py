@@ -37,7 +37,9 @@ class TestData:
         os.makedirs(self.dirs[False])
         os.mkdir(self.dirs[True])
         self.added_sources = {False: set(), True: set()}
-        self.added_binaries = {False: set(), True: set()}
+        self.added_binaries = {}
+        for arch in architectures:
+            self.added_binaries[arch] = {False: set(), True: set()}
 
         # pre-create all files for all architectures
         for arch in architectures:
@@ -75,10 +77,16 @@ class TestData:
         source record, based on fields['Source'] and name. In that case, the
         "Testsuite:" field is set to the testsuite argument.
         '''
-        assert (name not in self.added_binaries[unstable])
-        self.added_binaries[unstable].add(name)
-
         fields.setdefault('Architecture', 'all')
+        if fields['Architecture'] == 'all':
+            arches = architectures
+        else:
+            arches = [fields['Architecture']]
+
+        for a in arches:
+            assert (name not in self.added_binaries[a][unstable])
+            self.added_binaries[a][unstable].add(name)
+
         fields.setdefault('Version', '1')
         fields.setdefault('Priority', 'optional')
         fields.setdefault('Section', 'devel')
@@ -130,7 +138,8 @@ Maintainer: Joe <joe@example.com>
     def remove_all(self, unstable):
         '''Remove all added packages'''
 
-        self.added_binaries[unstable] = set()
+        for arch in self.added_binaries:
+            self.added_binaries[arch][unstable] = set()
         self.added_sources[unstable] = set()
         for a in architectures:
             open(os.path.join(self.dirs[unstable], 'Packages_' + a), 'w').close()
