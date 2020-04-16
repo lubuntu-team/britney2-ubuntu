@@ -13,7 +13,7 @@ import unittest
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-architectures = ['amd64', 'arm64', 'armhf', 'i386', 'powerpc', 'ppc64el']
+architectures = ['amd64', 'arm64', 'armhf', 'i386', 'powerpc', 'ppc64el', 'riscv64']
 
 
 class TestData:

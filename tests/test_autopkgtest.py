@@ -29,7 +29,7 @@ apt_pkg.init()
 def tr(s):
     return {'custom_environment': ['ADT_TEST_TRIGGERS=%s' % s]}
 
-ON_ALL_ARCHES = {'on-architectures': ['amd64', 'arm64', 'armhf', 'i386', 'powerpc', 'ppc64el'],
+ON_ALL_ARCHES = {'on-architectures': ['amd64', 'arm64', 'armhf', 'i386', 'powerpc', 'ppc64el', 'riscv64'],
                  'on-unimportant-architectures': []}
 
 
@@ -52,6 +52,8 @@ class T(TestBase):
                 print('ADT_SWIFT_URL = http://localhost:18085')
             elif 'ADT_ARCHES' in line:
                 print('ADT_ARCHES = amd64 i386')
+            elif 'BREAK_ARCHES' in line:
+                print('BREAK_ARCHES = riscv64')
             else:
                 sys.stdout.write(line)
 
@@ -219,6 +221,44 @@ class T(TestBase):
             upgrade_out = f.read()
         self.assertNotIn('accepted:', upgrade_out)
         self.assertIn('SUCCESS (0/0)', upgrade_out)
+
+    def test_no_request_for_uninstallable_break_arch_not_adt_arch(self):
+        '''Does not request a test for an uninstallable package if
+           uninstallable on a BREAK_ARCH which isn't in ADT_ARCHES, package
+           becomes a candidate'''
+
+        self.sourceppa_cache['pink'] = {'1': ''}
+        self.swift.set_results({'autopkgtest-series': {
+            'series/riscv64/p/pink/20150101_100000@': (0, 'pink 0.1', tr('pink/0.1'))
+        }})
+
+        self.data.add_src('pink', True, {'Version': '1', 'Testsuite': 'autopkgtest'})
+        self.data.add('pink',
+                      True,
+                      {'Version': '1',
+                       'Depends': 'libc6 (>= 0.9), libgreen1 (>= 2)',
+                       'Architecture': 'riscv64'},
+                      testsuite='autopkgtest',
+                      add_src=False)
+        exc = self.do_test(
+            # uninstallable unstable version on riscv64 (BREAK_ARCH) only
+            [],
+            {'pink': (True, {})}
+            )[1]
+
+        # autopkgtest should not be triggered since riscv64 is not in ADT_ARCHES
+        self.assertEqual(exc['pink']['policy_info']['autopkgtest'], {})
+        # we noticed the unsat dep
+        self.assertEqual(exc['pink']['dependencies']['unsatisfiable-dependencies'],
+                         {'riscv64': ['libgreen1 (>= 2)']})
+
+        self.assertEqual(self.pending_requests, {})
+        self.assertEqual(self.amqp_requests, set())
+
+        with open(os.path.join(self.data.path, 'output', 'series', 'output.txt')) as f:
+            upgrade_out = f.read()
+        self.assertIn('accepted: pink', upgrade_out)
+        self.assertIn('SUCCESS (1/0)', upgrade_out)
 
     def test_no_request_for_excluded_arch(self):
         '''
@@ -737,7 +777,7 @@ class T(TestBase):
             [],
             {'green': (False, {})},
             {'green': [('old-version', '1'), ('new-version', '2'),
-                       ('missing-builds', {'on-architectures': ['amd64', 'arm64', 'armhf', 'powerpc', 'ppc64el'],
+                       ('missing-builds', {'on-architectures': ['amd64', 'arm64', 'armhf', 'powerpc', 'ppc64el', 'riscv64'],
                                            'on-unimportant-architectures': []})
                       ]
             })[1]
@@ -757,7 +797,7 @@ class T(TestBase):
             [],
             {'green': (False, {})},
             {'green': [('old-version', '1'), ('new-version', '2'),
-                       ('missing-builds', {'on-architectures': ['amd64', 'arm64', 'armhf', 'powerpc', 'ppc64el'],
+                       ('missing-builds', {'on-architectures': ['amd64', 'arm64', 'armhf', 'powerpc', 'ppc64el', 'riscv64'],
                                            'on-unimportant-architectures': []})
                       ]
             })[1]
@@ -2488,7 +2528,7 @@ class T(TestBase):
         exc = self.do_test(
             [('red', {'Version': '2'}, 'autopkgtest')],
             {'green': (False, {}), 'red': (False, {})},
-            {'green': [('missing-builds', {'on-architectures': ['amd64', 'arm64', 'armhf', 'powerpc', 'ppc64el'],
+            {'green': [('missing-builds', {'on-architectures': ['amd64', 'arm64', 'armhf', 'powerpc', 'ppc64el', 'riscv64'],
                                            'on-unimportant-architectures': []})],
              'red': [('reason', 'source-ppa')]}
         )[1]
