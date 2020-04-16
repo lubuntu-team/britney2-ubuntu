@@ -260,6 +260,58 @@ class T(TestBase):
         self.assertIn('accepted: pink', upgrade_out)
         self.assertIn('SUCCESS (1/0)', upgrade_out)
 
+    def test_tests_requested_when_non_adt_arch_is_blocking(self):
+        ''' When a package is uninstallable on an arch that isn't an ADT_ARCH,
+            we should still request tests (but the package should remain a
+            non-candidate unless it is in BREAK_ARCHES - see above test). '''
+        self.sourceppa_cache['pink'] = {'1': ''}
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/p/pink/20150101_100000@': (0, 'pink 0.1', tr('pink/0.1')),
+            'series/ppc64el/p/pink/20150101_100000@': (0, 'pink 0.1', tr('pink/0.1'))
+        }})
+
+        self.data.add_src('pink', True, {'Version': '1', 'Testsuite': 'autopkgtest'})
+        # amd64 is installable
+        self.data.add('pink',
+                      True,
+                      {'Version': '1',
+                       'Depends': 'libc6 (>= 0.9)',
+                       'Architecture': 'amd64'},
+                      testsuite='autopkgtest',
+                      add_src=False)
+        # ppc64el is not installable
+        self.data.add('pink',
+                      True,
+                      {'Version': '1',
+                       'Depends': 'libc6 (>= 0.9), libgreen1 (>= 2)',
+                       'Architecture': 'ppc64el'},
+                      testsuite='autopkgtest',
+                      add_src=False)
+        exc = self.do_test(
+            [],
+            {'pink': (False, {})}
+            )[1]
+
+        # we noticed the unsat dep
+        self.assertEqual(exc['pink']['dependencies']['unsatisfiable-dependencies'],
+                         {'ppc64el': ['libgreen1 (>= 2)']})
+
+        # but still requested the tests
+        self.assertEqual(self.pending_requests, {'pink/1': {'pink': ['amd64']}})
+        self.assertEqual(self.amqp_requests, set(['debci-series-amd64:pink {"triggers": ["pink/1"]}']))
+        self.assertEqual(exc['pink']['policy_info']['autopkgtest'],
+                {'pink': {'amd64': ['RUNNING',
+                                    'http://autopkgtest.ubuntu.com/running',
+                                    'http://autopkgtest.ubuntu.com/packages/p/pink/series/amd64',
+                                    None,
+                                    None]}})
+
+
+        with open(os.path.join(self.data.path, 'output', 'series', 'output.txt')) as f:
+            upgrade_out = f.read()
+        self.assertNotIn('accepted: pink', upgrade_out)
+        self.assertIn('SUCCESS (0/0)', upgrade_out)
+
     def test_no_request_for_excluded_arch(self):
         '''
         Does not request a test on an architecture for which the package

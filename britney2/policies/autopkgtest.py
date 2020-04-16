@@ -176,7 +176,8 @@ class AutopkgtestPolicy(BasePolicy):
         # skip/delay autopkgtests until package is built
         binaries_info = self.britney.sources[suite][source_name]
         unsat_deps = excuse.unsat_deps.copy()
-        for arch in self.options.break_arches:
+        non_adt_arches = set(self.options.architectures) - set(self.adt_arches)
+        for arch in set(self.options.break_arches) | non_adt_arches:
             try:
                 del unsat_deps[arch]
             except KeyError:
