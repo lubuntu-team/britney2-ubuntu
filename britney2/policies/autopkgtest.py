@@ -177,12 +177,13 @@ class AutopkgtestPolicy(BasePolicy):
         binaries_info = self.britney.sources[suite][source_name]
         unsat_deps = excuse.unsat_deps.copy()
         non_adt_arches = set(self.options.architectures) - set(self.adt_arches)
+        interesting_missing_builds = set(excuse.missing_builds) - non_adt_arches
         for arch in set(self.options.break_arches) | non_adt_arches:
             try:
                 del unsat_deps[arch]
             except KeyError:
                 pass
-        if excuse.missing_builds or not binaries_info.binaries or unsat_deps:
+        if interesting_missing_builds or not binaries_info.binaries or unsat_deps:
             self.log('%s has missing builds or is uninstallable, skipping autopkgtest policy' % excuse.name)
             return PolicyVerdict.REJECTED_TEMPORARILY
 

@@ -311,6 +311,60 @@ class T(TestBase):
         self.assertNotIn('accepted: pink', upgrade_out)
         self.assertIn('SUCCESS (0/0)', upgrade_out)
 
+    def test_tests_requested_when_non_adt_arch_is_missing_build(self):
+        ''' When a package is unbuilt on an arch that isn't an ADT_ARCH,
+            we should still request tests (but the package should remain a
+            non-candidate unless it is in BREAK_ARCHES - see above test). '''
+        self.sourceppa_cache['pink'] = {'2': ''}
+        self.swift.set_results({'autopkgtest-series': {
+            'series/amd64/p/pink/20150101_100000@': (0, 'pink 1', tr('pink/1')),
+            'series/ppc64el/p/pink/20150101_100000@': (0, 'pink 1', tr('pink/1'))
+        }})
+
+        self.data.add('pink',
+                      False,
+                      {'Version': '1',
+                       'Depends': 'libc6 (>= 0.9)',
+                       'Architecture': 'amd64'},
+                      testsuite='autopkgtest')
+        self.data.add('pink',
+                      False,
+                      {'Version': '1',
+                       'Depends': 'libc6 (>= 0.9)',
+                       'Architecture': 'ppc64el'},
+                      testsuite='autopkgtest')
+        # built in unstable on amd64 only, so ppc64el is missing-build
+        self.data.add('pink',
+                      True,
+                      {'Version': '2',
+                       'Depends': 'libc6 (>= 0.9)',
+                       'Architecture': 'amd64'},
+                      testsuite='autopkgtest')
+        exc = self.do_test(
+            [],
+            {'pink': (False, {})}
+            )[1]
+
+        # we noticed the unsat dep
+        self.assertEqual(exc['pink']['missing-builds']['on-architectures'],
+                         ['ppc64el'])
+
+        # but still requested the tests
+        self.assertEqual(self.pending_requests, {'pink/2': {'pink': ['amd64']}})
+        self.assertEqual(self.amqp_requests, set(['debci-series-amd64:pink {"triggers": ["pink/2"]}']))
+        self.assertEqual(exc['pink']['policy_info']['autopkgtest'],
+                {'pink': {'amd64': ['RUNNING',
+                                    'http://autopkgtest.ubuntu.com/running',
+                                    'http://autopkgtest.ubuntu.com/packages/p/pink/series/amd64',
+                                    None,
+                                    None]}})
+
+
+        with open(os.path.join(self.data.path, 'output', 'series', 'output.txt')) as f:
+            upgrade_out = f.read()
+        self.assertNotIn('accepted: pink', upgrade_out)
+        self.assertIn('SUCCESS (0/0)', upgrade_out)
+
     def test_no_request_for_excluded_arch(self):
         '''
         Does not request a test on an architecture for which the package
