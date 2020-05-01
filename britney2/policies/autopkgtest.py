@@ -45,12 +45,18 @@ class Result(Enum):
     PASS = 2
     NEUTRAL = 3
     NONE = 4
+    OLD_FAIL = 5
+    OLD_PASS = 6
+    OLD_NEUTRAL = 7
 
 
 EXCUSES_LABELS = {
     "PASS": '<span style="background:#87d96c">Pass</span>',
+    "OLD_PASS": '<span style="background:#87d96c">Pass</span>',
     "NEUTRAL": '<span style="background:#e5c545">No test results</span>',
+    "OLD_NEUTRAL": '<span style="background:#e5c545">No test results</span>',
     "FAIL": '<span style="background:#ff6666">Failed</span>',
+    "OLD_FAIL": '<span style="background:#ff6666">Failed</span>',
     "ALWAYSFAIL": '<span style="background:#e5c545">Not a regression</span>',
     "REGRESSION": '<span style="background:#ff6666">Regression</span>',
     "IGNORE-FAIL": '<span style="background:#e5c545">Ignored failure</span>',
@@ -86,6 +92,18 @@ def all_leaf_results(test_results):
     for trigger in test_results.values():
         for arch in trigger.values():
             yield from arch.values()
+
+
+def mark_result_as_old(result):
+    '''Convert current result into corresponding old result'''
+
+    if result == Result.FAIL:
+        result = Result.OLD_FAIL
+    elif result == Result.PASS:
+        result = Result.OLD_PASS
+    elif result == Result.NEUTRAL:
+        result = Result.OLD_NEUTRAL
+    return result
 
 
 class AutopkgtestPolicy(BasePolicy):
@@ -281,22 +299,15 @@ class AutopkgtestPolicy(BasePolicy):
 '''
 
         test_results = self.test_results
-        test_results_new = deepcopy(test_results)
 
         for (trigger, trigger_data) in test_results.items():
             for (src, results) in trigger_data.items():
                 for (arch, result) in results.items():
                     if trigger == REF_TRIG and \
                       result[3] < self._now - self.options.adt_reference_max_age:
-                        del test_results_new[trigger][src][arch]
+                        result[0] = mark_result_as_old(result[0])
                     elif not self.test_version_in_any_suite(src, result[1]):
-                        del test_results_new[trigger][src][arch]
-                if len(test_results_new[trigger][src]) == 0:
-                    del test_results_new[trigger][src]
-            if len(test_results_new[trigger]) == 0:
-                del test_results_new[trigger]
-
-        self.test_results = test_results_new
+                        result[0] = mark_result_as_old(result[0])
 
     def test_version_in_any_suite(self, src, version):
         '''Check if the mentioned version of src is found in a suite
@@ -946,10 +957,12 @@ class AutopkgtestPolicy(BasePolicy):
             result_state = result[0]
             version = result[1]
             baseline = self.result_in_baseline(src, arch)
-            if result_state == Result.FAIL and \
-               baseline[0] in {Result.PASS, Result.NEUTRAL} and \
-               self.options.adt_retry_older_than and \
-               result[3] + int(self.options.adt_retry_older_than) * SECPERDAY < self._now:
+            if result_state in {Result.OLD_PASS, Result.OLD_FAIL, Result.OLD_NEUTRAL}:
+                pass
+            elif result_state == Result.FAIL and \
+                    baseline[0] in {Result.PASS, Result.NEUTRAL, Result.OLD_PASS, Result.OLD_NEUTRAL} and \
+                    self.options.adt_retry_older_than and \
+                    result[3] + int(self.options.adt_retry_older_than) * SECPERDAY < self._now:
                 # We might want to retry this failure, so continue
                 pass
             elif not uses_swift:
@@ -1045,7 +1058,7 @@ class AutopkgtestPolicy(BasePolicy):
             ver = r[1]
             run_id = r[2]
 
-            if r[0] == Result.FAIL:
+            if r[0] in {Result.FAIL, Result.OLD_FAIL}:
                 # Special-case triggers from linux-meta*: we cannot compare
                 # results against different kernels, as e. g. a DKMS module
                 # might work against the default kernel but fail against a
@@ -1057,9 +1070,7 @@ class AutopkgtestPolicy(BasePolicy):
 
                 if baseline_result == Result.FAIL:
                     result = 'ALWAYSFAIL'
-                elif self.has_force_badtest(src, ver, arch):
-                    result = 'IGNORE-FAIL'
-                elif baseline_result == Result.NONE:
+                elif baseline_result in {Result.NONE, Result.OLD_FAIL}:
                     # Check if the autopkgtest exists in the target suite and request it
                     test_in_target = False
                     try:
@@ -1070,11 +1081,17 @@ class AutopkgtestPolicy(BasePolicy):
                         pass
                     if test_in_target:
                         self.request_test_if_not_queued(src, arch, REF_TRIG)
-                        result = 'RUNNING-REFERENCE'
+                        if baseline_result == Result.NONE:
+                            result = 'RUNNING-REFERENCE'
+                        else:
+                            result = 'ALWAYSFAIL'
                     else:
                         result = 'REGRESSION'
                 else:
                     result = 'REGRESSION'
+
+                if self.has_force_badtest(src, ver, arch):
+                    result = 'IGNORE-FAIL'
             else:
                 result = r[0].name
 

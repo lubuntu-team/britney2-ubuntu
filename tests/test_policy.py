@@ -560,19 +560,17 @@ class TestAutopkgtestPolicy(unittest.TestCase):
         amqp = self.read_amqp()
         assert amqp[0:-1] == 'debci-testing-amd64:' + src_name + ' {"triggers": ["' + src_name + '/2.0 broken/2.0"]}'
 
-    def test_fail_old_test_result(self):
+    def test_remember_old_test_result(self):
         src_name = 'broken'
         policy = initialize_policy(
-            'autopkgtest/fail-old-test-result',
+            'autopkgtest/remember-old-test-result',
             AutopkgtestPolicy,
             adt_amqp=self.amqp,
             pkg_universe=breaks_universe,
             inst_tester=breaks_inst_tester,
             adt_baseline='reference')
-        autopkgtest_policy_info = apply_src_policy(policy, PolicyVerdict.REJECTED_TEMPORARILY, src_name)
+        autopkgtest_policy_info = apply_src_policy(policy, PolicyVerdict.PASS, src_name)
         assert autopkgtest_policy_info[src_name + '/2.0'][ARCH][0] == 'PASS'
-        assert autopkgtest_policy_info['inter'][ARCH][0] == 'RUNNING'
-        assert autopkgtest_policy_info['inter'][ARCH][1] == 'status/pending'
         amqp = self.read_amqp()
         assert amqp[0:-1] == 'debci-testing-amd64:inter {"triggers": ["' + src_name + '/2.0"]}'
 
@@ -595,7 +593,7 @@ class TestAutopkgtestPolicy(unittest.TestCase):
         amqp = self.read_amqp()
         assert len(amqp) == 0
 
-    def test_fail_reference_too_old(self):
+    def test_reference_too_old(self):
         src_name = 'pkg'
         policy = initialize_policy(
             'autopkgtest/fail-to-fail',
@@ -606,8 +604,8 @@ class TestAutopkgtestPolicy(unittest.TestCase):
             adt_reference_max_age=1,
             pkg_universe=simple_universe,
             inst_tester=simple_inst_tester)
-        autopkgtest_policy_info = apply_src_policy(policy, PolicyVerdict.REJECTED_TEMPORARILY, src_name)
-        assert autopkgtest_policy_info[src_name + '/2.0'][ARCH][0] == 'RUNNING-REFERENCE'
+        autopkgtest_policy_info = apply_src_policy(policy, PolicyVerdict.PASS, src_name)
+        assert autopkgtest_policy_info[src_name + '/2.0'][ARCH][0] == 'ALWAYSFAIL'
         assert autopkgtest_policy_info[src_name + '/2.0'][ARCH][1] == \
             'data/autopkgtest/testing/amd64/' + src_name[0] + '/' + src_name + '/2/log.gz'
         assert autopkgtest_policy_info[src_name + '/2.0'][ARCH][2] == \
