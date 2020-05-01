@@ -171,14 +171,6 @@ class AutopkgtestPolicy(BasePolicy):
                 test_results = json.load(f)
                 self.test_results = self.check_and_upgrade_cache(test_results)
             self.logger.info('Read previous results from %s', self.results_cache_file)
-
-            # The cache can contain results against versions of packages that
-            # are not in any suite anymore. Strip those out, as we don't want
-            # to use those results. Additionally, old references may be
-            # filtered out.
-            if self.options.adt_baseline == 'reference':
-                self.filter_old_results()
-
         else:
             self.logger.info('%s does not exist, re-downloading all results from swift', self.results_cache_file)
 
@@ -226,6 +218,13 @@ class AutopkgtestPolicy(BasePolicy):
                             self.add_trigger_to_results(trigger, src, ver, arch, run_id, seen, Result[status.upper()])
             else:
                 self.logger.info('%s does not exist, no new data will be processed', debci_file)
+
+        # The cache can contain results against versions of packages that
+        # are not in any suite anymore. Strip those out, as we don't want
+        # to use those results. Additionally, old references may be
+        # filtered out.
+        if self.options.adt_baseline == 'reference':
+            self.filter_old_results()
 
         # we need sources, binaries, and installability tester, so for now
         # remember the whole britney object
@@ -882,17 +881,6 @@ class AutopkgtestPolicy(BasePolicy):
             return
         if trigsrc == src and apt_pkg.version_compare(ver, trigver) < 0:
             self.logger.debug('test trigger %s, but run for older version %s, ignoring', trigger, ver)
-            return
-        if self.options.adt_baseline == 'reference' and \
-           not self.test_version_in_any_suite(src, ver):
-            self.logger.debug(
-                "Ignoring result for source %s and trigger %s as the tested version %s isn't found in any suite",
-                src, trigger, ver)
-            return
-        if trigger == REF_TRIG and \
-           seen < self._now - self.options.adt_reference_max_age:
-            self.logger.debug(
-                "Ignoring reference result for source %s as it's too old", src)
             return
 
         result = self.test_results.setdefault(trigger, {}).setdefault(
