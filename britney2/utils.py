@@ -299,6 +299,7 @@ def write_heidi_delta(filename, all_selected):
                 fd.write('%s%s %s %s\n' % (prefix, item.package,
                                            item.version, item.architecture))
 
+
 def write_excuses(excuses, dest_file, output_format="yaml"):
     """Write the excuses to dest_file
 
