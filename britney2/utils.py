@@ -527,7 +527,7 @@ def read_release_file(suite_dir):
     return result
 
 
-def read_sources_file(filename, sources=None, intern=sys.intern):
+def read_sources_file(filename, sources=None, intern=sys.intern, component=None):
     """Parse a single Sources file into a hash
 
     Parse a single Sources file into a dict mapping a source package
@@ -585,6 +585,7 @@ def read_sources_file(filename, sources=None, intern=sys.intern):
                                              build_deps_indep,
                                              get_field('Testsuite', '').split(),
                                              get_field('Testsuite-Triggers', '').replace(',', '').split(),
+                                             component,
                                              )
     return sources
 

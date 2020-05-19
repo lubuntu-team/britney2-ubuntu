@@ -206,7 +206,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                 filename = os.path.join(basedir, component, "source", "Sources")
                 filename = possibly_compressed(filename)
                 self.logger.info("Loading source packages from %s", filename)
-                read_sources_file(filename, sources)
+                read_sources_file(filename, sources, component=component)
         else:
             filename = os.path.join(basedir, "Sources")
             self.logger.info("Loading source packages from %s", filename)
@@ -287,7 +287,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         """
         return separator.join(filter(None, (get_field(x) for x in field_names))) or None
 
-    def _read_packages_file(self, filename, arch, srcdist, packages=None, intern=sys.intern):
+    def _read_packages_file(self, filename, arch, srcdist, packages=None, intern=sys.intern, component=None):
         self.logger.info("Loading binary packages from %s", filename)
 
         if packages is None:
@@ -375,6 +375,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                                  ess,
                                  pkg_id,
                                  builtusing,
+                                 component,
                                  )
 
             # if the source package is available in the distribution, then register this binary package
@@ -389,7 +390,17 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                     srcdist[source].binaries.add(pkg_id)
             # if the source package doesn't exist, create a fake one
             else:
-                srcdist[source] = SourcePackage(source, source_version, 'faux', {pkg_id}, None, True, None, None, [], [])
+                srcdist[source] = SourcePackage(source,
+                                                source_version,
+                                                'faux',
+                                                {pkg_id},
+                                                None,
+                                                True,
+                                                None,
+                                                None,
+                                                [],
+                                                [],
+                                                component)
 
             # add the resulting dictionary to the package list
             packages[pkg] = dpkg
@@ -459,11 +470,13 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                     self._read_packages_file(filename,
                                              arch,
                                              suite.sources,
-                                             packages)
+                                             packages,
+                                             component=component)
                     self._read_packages_file(udeb_filename,
                                              arch,
                                              suite.sources,
-                                             packages)
+                                             packages,
+                                             component=component)
                 # create provides
                 provides = create_provides_map(packages)
                 binaries[arch] = packages

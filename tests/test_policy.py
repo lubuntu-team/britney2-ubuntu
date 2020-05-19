@@ -79,7 +79,7 @@ def create_excuse(name, pkgs):
 def create_source_package(name, version, section='devel', binaries=None):
     if binaries is None:
         binaries = set()
-    return SourcePackage(name, version, section, binaries, 'Random tester', False, None, None, ['autopkgtest'], [])
+    return SourcePackage(name, version, section, binaries, 'Random tester', False, None, None, ['autopkgtest'], [], 'fake-component')
 
 
 def create_bin_package(pkg_id, source_name=None, depends=None, conflicts=None):
@@ -101,6 +101,7 @@ def create_bin_package(pkg_id, source_name=None, depends=None, conflicts=None):
         False,
         pkg_id,
         [],
+        'fake-component'
         )
 
 
