@@ -240,10 +240,10 @@ class Suites(object):
 class SourcePackage(object):
 
     __slots__ = ['source', 'version', 'section', 'binaries', 'maintainer', 'is_fakesrc', 'build_deps_arch',
-                 'build_deps_indep', 'testsuite', 'testsuite_triggers']
+                 'build_deps_indep', 'testsuite', 'testsuite_triggers', 'component']
 
     def __init__(self, source, version, section, binaries, maintainer, is_fakesrc, build_deps_arch,
-                 build_deps_indep, testsuite, testsuite_triggers):
+                 build_deps_indep, testsuite, testsuite_triggers, component):
         self.source = source
         self.version = version
         self.section = section
@@ -254,6 +254,7 @@ class SourcePackage(object):
         self.build_deps_indep = build_deps_indep
         self.testsuite = testsuite
         self.testsuite_triggers = testsuite_triggers
+        self.component = component
 
     def __getitem__(self, item):
         return getattr(self, self.__slots__[item])
@@ -313,4 +314,5 @@ BinaryPackage = namedtuple('BinaryPackage', [
     'is_essential',
     'pkg_id',
     'builtusing',
+    'component'
 ])
