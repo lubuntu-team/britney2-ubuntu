@@ -29,6 +29,7 @@ import sys
 import time
 from collections import defaultdict
 from datetime import datetime
+from enum import Enum, unique
 from functools import partial
 from itertools import filterfalse, chain
 
@@ -955,3 +956,52 @@ def parse_builtusing(builtusing_raw, pkg_id=None, logger=None):
             part = (bu, bu_version)
             nbu.append(part)
     return nbu
+
+
+@unique
+class UbuntuComponent(Enum):
+    MAIN = 0
+    RESTRICTED = 1
+    UNIVERSE = 2
+    MULTIVERSE = 3
+
+    @classmethod
+    def get_component(cls, section):
+        """Parse section and return component
+
+        Given a section, return component. Packages in MAIN have no
+        prefix, all others have <component>/ prefix.
+        """
+        name2component = {
+            "restricted": cls.RESTRICTED,
+            "universe": cls.UNIVERSE,
+            "multiverse": cls.MULTIVERSE,
+        }
+
+        if "/" in section:
+            return name2component[section.split("/", 1)[0]]
+
+        return cls.MAIN
+
+    def allowed_component(self, dep):
+        """Check if I can depend on the other component"""
+
+        component_dependencies = {
+            UbuntuComponent.MAIN: [UbuntuComponent.MAIN],
+            UbuntuComponent.RESTRICTED: [
+                UbuntuComponent.MAIN,
+                UbuntuComponent.RESTRICTED,
+            ],
+            UbuntuComponent.UNIVERSE: [
+                UbuntuComponent.MAIN,
+                UbuntuComponent.UNIVERSE,
+            ],
+            UbuntuComponent.MULTIVERSE: [
+                UbuntuComponent.MAIN,
+                UbuntuComponent.RESTRICTED,
+                UbuntuComponent.UNIVERSE,
+                UbuntuComponent.MULTIVERSE,
+            ],
+        }
+
+        return dep in component_dependencies[self]
