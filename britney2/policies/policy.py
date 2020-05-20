@@ -898,7 +898,21 @@ class DependsPolicy(BasePolicy):
                 needed_for_dep = set()
 
                 for alternative in dep:
-                    if target_suite.is_pkg_in_the_suite(alternative):
+                    alt_bin = self._britney.all_binaries[alternative]
+
+                    component = binary_u.component
+                    alt_component = alt_bin.component
+
+                    # Don't check components when testing PPAs, as they do not have this concept
+                    if self.options.adt_ppas:
+                        component = None
+
+                    # This relationship is good wrt. components if either the binary being
+                    # considered doesn't have a component, or if the ogre model
+                    # permits it (see UbuntuComponent)
+                    relationship_is_allowed = component is None or component.allowed_component(alt_component)
+
+                    if target_suite.is_pkg_in_the_suite(alternative) and relationship_is_allowed:
                         # dep can be satisfied in testing - ok
                         is_ok = True
                     elif alternative in my_bins:
@@ -1745,6 +1759,7 @@ class LPBlockBugPolicy(BasePolicy):
     The dates are expressed as the number of seconds from the Unix epoch
     (1970-01-01 00:00:00 UTC).
     """
+
     def __init__(self, options, suite_info):
         super().__init__('block-bugs', options, suite_info, {SuiteClass.PRIMARY_SOURCE_SUITE})
 
@@ -1753,7 +1768,7 @@ class LPBlockBugPolicy(BasePolicy):
         self.blocks = {}  # srcpkg -> [(bug, date), ...]
 
         filename = os.path.join(self.options.unstable, "Blocks")
-        self.log("Loading user-supplied block data from %s" % filename)
+        self.logger.info("Loading user-supplied block data from %s" % filename)
         for line in open(filename):
             ln = line.split()
             if len(ln) != 3:
