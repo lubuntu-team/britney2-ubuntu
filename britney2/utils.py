@@ -29,6 +29,7 @@ import sys
 import time
 from collections import defaultdict
 from datetime import datetime
+from enum import Enum, unique
 from functools import partial
 from itertools import filterfalse, chain
 
@@ -527,7 +528,7 @@ def read_release_file(suite_dir):
     return result
 
 
-def read_sources_file(filename, sources=None, intern=sys.intern, component=None):
+def read_sources_file(filename, sources=None, intern=sys.intern):
     """Parse a single Sources file into a hash
 
     Parse a single Sources file into a dict mapping a source package
@@ -575,6 +576,7 @@ def read_sources_file(filename, sources=None, intern=sys.intern, component=None)
         build_deps_indep = get_field('Build-Depends-Indep')
         if build_deps_indep is not None:
             build_deps_indep = sys.intern(build_deps_indep)
+        # XXX: Do the get_component thing in a much nicer way that can be upstreamed
         sources[intern(pkg)] = SourcePackage(intern(pkg),
                                              intern(ver),
                                              section,
@@ -585,7 +587,7 @@ def read_sources_file(filename, sources=None, intern=sys.intern, component=None)
                                              build_deps_indep,
                                              get_field('Testsuite', '').split(),
                                              get_field('Testsuite-Triggers', '').replace(',', '').split(),
-                                             component,
+                                             UbuntuComponent.get_component(section),
                                              )
     return sources
 
@@ -955,3 +957,52 @@ def parse_builtusing(builtusing_raw, pkg_id=None, logger=None):
             part = (bu, bu_version)
             nbu.append(part)
     return nbu
+
+
+@unique
+class UbuntuComponent(Enum):
+    MAIN = 'main'
+    RESTRICTED = 'restricted'
+    UNIVERSE = 'universe'
+    MULTIVERSE = 'multiverse'
+
+    @classmethod
+    def get_component(cls, section):
+        """Parse section and return component
+
+        Given a section, return component. Packages in MAIN have no
+        prefix, all others have <component>/ prefix.
+        """
+        name2component = {
+            "restricted": cls.RESTRICTED,
+            "universe": cls.UNIVERSE,
+            "multiverse": cls.MULTIVERSE,
+        }
+
+        if "/" in section:
+            return name2component[section.split("/", 1)[0]]
+
+        return cls.MAIN
+
+    def allowed_component(self, dep):
+        """Check if I can depend on the other component"""
+
+        component_dependencies = {
+            UbuntuComponent.MAIN: [UbuntuComponent.MAIN],
+            UbuntuComponent.RESTRICTED: [
+                UbuntuComponent.MAIN,
+                UbuntuComponent.RESTRICTED,
+            ],
+            UbuntuComponent.UNIVERSE: [
+                UbuntuComponent.MAIN,
+                UbuntuComponent.UNIVERSE,
+            ],
+            UbuntuComponent.MULTIVERSE: [
+                UbuntuComponent.MAIN,
+                UbuntuComponent.RESTRICTED,
+                UbuntuComponent.UNIVERSE,
+                UbuntuComponent.MULTIVERSE,
+            ],
+        }
+
+        return dep in component_dependencies[self]

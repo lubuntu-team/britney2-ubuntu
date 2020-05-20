@@ -8,7 +8,8 @@ import sys
 
 from britney2 import SuiteClass, Suite, TargetSuite, Suites, BinaryPackage, BinaryPackageId, SourcePackage
 from britney2.utils import (
-    read_release_file, possibly_compressed, read_sources_file, create_provides_map, parse_provides, parse_builtusing
+    read_release_file, possibly_compressed, read_sources_file, create_provides_map, parse_provides, parse_builtusing,
+    UbuntuComponent
 )
 
 
@@ -216,7 +217,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                 filename = os.path.join(basedir, component, "source", "Sources")
                 filename = possibly_compressed(filename)
                 self.logger.info("Loading source packages from %s", filename)
-                read_sources_file(filename, sources, component=component)
+                read_sources_file(filename, sources)
         else:
             filename = os.path.join(basedir, "Sources")
             self.logger.info("Loading source packages from %s", filename)
@@ -297,7 +298,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         """
         return separator.join(filter(None, (get_field(x) for x in field_names))) or None
 
-    def _read_packages_file(self, filename, arch, srcdist, packages=None, intern=sys.intern, component=None):
+    def _read_packages_file(self, filename, arch, srcdist, packages=None, intern=sys.intern):
         self.logger.info("Loading binary packages from %s", filename)
 
         if packages is None:
@@ -312,6 +313,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         while step():
             pkg = get_field('Package')
             version = get_field('Version')
+            section = get_field('Section')
 
             # There may be multiple versions of any arch:all packages
             # (in unstable) if some architectures have out-of-date
@@ -373,6 +375,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
             else:
                 builtusing = []
 
+            # XXX: Do the get_component thing in a much nicer way that can be upstreamed
             dpkg = BinaryPackage(version,
                                  intern(get_field('Section')),
                                  source,
@@ -385,7 +388,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                                  ess,
                                  pkg_id,
                                  builtusing,
-                                 component,
+                                 UbuntuComponent.get_component(section),
                                  )
 
             # if the source package is available in the distribution, then register this binary package
@@ -400,6 +403,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                     srcdist[source].binaries.add(pkg_id)
             # if the source package doesn't exist, create a fake one
             else:
+                # XXX: Do the get_component thing in a much nicer way that can be upstreamed
                 srcdist[source] = SourcePackage(source,
                                                 source_version,
                                                 'faux',
@@ -410,7 +414,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                                                 None,
                                                 [],
                                                 [],
-                                                component)
+                                                UbuntuComponent.get_component(section))
 
             # add the resulting dictionary to the package list
             packages[pkg] = dpkg
@@ -480,13 +484,11 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                     self._read_packages_file(filename,
                                              arch,
                                              suite.sources,
-                                             packages,
-                                             component=component)
+                                             packages)
                     self._read_packages_file(udeb_filename,
                                              arch,
                                              suite.sources,
-                                             packages,
-                                             component=component)
+                                             packages)
                 # create provides
                 provides = create_provides_map(packages)
                 binaries[arch] = packages
