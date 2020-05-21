@@ -2032,100 +2032,45 @@ class AT(TestAutopkgtestBase):
         self.assertEqual(self.pending_requests,
                          {'linux-meta-lts-grumpy/1': {'fancy': ['amd64']}})
 
-# #    def test_kernel_triggered_tests(self):
-# #        '''linux, lxc, glibc, systemd, snapd tests get triggered by linux-meta* uploads'''
-# #
-# #        self.data.add('libc6-dev', False, {'Source': 'glibc', 'Depends': 'linux-libc-dev'},
-# #                      testsuite='autopkgtest')
-# #        self.data.add('libc6-dev', True, {'Source': 'glibc', 'Depends': 'linux-libc-dev'},
-# #                      testsuite='autopkgtest')
-# #        self.data.add('lxc', False, {}, testsuite='autopkgtest')
-# #        self.data.add('lxc', True, {}, testsuite='autopkgtest')
-# #        self.data.add('systemd', False, {}, testsuite='autopkgtest')
-# #        self.data.add('systemd', True, {}, testsuite='autopkgtest')
-# #        self.data.add('snapd', False, {}, testsuite='autopkgtest')
-# #        self.data.add('snapd', True, {}, testsuite='autopkgtest')
-# #        self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
-# #        self.data.add('linux-image-1', True, {'Source': 'linux'}, testsuite='autopkgtest')
-# #        self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
-# #        self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
-# #
-# #        self.swift.set_results({'autopkgtest-testing': {
-# #            'testing/amd64/l/lxc/20150101_100101@': (0, 'lxc 0.1', tr('passedbefore/1'))
-# #        }})
-# #
-# #        exc = self.run_it(
-# #            [('linux-image', {'Version': '2', 'Depends': 'linux-image-2', 'Source': 'linux-meta'}, None),
-# #             ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
-# #             ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
-# #             ('linux-libc-dev', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
-# #            ],
-# #            {'linux-meta': (False, {'lxc': {'amd64': 'RUNNING', 'i386': 'RUNNING-ALWAYSFAIL'},
-# #                                    'glibc': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-# #                                    'linux': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-# #                                    'systemd': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-# #                                    'snapd': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
-# #                                   }),
-# #             'linux-meta-64only': (False, {'lxc': {'amd64': 'RUNNING'}}),
-# #             'linux': (False, {}),
-# #            })[1]
-# #        # the kernel itself should not trigger tests; we want to trigger
-# #        # everything from -meta
-# #        self.assertEqual(exc['linux']['policy_info']['autopkgtest'], {})
+    def test_kernel_triggered_tests(self):
+        '''linux, lxc, glibc, systemd, snapd tests get triggered by linux-meta* uploads'''
 
-# #    def test_kernel_waits_on_meta(self):
-# #        '''linux waits on linux-meta'''
-# #
-# #        self.data.add('dkms', False, {})
-# #        self.data.add('dkms', True, {})
-# #        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
-# #        self.data.add('fancy-dkms', True, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
-# #        self.data.add('linux-image-generic', False, {'Version': '0.1', 'Source': 'linux-meta', 'Depends': 'linux-image-1'})
-# #        self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
-# #        self.data.add('linux-firmware', False, {'Source': 'linux-firmware'}, testsuite='autopkgtest')
-# #
-# #        self.swift.set_results({'autopkgtest-testing': {
-# #            'testing/i386/f/fancy/20150101_090000@': (0, 'fancy 0.5', tr('passedbefore/1')),
-# #            'testing/i386/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
-# #            'testing/amd64/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
-# #            'testing/i386/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', tr('linux-firmware/2')),
-# #            'testing/amd64/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', tr('linux-firmware/2')),
-# #        }})
-# #
-# #        self.run_it(
-# #            [('linux-image-generic', {'Version': '0.2', 'Source': 'linux-meta', 'Depends': 'linux-image-2'}, None),
-# #             ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
-# #             ('linux-firmware', {'Version': '2', 'Source': 'linux-firmware'}, 'autopkgtest'),
-# #            ],
-# #            {'linux-meta': (False, {'fancy': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
-# #                                    'linux/2': {'amd64': 'PASS', 'i386': 'PASS'}
-# #                                   }),
-# #             # no tests, but should wait on linux-meta
-# #             'linux': (False, {}),
-# #             # this one does not have a -meta, so don't wait
-# #             'linux-firmware': (True, {'linux-firmware/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
-# #            },
-# #            {'linux': [('reason', 'depends'),
-# #                       ('excuses', 'Invalidated by dependency'),
-# #                       ('dependencies', {'blocked-by': ['linux-meta']})]
-# #            }
-# #        )
-# #
-# #        # now linux-meta is ready to go
-# #        self.swift.set_results({'autopkgtest-testing': {
-# #            'testing/i386/f/fancy/20150101_100000@': (0, 'fancy 1', tr('linux-meta/0.2')),
-# #            'testing/amd64/f/fancy/20150101_100000@': (0, 'fancy 1', tr('linux-meta/0.2')),
-# #        }})
-# #        self.run_it(
-# #            [],
-# #            {'linux-meta': (True, {'fancy/1': {'amd64': 'PASS', 'i386': 'PASS'},
-# #                                   'linux/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
-# #             'linux': (True, {}),
-# #             'linux-firmware': (True, {'linux-firmware/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
-# #            },
-# #            {'linux': [('dependencies', {'migrate-after': ['linux-meta']})]
-# #            }
-# #        )
+        self.data.add('libc6-dev', False, {'Source': 'glibc', 'Depends': 'linux-libc-dev'},
+                      testsuite='autopkgtest')
+        self.data.add('libc6-dev', True, {'Source': 'glibc', 'Depends': 'linux-libc-dev'},
+                      testsuite='autopkgtest')
+        self.data.add('lxc', False, {}, testsuite='autopkgtest')
+        self.data.add('lxc', True, {}, testsuite='autopkgtest')
+        self.data.add('systemd', False, {}, testsuite='autopkgtest')
+        self.data.add('systemd', True, {}, testsuite='autopkgtest')
+        self.data.add('snapd', False, {}, testsuite='autopkgtest')
+        self.data.add('snapd', True, {}, testsuite='autopkgtest')
+        self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
+        self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
+        self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lxc/20150101_100101@': (0, 'lxc 0.1', tr('passedbefore/1'))
+        }})
+
+        exc = self.run_it(
+            [('linux-image', {'Version': '2', 'Depends': 'linux-image-2', 'Source': 'linux-meta'}, None),
+             ('linux-image-64only', {'Source': 'linux-meta-64only', 'Architecture': 'amd64'}, None),
+             ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
+             ('linux-libc-dev', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
+            ],
+            {'linux-meta': (False, {'lxc': {'amd64': 'RUNNING', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                    'glibc': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                    'linux': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                    'systemd': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                    'snapd': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'},
+                                   }),
+             'linux-meta-64only': (False, {'lxc': {'amd64': 'RUNNING'}}),
+             'linux': (False, {}),
+            })[1]
+        # the kernel itself should not trigger tests; we want to trigger
+        # everything from -meta
+        self.assertEqual(exc['linux']['policy_info']['autopkgtest'], {'verdict': 'PASS'})
 
     ################################################################
     # Tests for special-cased packages
