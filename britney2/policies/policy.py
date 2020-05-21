@@ -959,7 +959,7 @@ class BuildDependsPolicy(BasePolicy):
 
         # analyze the dependency fields (if present)
         deps = source_data_srcdist.build_deps_arch
-        if deps:
+        if deps or item.package.startswith('linux'):
             v = self._check_build_deps(deps, DependencyType.BUILD_DEPENDS, build_deps_info, item,
                                        source_data_tdist, source_data_srcdist, excuse,
                                        get_dependency_solvers=get_dependency_solvers)
@@ -1056,6 +1056,34 @@ class BuildDependsPolicy(BasePolicy):
             binaries_t_a = binaries_t[arch]
             provides_t_a = provides_t[arch]
             arch_results[arch] = BuildDepResult.OK
+
+            # make linux* wait on corresponding -meta package
+            if source_name.startswith('linux'):
+                meta = source_name.replace('linux', 'linux-meta', 1)
+                try:
+                    meta_src = source_suite.sources[meta]
+                    meta_binaries = meta_src.binaries
+
+                    # Find a binary to build-depend on
+                    for binary in meta_binaries:
+                        dep_pkg_name = binary.package_name
+                        dep_pkg_version = binary.version
+                        break
+
+                    new_dep = '%s (>= %s)' % (dep_pkg_name, dep_pkg_version)
+
+                    if not deps:
+                        deps = new_dep
+                    elif new_dep not in deps:
+                        deps += ', %s' % new_dep
+
+                    self.logger.info('Synthesizing Build-Depends from %s to %s' % (source_name, new_dep))
+                except KeyError:
+                    pass
+
+            if not deps:
+                return verdict
+
             # for every dependency block (formed as conjunction of disjunction)
             for block_txt in deps.split(','):
                 block = parse_src_depends(block_txt, False, arch)

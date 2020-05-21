@@ -2072,6 +2072,59 @@ class AT(TestAutopkgtestBase):
         # everything from -meta
         self.assertEqual(exc['linux']['policy_info']['autopkgtest'], {'verdict': 'PASS'})
 
+    def test_kernel_waits_on_meta(self):
+        '''linux waits on linux-meta'''
+
+        self.data.add('dkms', False, {})
+        self.data.add('dkms', True, {})
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'}, testsuite='autopkgtest-pkg-dkms')
+        self.data.add('fancy-dkms', True, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'}, testsuite='autopkgtest-pkg-dkms')
+        self.data.add('linux-image-generic', False, {'Version': '0.1', 'Source': 'linux-meta', 'Depends': 'linux-image-1'})
+        self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
+        self.data.add('linux-firmware', False, {'Source': 'linux-firmware'}, testsuite='autopkgtest')
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/i386/f/fancy/20150101_090000@': (0, 'fancy 0.5', tr('passedbefore/1')),
+            'testing/i386/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
+            'testing/amd64/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
+            'testing/i386/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', tr('linux-firmware/2')),
+            'testing/amd64/l/linux-firmware/20150101_100000@': (0, 'linux-firmware 2', tr('linux-firmware/2')),
+        }})
+
+        self.run_it(
+            [('linux-image-generic', {'Version': '0.2', 'Source': 'linux-meta', 'Depends': 'linux-image-2'}, None),
+             ('linux-image-2', {'Version': '2', 'Source': 'linux'}, 'autopkgtest'),
+             ('linux-firmware', {'Version': '2', 'Source': 'linux-firmware'}, 'autopkgtest'),
+            ],
+            {'linux-meta': (False, {'fancy': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                                    'linux/2': {'amd64': 'PASS', 'i386': 'PASS'}
+                                   }),
+             # no tests, but should wait on linux-meta
+             'linux': (False, {}),
+             # this one does not have a -meta, so don't wait
+             'linux-firmware': (True, {'linux-firmware/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
+            },
+            {'linux': [('excuses', 'Build-Depends(-Arch): linux <a href="#linux-meta">linux-meta</a> (not considered)'),
+                       ('dependencies', {'blocked-by': ['linux-meta']})]
+            }
+        )
+
+        # now linux-meta is ready to go
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/i386/f/fancy/20150101_100000@': (0, 'fancy 1', tr('linux-meta/0.2')),
+            'testing/amd64/f/fancy/20150101_100000@': (0, 'fancy 1', tr('linux-meta/0.2')),
+        }})
+        self.run_it(
+            [],
+            {'linux-meta': (True, {'fancy/1': {'amd64': 'PASS', 'i386': 'PASS'},
+                                   'linux/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
+             'linux': (True, {}),
+             'linux-firmware': (True, {'linux-firmware/2': {'amd64': 'PASS', 'i386': 'PASS'}}),
+            },
+            {'linux': [('dependencies', {'migrate-after': ['linux-meta']})]
+            }
+        )
+
     ################################################################
     # Tests for special-cased packages
     ################################################################
