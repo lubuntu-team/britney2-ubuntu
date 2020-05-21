@@ -1056,6 +1056,7 @@ class BuildDependsPolicy(BasePolicy):
             binaries_t_a = binaries_t[arch]
             provides_t_a = provides_t[arch]
             arch_results[arch] = BuildDepResult.OK
+
             # for every dependency block (formed as conjunction of disjunction)
             for block_txt in deps.split(','):
                 block = parse_src_depends(block_txt, False, arch)
@@ -1794,3 +1795,94 @@ class LPBlockBugPolicy(BasePolicy):
         excuse.addreason('block')
 
         return PolicyVerdict.REJECTED_PERMANENTLY
+
+class LinuxPolicy(BasePolicy):
+    """Make linux-* wait on linux-meta-*"""
+
+    def __init__(self, options, suite_info):
+        super().__init__('linux', options, suite_info, {SuiteClass.PRIMARY_SOURCE_SUITE})
+        self.metas = {}
+        self.invalidate = defaultdict(list)
+
+    def initialise(self, britney):
+        super().initialise(britney)
+        self.britney = britney
+
+    def meta_name(self, linux_source):
+        if linux_source.startswith('linux-signed'):
+            meta = linux_source.replace('linux-signed', 'linux-meta')
+        else:
+            meta = linux_source.replace('linux', 'linux-meta')
+
+        return meta
+
+    def find_meta_excuse(self, linux_source):
+        assert linux_source.startswith('linux')
+
+        meta = self.meta_name(linux_source)
+
+        try:
+            return self.metas[meta]
+        except KeyError:
+            return None
+
+    def apply_src_policy_impl(self, linux_info, item, source_data_tdist, source_data_srcdist, excuse):
+        source_name = item.package
+
+        if not source_name.startswith('linux'):
+            return PolicyVerdict.NOT_APPLICABLE
+
+        self.logger.info("linux policy: considering %s", source_name)
+
+        # If we're currently migrating a linux-meta package, look to see if we
+        # need to reject any of its corresponding linux packages.
+        if source_name.startswith('linux-meta'):
+            self.metas[source_name] = excuse
+
+            # We're currently in the middle of running the policies for
+            # linux-meta, so we need to look at the *tentative* verdict. If
+            # it's rejected, then we will find any linux-* that we marked to
+            # come back to (see below), and handle them now.
+            if excuse.tentative_policy_verdict.is_rejected:
+                self.logger.info("%s is rejected, checking if we now need to reject anything else", source_name)
+                linux_excuses = self.invalidate[source_name]
+                if linux_excuses:
+                    for linux_excuse in linux_excuses:
+                        self.logger.info("%s is invalid, so invalidating %s too",
+                                         excuse.name,
+                                         linux_excuse.name)
+                        linux_excuse.policy_verdict = PolicyVerdict.REJECTED_WAITING_FOR_ANOTHER_ITEM
+                        linux_excuse.addreason("linux-meta-not-ready")
+                        linux_excuse.add_verdict_info(linux_excuse.policy_verdict,
+                                                      "Cannot migrate because %s is invalid" % excuse.name)
+                else:
+                    self.logger.info("Nothing recorded to reject yet")
+            else:
+                self.logger.info("%s is a candidate, so we will not invalidate anything else", source_name)
+            return PolicyVerdict.PASS
+
+        # Or we're migrating linux-*, so look to see if we already know about
+        # linux-meta-*, which will happen if we processed that excuse first.
+        linux_meta_excuse = self.find_meta_excuse(source_name)
+
+        if not linux_meta_excuse:
+            # We don't know about linux-meta, but if it's in the source suite
+            # we will later, so remember to come back to this item then.
+            meta_name = self.meta_name(source_name)
+            self.logger.info("No excuse for %s yet, will come back to %s when visiting it later.",
+                             meta_name,
+                             excuse.name)
+            self.invalidate[meta_name].append(excuse)
+            return PolicyVerdict.PASS
+
+        # We do know about linux-meta, so invalidate linux if meta is also
+        # invalid, otherwise leave it alone.
+        if not linux_meta_excuse.is_valid:
+            self.logger.info("Invalidating %s because %s is invalid", excuse.name, linux_meta_excuse.name)
+            res = PolicyVerdict.REJECTED_WAITING_FOR_ANOTHER_ITEM
+            excuse.add_verdict_info(res, "Cannot migrate because %s is invalid" % linux_meta_excuse.name)
+            return res
+        else:
+            self.logger.info("Not invalidating %s because %s is valid", excuse.name, linux_meta_excuse.name)
+
+        return PolicyVerdict.PASS

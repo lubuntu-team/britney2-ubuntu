@@ -213,6 +213,7 @@ from britney2.policies.policy import (AgePolicy,
                                       BuiltUsingPolicy,
                                       BuiltOnBuilddPolicy,
                                       ImplicitDependencyPolicy,
+                                      LinuxPolicy,
                                       LPBlockBugPolicy,
                                       )
 from britney2.policies.autopkgtest import AutopkgtestPolicy
@@ -523,6 +524,7 @@ class Britney(object):
         if getattr(self.options, 'check_buildd', 'no') == 'yes':
             self._policy_engine.add_policy(BuiltOnBuilddPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(LPBlockBugPolicy(self.options, self.suite_info))
+        self._policy_engine.add_policy(LinuxPolicy(self.options, self.suite_info))
 
     @property
     def hints(self):
