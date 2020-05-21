@@ -213,6 +213,7 @@ from britney2.policies.policy import (AgePolicy,
                                       BuiltUsingPolicy,
                                       BuiltOnBuilddPolicy,
                                       ImplicitDependencyPolicy,
+                                      LinuxPolicy,
                                       LPBlockBugPolicy,
                                       )
 from britney2.policies.autopkgtest import AutopkgtestPolicy
@@ -526,6 +527,7 @@ class Britney(object):
             self._policy_engine.add_policy(BuiltOnBuilddPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(LPBlockBugPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(SourcePPAPolicy(self.options, self.suite_info))
+        self._policy_engine.add_policy(LinuxPolicy(self.options, self.suite_info))
         add_email_policy = getattr(self.options, 'email_enable', 'no')
         if add_email_policy in ('yes', 'dry-run'):
             self._policy_engine.add_policy(EmailPolicy(self.options,
