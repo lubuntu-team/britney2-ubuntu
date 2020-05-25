@@ -49,7 +49,7 @@ class JenkinsPassPolicy(BasePolicy):
         super().initialise(britney)
         self.britney = britney
 
-    def save_state(self):
+    def save_state(self, jenkins=None):
         pass
 
     def match_jobname_package(self, pkg, version):
