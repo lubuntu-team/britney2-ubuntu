@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import os
+from os import getenv, path
 from jenkinsapi.jenkins import Jenkins
 from britney2.policies.policy import BasePolicy, PolicyVerdict
 
@@ -30,7 +30,7 @@ class JenkinsPassPolicy(BasePolicy):
 
     def __init__(self, options, suite_info):
         super().__init__("jenkins-pass", options, suite_info, {"unstable"})
-        self.filename = os.path.join(options.unstable, "JenkinsPass")
+        self.filename = path.join(options.unstable, "JenkinsPass")
 
         # Authenticate to Jenkins with the given env vars
         api_site = getenv("API_SITE")
