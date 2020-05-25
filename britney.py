@@ -204,6 +204,7 @@ from britney2.excuse import Excuse
 from britney2.hints import HintParser
 from britney2.installability.builder import build_installability_tester, ma_parse_depends
 from britney2.migrationitem import MigrationItem
+from britney2.policies.jenkinspass import JenkinsPassPolicy
 from britney2.policies.policy import AgePolicy, RCBugPolicy, PiupartsPolicy, PolicyVerdict
 from britney2.policies.policy import LPBlockBugPolicy, LPExcuseBugsPolicy
 from britney2.policies.autopkgtest import AutopkgtestPolicy
@@ -543,6 +544,7 @@ class Britney(object):
         if getattr(self.options, 'adt_enable') == 'yes':
             self.policies.append(AutopkgtestPolicy(self.options, self.suite_info))
         self.policies.append(SourcePPAPolicy(self.options, self.suite_info))
+        self.policies.append(JenkinsPassPolicy(self.options, self.suite_info))
         add_email_policy = getattr(self.options, 'email_enable', 'no')
         if add_email_policy in ('yes', 'dry-run'):
             self.policies.append(EmailPolicy(self.options,
