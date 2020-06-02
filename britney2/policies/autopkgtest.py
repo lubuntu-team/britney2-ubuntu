@@ -491,7 +491,7 @@ class AutopkgtestPolicy(BasePolicy):
     #
 
     @classmethod
-    def has_autodep8(kls, srcinfo):
+    def has_autodep8(kls, srcinfo, binaries):
         '''Check if package  is covered by autodep8
 
         srcinfo is an item from self.britney.sources
@@ -502,6 +502,14 @@ class AutopkgtestPolicy(BasePolicy):
             if t.startswith('autopkgtest-pkg'):
                 return True
 
+        # DKMS: some binary depends on "dkms"
+        for pkg_id in srcinfo.binaries:
+            try:
+                bininfo = binaries[pkg_id.package_name]
+            except KeyError:
+                continue
+            if 'dkms' in (bininfo.depends or ''):
+                return True
         return False
 
     def request_tests_for_source(self, item, arch, source_data_srcdist, pkg_arch_result, excuse):
@@ -646,7 +654,7 @@ class AutopkgtestPolicy(BasePolicy):
         # we want to test the package itself, if it still has a test in unstable
         # but only if the package actually exists on this arch
         srcinfo = source_suite.sources[src]
-        if ('autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo)) and \
+        if ('autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo, binaries_info)) and \
            len(excuse.packages[arch]) > 0:
             reported_pkgs.add(src)
             tests.append((src, ver))
@@ -682,7 +690,7 @@ class AutopkgtestPolicy(BasePolicy):
                     continue
 
                 rdep_src_info = sources_info[rdep_src]
-                if 'autopkgtest' in rdep_src_info.testsuite or self.has_autodep8(rdep_src_info):
+                if 'autopkgtest' in rdep_src_info.testsuite or self.has_autodep8(rdep_src_info, binaries_info):
                     if rdep_src not in reported_pkgs:
                         tests.append((rdep_src, rdep_src_info.version))
                         reported_pkgs.add(rdep_src)
@@ -693,7 +701,7 @@ class AutopkgtestPolicy(BasePolicy):
                         tdep_src_info = sources_info[tdep_src]
                     except KeyError:
                         continue
-                    if 'autopkgtest' in tdep_src_info.testsuite or self.has_autodep8(tdep_src_info):
+                    if 'autopkgtest' in tdep_src_info.testsuite or self.has_autodep8(tdep_src_info, binaries_info):
                         for pkg_id in tdep_src_info.binaries:
                             if pkg_id.architecture == arch:
                                 tests.append((tdep_src, tdep_src_info.version))
@@ -1066,8 +1074,12 @@ class AutopkgtestPolicy(BasePolicy):
         Return (status, real_version, run_id, log_url) tuple; status is a key in
         EXCUSES_LABELS. run_id is None if the test is still running.
         '''
+        target_suite = self.suite_info.target_suite
+        binaries_info = target_suite.binaries[arch]
+
         # determine current test result status
         baseline_result = self.result_in_baseline(src, arch)[0]
+
 
         url = None
         run_id = None
@@ -1093,7 +1105,7 @@ class AutopkgtestPolicy(BasePolicy):
                     test_in_target = False
                     try:
                         srcinfo = self.suite_info.target_suite.sources[src]
-                        if 'autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo):
+                        if 'autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo, binaries_info):
                             test_in_target = True
                     except KeyError:
                         pass
