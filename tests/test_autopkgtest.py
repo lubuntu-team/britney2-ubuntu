@@ -1980,7 +1980,7 @@ class AT(TestAutopkgtestBase):
         '''DKMS results get mapped to the triggering kernel version'''
 
         self.data.add('dkms', False, {})
-        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'}, testsuite='autopkgtest-pkg-dkms')
+        self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'})
 
         # works against linux-meta and -64only, fails against grumpy i386, no
         # result yet for grumpy amd64
