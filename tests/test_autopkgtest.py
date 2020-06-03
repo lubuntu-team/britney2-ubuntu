@@ -34,7 +34,7 @@ ON_ALL_ARCHES = {'on-architectures': ['amd64', 'arm64', 'armhf', 'i386', 'powerp
                  'on-unimportant-architectures': []}
 
 
-class T(TestBase):
+class TestAutopkgtestBase(TestBase):
     '''AMQP/cloud interface'''
 
     ################################################################
@@ -162,6 +162,8 @@ class T(TestBase):
 
         return (out, excuses_dict, excuses_html)
 
+
+class AT(TestAutopkgtestBase):
     ################################################################
     # Tests for generic packages
     ################################################################
