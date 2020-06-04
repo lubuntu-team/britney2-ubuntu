@@ -198,6 +198,36 @@ class AT(TestAutopkgtestBase):
             upgrade_out = f.read()
         self.assertNotIn('accepted:', upgrade_out)
 
+    def test_no_request_for_excluded_arch(self):
+        '''
+        Does not request a test on an architecture for which the package
+        produces no binaries
+        '''
+
+        self.data.add_default_packages()
+        self.sourceppa_cache['purple'] = {'2': ''}
+
+        # The package has passed before on i386
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/i386/p/purple/20150101_100000@': (0, 'purple 1', tr('purple/1')),
+            'testing/amd64/p/purple/20150101_100000@': (0, 'purple 1', tr('purple/1')),
+            'testing/amd64/p/purple/20200101_100000@': (0, 'purple 2', tr('purple/2')),
+        }})
+
+        exc = self.run_it(
+            [('libpurple1', {'Source': 'purple', 'Version': '2', 'Architecture': 'amd64'},
+             'autopkgtest')],
+            {'purple': (True, {'purple/2': {'amd64': 'PASS'}})},
+        )[1]
+
+        self.assertEqual(self.pending_requests, {})
+        self.assertEqual(self.amqp_requests, set())
+
+        with open(os.path.join(self.data.path, 'output', 'output.txt')) as f:
+            upgrade_out = f.read()
+        self.assertIn('accepted: purple', upgrade_out)
+        self.assertIn('SUCCESS (1/0)', upgrade_out)
+
     def test_no_wait_for_always_failed_test(self):
         '''We do not need to wait for results for tests which have always failed'''
 
