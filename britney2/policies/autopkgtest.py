@@ -1167,7 +1167,10 @@ class AutopkgtestPolicy(BasePolicy):
                     result = 'RUNNING'
                 else:
                     result = 'RUNNING-ALWAYSFAIL'
-                url = self.options.adt_ci_url + 'status/pending'
+                if self.options.adt_swift_url.startswith('file://'):
+                    url = self.options.adt_ci_url + 'status/pending'
+                else:
+                    url = self.options.adt_ci_url + 'running'
             else:
                 raise RuntimeError('Result for %s/%s/%s (triggered by %s) is neither known nor pending!' %
                                    (src, ver, arch, trigger))
