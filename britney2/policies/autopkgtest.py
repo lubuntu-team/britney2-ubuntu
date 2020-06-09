@@ -1126,9 +1126,13 @@ class AutopkgtestPolicy(BasePolicy):
                     except KeyError:
                         pass
                     if test_in_target:
-                        self.request_test_if_not_queued(src, arch, REF_TRIG)
-                        if baseline_result == Result.NONE:
-                            result = 'RUNNING-REFERENCE'
+                        # If we want reference tests, request here
+                        if self.options.adt_baseline == 'reference':
+                            self.request_test_if_not_queued(src, arch, REF_TRIG)
+                            if baseline_result == Result.NONE:
+                                result = 'RUNNING-REFERENCE'
+                            else:
+                                result = 'ALWAYSFAIL'
                         else:
                             result = 'ALWAYSFAIL'
                     else:
