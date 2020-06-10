@@ -158,6 +158,7 @@ class AutopkgtestPolicy(BasePolicy):
     def register_hints(self, hint_parser):
         hint_parser.register_hint_type('force-badtest', britney2.hints.split_into_one_hint_per_package)
         hint_parser.register_hint_type('force-skiptest', britney2.hints.split_into_one_hint_per_package)
+        hint_parser.register_hint_type('force-reset-test', britney2.hints.split_into_one_hint_per_package)
 
     def initialise(self, britney):
         super().initialise(britney)
@@ -1096,6 +1097,11 @@ class AutopkgtestPolicy(BasePolicy):
         # determine current test result status
         baseline_result = self.result_in_baseline(src, arch)[0]
 
+        # determine current test result status
+        until = self.find_max_lower_force_reset_test(src, ver, arch)
+        ever_passed = self.check_ever_passed_before(src, ver, arch, until)
+
+        fail_result = 'REGRESSION' if ever_passed else 'ALWAYSFAIL'
 
         url = None
         run_id = None
@@ -1136,9 +1142,13 @@ class AutopkgtestPolicy(BasePolicy):
                         else:
                             result = 'ALWAYSFAIL'
                     else:
-                        result = 'REGRESSION'
+                        result = fail_result
                 else:
-                    result = 'REGRESSION'
+                    result = fail_result
+
+                if result == 'REGRESSION' and \
+                   self.has_higher_force_reset_test(src, ver, arch):
+                    result = 'ALWAYSFAIL'
 
                 if self.has_force_badtest(src, ver, arch):
                     result = 'IGNORE-FAIL'
@@ -1180,6 +1190,59 @@ class AutopkgtestPolicy(BasePolicy):
                                    (src, ver, arch, trigger))
 
         return (result, ver, run_id, url)
+
+    def check_ever_passed_before(self, src, max_ver, arch, min_ver=None):
+        '''Check if tests for src ever passed on arch for specified range
+
+        If min_ver is specified, it checks that all versions in
+        [min_ver, max_ver) have passed; otherwise it checks that
+        [min_ver, inf) have passed.'''
+
+        # FIXME: add caching
+        for srcmap in self.test_results.values():
+            try:
+                too_high = apt_pkg.version_compare(srcmap[src][arch][1], max_ver) > 0
+                too_low = apt_pkg.version_compare(srcmap[src][arch][1], min_ver) <= 0 if min_ver else False
+
+                if too_high or too_low:
+                    continue
+
+                if srcmap[src][arch][0] in (Result.PASS, Result.OLD_PASS):
+                    return True
+            except KeyError:
+                pass
+        return False
+
+    def find_max_lower_force_reset_test(self, src, ver, arch):
+        '''Find the maximum force-reset-test hint before/including ver'''
+        hints = self.hints.search('force-reset-test', package=src)
+        found_ver = None
+
+        if hints:
+            for hint in hints:
+                for mi in hint.packages:
+                    if (mi.architecture in ['source', arch] and
+                            mi.version != 'all' and
+                            apt_pkg.version_compare(mi.version, ver) <= 0 and
+                            (found_ver is None or apt_pkg.version_compare(found_ver, mi.version) < 0)):
+                        found_ver = mi.version
+
+        return found_ver
+
+    def has_higher_force_reset_test(self, src, ver, arch):
+        '''Find if there is a minimum force-reset-test hint after/including ver'''
+        hints = self.hints.search('force-reset-test', package=src)
+
+        if hints:
+            self.logger.info('Checking hints for %s/%s/%s: %s' % (src, ver, arch, [str(h) for h in hints]))
+            for hint in hints:
+                for mi in hint.packages:
+                    if (mi.architecture in ['source', arch] and
+                            mi.version != 'all' and
+                            apt_pkg.version_compare(mi.version, ver) >= 0):
+                        return True
+
+        return False
 
     def has_force_badtest(self, src, ver, arch):
         '''Check if src/ver/arch has a force-badtest hint'''
