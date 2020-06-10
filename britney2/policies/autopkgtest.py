@@ -179,7 +179,8 @@ class AutopkgtestPolicy(BasePolicy):
             # Make adt_baseline optional
             setattr(self.options, 'adt_baseline', None)
 
-        if not hasattr(self.options, 'adt_reference_max_age'):
+        if not hasattr(self.options, 'adt_reference_max_age') or \
+           not self.options.adt_reference_max_age:
             self.options.adt_reference_max_age = float('inf')
         else:
             self.options.adt_reference_max_age = \
