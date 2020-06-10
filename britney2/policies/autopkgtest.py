@@ -891,7 +891,8 @@ class AutopkgtestPolicy(BasePolicy):
             return
 
         run_id = os.path.basename(os.path.dirname(url))
-        seen = round(calendar.timegm(time.strptime(run_id, '%Y%m%d_%H%M%S@')))
+        # 20200101_000000 is 15 chars long
+        seen = round(calendar.timegm(time.strptime(run_id[0:15], '%Y%m%d_%H%M%S')))
         # allow some skipped tests, but nothing else
         if exitcode in [0, 2]:
             result = Result.PASS
