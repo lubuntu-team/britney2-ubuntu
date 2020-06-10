@@ -1985,6 +1985,223 @@ class AT(TestAutopkgtestBase):
             {'lightgreen': [('reason', 'block')]}
         )
 
+    def test_hint_force_reset_test_goodbad_alwaysfail(self):
+        '''force-reset-test hint marks as alwaysfail'''
+
+        self.data.add_default_packages(lightgreen=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/1')
+
+        self.run_it(
+            [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (True, {
+                              'lightgreen/2': {'amd64': 'ALWAYSFAIL'},
+                             }),
+            },
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]
+            })
+
+    def test_hint_force_reset_test_goodbad_alwaysfail_arch(self):
+        '''force-reset-test hint marks as alwaysfail per arch'''
+
+        self.data.add_default_packages(lightgreen=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
+            'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/i386/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/1/amd64')
+
+        self.run_it(
+            [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (False, {
+                             'lightgreen/2': {'amd64': 'ALWAYSFAIL', 'i386': 'REGRESSION'},
+                             }),
+            },
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]
+            })
+
+    def test_hint_force_reset_test_bad_good_pass(self):
+        '''force-reset-test hint followed by pass is pass'''
+
+        self.data.add_default_packages(lightgreen=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/1')
+
+        self.run_it(
+            [('lightgreen', {'Version': '2', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (True, {
+                              'lightgreen/2': {'amd64': 'PASS'},
+                             }),
+            },
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]
+            })
+
+    def test_hint_force_reset_test_bad_good_bad_regression(self):
+        '''force-reset-test hint followed by good, bad is regression'''
+
+        self.data.add_default_packages(lightgreen=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'testing/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/1')
+
+        self.run_it(
+            [('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'lightgreen': (False, {
+                              'lightgreen/3': {'amd64': 'REGRESSION'},
+                             }),
+            },
+            {'lightgreen': [('old-version', '1'), ('new-version', '3')]
+            })
+
+    def test_hint_force_reset_test_bad_good_bad_regression_different_trigger(self):
+        '''force-reset-test hint followed by good, bad is regression (not self-triggered)'''
+
+        self.data.add_default_packages(green=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 0.1', tr('lightgreen/0.1')),
+            'testing/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 1', tr('green/2')),
+        }})
+
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/0.1')
+
+        self.run_it(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {
+                              'lightgreen/1': {'amd64': 'REGRESSION'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')]
+            })
+
+    def test_hint_force_reset_test_multiple_hints(self):
+        '''force-reset-test multiple hints check ranges'''
+
+        self.data.add_default_packages(green=False, lightgreen=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/amd64/l/lightgreen/20150102_100100@': (4, 'lightgreen 1', tr('green/2')),
+            'testing/amd64/l/lightgreen/20150103_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'testing/amd64/l/lightgreen/20150104_100101@': (4, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+        self.run_it(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (False, {
+                              'lightgreen/1': {'amd64': 'REGRESSION'},
+                             }),
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/1')
+        self.run_it(
+            [],
+            {'green': (True, {
+                              'lightgreen/1': {'amd64': 'ALWAYSFAIL'},
+                             }),
+             'lightgreen': (False, {
+                              'lightgreen/3': {'amd64': 'REGRESSION'},
+                             }),
+
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/3')
+        self.run_it(
+            [],
+            {'green': (True, {
+                              'lightgreen/1': {'amd64': 'ALWAYSFAIL'},
+                             }),
+             'lightgreen': (True, {
+                              'lightgreen/3': {'amd64': 'ALWAYSFAIL'},
+                             }),
+
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+
+    def test_hint_force_reset_test_earlier_hints(self):
+        '''force-reset-test for a later version applies backwards'''
+
+        self.data.add_default_packages(green=False, lightgreen=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/amd64/l/lightgreen/20150102_100101@': (4, 'lightgreen 1', tr('green/2')),
+            'testing/amd64/l/lightgreen/20150103_100102@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'testing/amd64/l/lightgreen/20150104_100102@': (4, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/3')
+        self.run_it(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {
+                              'lightgreen/1': {'amd64': 'ALWAYSFAIL'},
+                             }),
+             'lightgreen': (True, {
+                              'lightgreen/3': {'amd64': 'ALWAYSFAIL'},
+                             }),
+
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+
+    def test_hint_force_reset_test_earlier_hints_pass(self):
+        '''force-reset-test for a later version which is PASS is still PASS'''
+
+        self.data.add_default_packages(green=False, lightgreen=False)
+
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
+            'testing/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 1', tr('green/2')),
+            'testing/amd64/l/lightgreen/20150103_100102@': (0, 'lightgreen 2', tr('lightgreen/2')),
+            'testing/amd64/l/lightgreen/20150104_100102@': (0, 'lightgreen 3', tr('lightgreen/3')),
+        }})
+
+        self.create_hint('autopkgtest', 'force-reset-test lightgreen/3')
+        self.run_it(
+            [('libgreen1', {'Version': '2', 'Source': 'green', 'Depends': 'libc6'}, 'autopkgtest'),
+             ('lightgreen', {'Version': '3', 'Source': 'lightgreen', 'Depends': 'libc6'}, 'autopkgtest')],
+            {'green': (True, {
+                              'lightgreen/1': {'amd64': 'PASS'},
+                             }),
+             'lightgreen': (True, {
+                              'lightgreen/3': {'amd64': 'PASS'},
+                             }),
+
+            },
+            {'green': [('old-version', '1'), ('new-version', '2')],
+             'lightgreen': [('old-version', '1'), ('new-version', '3')],
+            })
+
     ################################################################
     # Kernel related tests
     ################################################################
