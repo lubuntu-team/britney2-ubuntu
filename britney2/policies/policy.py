@@ -1086,7 +1086,14 @@ class BuildDependsPolicy(BasePolicy):
 
             # for every dependency block (formed as conjunction of disjunction)
             for block_txt in deps.split(','):
-                block = parse_src_depends(block_txt, False, arch)
+                try:
+                    block = parse_src_depends(block_txt, False, arch)
+                except TypeError:
+                    # old python3-apt didn't have the third argument
+                    native_arch = apt_pkg.config["APT::Architecture"]
+                    apt_pkg.config["APT::Architecture"] = arch
+                    block = parse_src_depends(block_txt, False)
+                    apt_pkg.config["APT::Architecture"] = native_arch
                 # Unlike regular dependencies, some clauses of the Build-Depends(-Arch|-Indep) can be
                 # filtered out by (e.g.) architecture restrictions.  We need to cope with this while
                 # keeping block_txt and block aligned.

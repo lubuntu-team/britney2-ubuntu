@@ -297,6 +297,7 @@ class Britney(object):
 
         # initialize the apt_pkg back-end
         apt_pkg.init()
+        apt_pkg.init_config()
 
         # parse the command line arguments
         self._policy_engine = PolicyEngine()
