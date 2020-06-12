@@ -1304,7 +1304,8 @@ class Britney(object):
         if not self.options.dry_run:
             target_suite = self.suite_info.target_suite
 
-            if hasattr(self.options, 'heidi_output'):
+            if hasattr(self.options, 'heidi_output') and \
+               self.options.heidi_output:
                 # write HeidiResult
                 self.logger.info("Writing Heidi results to %s", self.options.heidi_output)
                 write_heidi(self.options.heidi_output,
