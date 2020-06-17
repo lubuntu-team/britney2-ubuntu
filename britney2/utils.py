@@ -311,7 +311,14 @@ def write_excuses(excuses, dest_file, output_format="yaml"):
     excuselist = sorted(excuses.values(), key=lambda x: x.sortkey())
     if output_format == "yaml":
         os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-        with open(dest_file, 'w', encoding='utf-8') as f:
+        opener = open
+        if dest_file.endswith('.xz'):
+            import lzma
+            opener = lzma.open
+        elif dest_file.endswith('.gz'):
+            import gzip
+            opener = gzip.open
+        with opener(dest_file, 'wt', encoding='utf-8') as f:
             edatalist = [e.excusedata(excuses) for e in excuselist]
             excusesdata = {
                 'sources': edatalist,
