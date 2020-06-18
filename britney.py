@@ -518,6 +518,8 @@ class Britney(object):
         if not hasattr(self.options, 'adt_retry_url_mech'):
             self.options.adt_retry_url_mech = ''
 
+        self.options.has_arch_all_buildds = getattr(self.options, 'has_arch_all_buildds', 'yes') == 'yes'
+
         self._policy_engine.add_policy(DependsPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(RCBugPolicy(self.options, self.suite_info))
         if getattr(self.options, 'piuparts_enable', 'yes') == 'yes':
