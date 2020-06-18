@@ -47,6 +47,7 @@ def initialize_policy(test_name, policy_class, *args, **kwargs):
         adt_regression_penalty=False,
         adt_retry_url_mech='run_id',
         fake_runtime=774000,
+        has_arch_all_buildds=True,
         **kwargs)
     suite_info = Suites(
         Suite(SuiteClass.TARGET_SUITE, target, os.path.join(test_dir, target), ''),
