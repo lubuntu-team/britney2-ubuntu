@@ -374,7 +374,8 @@ class AutopkgtestPolicy(BasePolicy):
             verdict = PolicyVerdict.REJECTED_TEMPORARILY
             excuse.add_verdict_info(verdict, "nothing built yet, autopkgtest delayed")
 
-        if 'all' in excuse.missing_builds:
+        if (self.options.has_arch_all_buildds and 'all' in excuse.missing_builds) or \
+           (not self.options.has_arch_all_buildds and self.options.all_buildarch in excuse.missing_builds):
             self.logger.info('%s hasn''t been built for arch:all, skipping autopkgtest policy', source_name)
             verdict = PolicyVerdict.REJECTED_TEMPORARILY
             excuse.add_verdict_info(verdict, "arch:all not built yet, autopkgtest delayed")

@@ -327,7 +327,8 @@ class ExcuseFinder(object):
         # at this point, we check the status of the builds on all the supported architectures
         # to catch the out-of-date ones
         archs_to_consider = list(self.options.architectures)
-        archs_to_consider.append('all')
+        if self.options.has_arch_all_buildds:
+            archs_to_consider.append('all')
         for arch in archs_to_consider:
             oodbins = {}
             uptodatebins = False
@@ -345,12 +346,19 @@ class ExcuseFinder(object):
                 binary_u = all_binaries[pkg_id]
                 pkgsv = binary_u.source_version
 
-                # arch:all packages are treated separately from arch:arch
-                if binary_u.architecture != arch:
-                    continue
+                # arch:all packages are treated separately from arch:arch if
+                # they have their own buildds
+                if self.options.has_arch_all_buildds:
+                    if binary_u.architecture != arch:
+                        continue
 
                 # TODO filter binaries based on checks below?
                 excuse.add_package(pkg_id)
+
+                # If we don't have arch:all buildds, drop arch:all packages on
+                # the non-arch-all-buildd arch
+                if not self.options.has_arch_all_buildds and arch != self.options.all_buildarch and binary_u.architecture != arch:
+                    continue
 
                 # if it wasn't built by the same source, it is out-of-date
                 # if there is at least one binary on this arch which is
