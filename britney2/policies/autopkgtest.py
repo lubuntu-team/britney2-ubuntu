@@ -27,9 +27,11 @@ import tarfile
 import io
 import itertools
 import re
+import socket
 import sys
 import time
 import urllib.parse
+from urllib.error import HTTPError
 from urllib.request import urlopen
 
 import apt_pkg
@@ -773,6 +775,30 @@ class AutopkgtestPolicy(BasePolicy):
 
     latest_run_for_package._cache = collections.defaultdict(dict)
 
+    def download_retry(self, url):
+        for retry in range(5):
+            try:
+                req = urlopen(url, timeout=30)
+                code = req.getcode()
+                if 200 <= code < 300:
+                    return req
+            except socket.timeout as e:
+                self.logger.info(
+                    "Timeout downloading '%s', will retry %d more times."
+                    % (url, 5 - retry - 1)
+                )
+                exc = e
+            except HTTPError as e:
+                if e.code not in (503, 502):
+                    raise
+                self.logger.info(
+                    "Caught error %d downloading '%s', will retry %d more times."
+                    % (e.code, url, 5 - retry - 1)
+                )
+                exc = e
+        else:
+            raise exc
+
     def fetch_swift_results(self, swift_url, src, arch):
         '''Download new results for source package/arch from swift'''
 
@@ -801,7 +827,7 @@ class AutopkgtestPolicy(BasePolicy):
         url += '?' + urllib.parse.urlencode(query)
         f = None
         try:
-            f = urlopen(url, timeout=30)
+            f = self.download_retry(url)
             if f.getcode() == 200:
                 result_paths = f.read().decode().strip().splitlines()
             elif f.getcode() == 204:  # No content
@@ -840,7 +866,7 @@ class AutopkgtestPolicy(BasePolicy):
         '''
         f = None
         try:
-            f = urlopen(url, timeout=30)
+            f = self.download_retry(url)
             if f.getcode() == 200:
                 tar_bytes = io.BytesIO(f.read())
             else:
