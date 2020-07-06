@@ -293,6 +293,8 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         if packages is None:
             packages = {}
 
+        added_old_binaries = {}
+
         all_binaries = self._all_binaries
 
         tag_file = apt_pkg.TagFile(filename)
@@ -317,7 +319,15 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                     continue
                 old_pkg_id = old_pkg_data.pkg_id
                 old_src_binaries = srcdist[old_pkg_data.source].binaries
-                old_src_binaries.remove(old_pkg_id)
+
+                prev_src = added_old_binaries.get(old_pkg_id, old_pkg_data.source)
+                ps = srcdist[prev_src]
+                ps.binaries.remove(old_pkg_id)
+                try:
+                    del added_old_binaries[old_pkg_id]
+                except KeyError:
+                    pass
+
                 # This may seem weird at first glance, but the current code rely
                 # on this behaviour to avoid issues like #709460.  Admittedly it
                 # is a special case, but Britney will attempt to remove the
@@ -326,6 +336,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                 # and the version, so it is not particularly resilient.
                 if pkg_id not in old_src_binaries:
                     old_src_binaries.add(pkg_id)
+                    added_old_binaries[pkg_id] = old_pkg_data.source
 
             # Merge Pre-Depends with Depends and Conflicts with
             # Breaks. Britney is not interested in the "finer
