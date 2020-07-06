@@ -399,8 +399,7 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                 # source -> binary mapping once. It doesn't matter which
                 # of the versions we include as only the package name and
                 # architecture are recorded.
-                if pkg_id not in srcdist[source].binaries:
-                    srcdist[source].binaries.add(pkg_id)
+                srcdist[source].binaries.add(pkg_id)
             # if the source package doesn't exist, create a fake one
             else:
                 # XXX: Do the get_component thing in a much nicer way that can be upstreamed
