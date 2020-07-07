@@ -1008,7 +1008,7 @@ class Britney(object):
 
         return (nuninst_last_accepted, maybe_rescheduled_packages)
 
-    def do_all(self, hinttype=None, init=None, actions=None):
+    def do_all(self, hinttype=None, init=None, actions=None, break_ok=False):
         """Testing update runner
 
         This method tries to update testing checking the uninstallability
@@ -1116,7 +1116,7 @@ class Britney(object):
                 better = True
             else:
                 break_arches = set(self.options.break_arches)
-                if all(x.architecture in break_arches for x in selected):
+                if all(x.architecture in break_arches for x in selected) and not break_ok:
                     # If we only migrated items from break-arches, then we
                     # do not allow any regressions on these architectures.
                     # This usually only happens with hints
@@ -1290,7 +1290,7 @@ class Britney(object):
         if removals:
             output_logger.info("Removing packages left in the target suite (e.g. smooth updates or cruft)")
             log_and_format_old_libraries(self.output_logger, removals)
-            self.do_all(actions=removals)
+            self.do_all(actions=removals, break_ok=True)
             removals = old_libraries(self._migration_item_factory, self.suite_info, self.options.outofsync_arches)
 
         output_logger.info("List of old libraries in the target suite (%d):", len(removals))
