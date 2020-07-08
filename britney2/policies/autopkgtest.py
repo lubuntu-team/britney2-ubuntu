@@ -466,7 +466,7 @@ class AutopkgtestPolicy(BasePolicy):
 
                 # render HTML line for testsrc entry, but only when action is
                 # or may be required
-                if r - {'PASS', 'NEUTRAL', 'RUNNING-ALWAYSFAIL', 'ALWAYSFAIL'}:
+                if r - {'PASS', 'NEUTRAL', 'RUNNING-ALWAYSFAIL', 'ALWAYSFAIL', 'IGNORE-FAIL'}:
                     results_info.append("autopkgtest for %s: %s" % (testname, ', '.join(html_archmsg)))
 
         if verdict != PolicyVerdict.PASS:
