@@ -849,14 +849,17 @@ class DependsPolicy(BasePolicy):
                 # we don't care about the existing arch: all binaries when
                 # checking a binNMU item, because the arch: all binaries won't
                 # migrate anyway
+                skip_dep_check_reason = "this is a binary-only arch:all migration"
                 skip_dep_check = True
 
             if pkg_arch == 'all' and arch not in self.nobreakall_arches:
+                skip_dep_check_reason = "this is an arch:all package which isn't required to be installable here"
                 skip_dep_check = True
 
             if pkg_name in self.allow_uninst[arch]:
                 # this binary is allowed to become uninstallable, so we don't
                 # need to check anything
+                skip_dep_check_reason = "it is allowed to become uninstallable via an allow-uninst hint"
                 skip_dep_check = True
 
             if pkg_name in packages_t_a:
@@ -866,6 +869,7 @@ class DependsPolicy(BasePolicy):
                     # uninstallable, the newer version is allowed to be
                     # uninstallable as well, so we don't need to check
                     # anything
+                    skip_dep_check_reason = "it is already uninstallable in the target suite"
                     skip_dep_check = True
 
             if pkg_id in self.broken_packages:
@@ -877,6 +881,8 @@ class DependsPolicy(BasePolicy):
                     # we don't care
                     # we still want the binary to be listed as uninstallable,
                     # so the autopkgtest policy knows not to try to run tests
+                    excuse.add_verdict_info(verdict, "%s/%s has unsatisfiable dependency, but %s so never mind." % (
+                        pkg_name, arch, skip_dep_check_reason))
                     continue
                 verdict = PolicyVerdict.REJECTED_PERMANENTLY
                 excuse.add_verdict_info(verdict, "%s/%s has unsatisfiable dependency" % (
