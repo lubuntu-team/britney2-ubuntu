@@ -630,13 +630,11 @@ class AutopkgtestPolicy(BasePolicy):
                             pass
         trigger = source_name + '/' + source_version
         triggers.discard(trigger)
-        trigger_str = trigger
-        if triggers:
-            # Make the order (minus the "real" trigger) deterministic
-            trigger_str += ' ' + ' '.join(sorted(list(triggers)))
+        triggers_list = sorted(list(triggers))
+        triggers_list.insert(0, trigger)
 
         for (testsrc, testver) in tests:
-            self.pkg_test_request(testsrc, arch, trigger_str, huge=is_huge)
+            self.pkg_test_request(testsrc, arch, triggers_list, huge=is_huge)
             (result, real_ver, run_id, url) = self.pkg_test_result(testsrc, testver, arch, trigger)
             pkg_arch_result[(testsrc, real_ver)][arch] = (result, run_id, url)
 
@@ -978,8 +976,8 @@ class AutopkgtestPolicy(BasePolicy):
             result[2] = run_id
             result[3] = seen
 
-    def send_test_request(self, src, arch, trigger, huge=False):
-        '''Send out AMQP request for testing src/arch for trigger
+    def send_test_request(self, src, arch, triggers, huge=False):
+        '''Send out AMQP request for testing src/arch for triggers
 
         If huge is true, then the request will be put into the -huge instead of
         normal queue.
@@ -987,7 +985,7 @@ class AutopkgtestPolicy(BasePolicy):
         if self.options.dry_run:
             return
 
-        params = {'triggers': [trigger]}
+        params = {'triggers': triggers}
         if self.options.adt_ppas:
             params['ppas'] = self.options.adt_ppas
             qname = 'debci-ppa-%s-%s' % (self.options.series, arch)
@@ -996,18 +994,21 @@ class AutopkgtestPolicy(BasePolicy):
         else:
             qname = 'debci-%s-%s' % (self.options.series, arch)
         params['submit-time'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S%z')
-        params = json.dumps(params)
 
         if self.amqp_channel:
+            params = json.dumps(params)
             self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params,
                                                          delivery_mode=2),  # persistent
                                             routing_key=qname)
         else:
+            # for file-based submission, triggers are space separated
+            params['triggers'] = [' '.join(params['triggers'])]
+            params = json.dumps(params)
             assert self.amqp_file
             with open(self.amqp_file, 'a') as f:
                 f.write('%s:%s %s\n' % (qname, src, params))
 
-    def pkg_test_request(self, src, arch, full_trigger, huge=False):
+    def pkg_test_request(self, src, arch, full_triggers, huge=False):
         '''Request one package test for one particular trigger
 
         trigger is "pkgname/version" of the package that triggers the testing
@@ -1020,7 +1021,7 @@ class AutopkgtestPolicy(BasePolicy):
         ensures to download current results for this package before
         requesting any test.
 '''
-        trigger = full_trigger.split()[0]
+        trigger = full_triggers[0]
         uses_swift = not self.options.adt_swift_url.startswith('file://')
         try:
             result = self.test_results[trigger][src][arch]
@@ -1058,11 +1059,11 @@ class AutopkgtestPolicy(BasePolicy):
             except KeyError:
                 pass
 
-        self.request_test_if_not_queued(src, arch, trigger, full_trigger, huge=huge)
+        self.request_test_if_not_queued(src, arch, trigger, full_triggers, huge=huge)
 
-    def request_test_if_not_queued(self, src, arch, trigger, full_trigger=None, huge=False):
-        if full_trigger is None:
-            full_trigger = trigger
+    def request_test_if_not_queued(self, src, arch, trigger, full_triggers=[], huge=False):
+        if not full_triggers:
+            full_triggers = [trigger]
 
         # Don't re-request if it's already pending
         arch_list = self.pending_tests.setdefault(trigger, {}).setdefault(src, [])
@@ -1072,7 +1073,7 @@ class AutopkgtestPolicy(BasePolicy):
             self.logger.info('Requesting %s autopkgtest on %s to verify %s', src, arch, trigger)
             arch_list.append(arch)
             arch_list.sort()
-            self.send_test_request(src, arch, full_trigger, huge=huge)
+            self.send_test_request(src, arch, full_triggers, huge=huge)
             # save pending.json right away, so that we don't re-request if britney crashes
             self.save_pending_json()
 
