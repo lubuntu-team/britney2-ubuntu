@@ -997,6 +997,7 @@ class AutopkgtestPolicy(BasePolicy):
         params['submit-time'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S%z')
 
         if self.amqp_channel:
+            import amqplib.client_0_8 as amqp
             params = json.dumps(params)
             self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params,
                                                          delivery_mode=2),  # persistent
