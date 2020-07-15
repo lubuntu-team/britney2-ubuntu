@@ -2411,6 +2411,24 @@ class AT(TestAutopkgtestBase):
     # Tests for special-cased packages
     ################################################################
 
+    def test_gcc(self):
+        '''gcc only triggers some key packages'''
+
+        self.data.add('binutils', False, {}, testsuite='autopkgtest')
+        self.data.add('linux', False, {}, testsuite='autopkgtest')
+        self.data.add('notme', False, {'Depends': 'libgcc1'}, testsuite='autopkgtest')
+
+        # binutils has passed before on i386 only, therefore ALWAYSFAIL on amd64
+        self.swift.set_results({'autopkgtest-testing': {
+            'testing/i386/b/binutils/20150101_100000@': (0, 'binutils 1', tr('passedbefore/1')),
+        }})
+
+        exc = self.run_it(
+            [('libgcc1', {'Source': 'gcc-5', 'Version': '2'}, None)],
+            {'gcc-5': (False, {'binutils': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING'},
+                               'linux': {'amd64': 'RUNNING-ALWAYSFAIL', 'i386': 'RUNNING-ALWAYSFAIL'}})})[1]
+        self.assertNotIn('notme 1', exc['gcc-5']['policy_info']['autopkgtest'])
+
     def test_gcc_hastest(self):
         """gcc triggers itself when it has a testsuite"""
 

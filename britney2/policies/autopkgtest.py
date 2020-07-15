@@ -651,6 +651,29 @@ class AutopkgtestPolicy(BasePolicy):
 
         tests = []
 
+        # gcc-N triggers tons of tests via libgcc1, but this is mostly in vain:
+        # gcc already tests itself during build, and it is being used from
+        # -proposed, so holding it back on a dozen unrelated test failures
+        # serves no purpose. Just check some key packages which actually use
+        # gcc during the test, and doxygen as an example for a libgcc user.
+        if src.startswith('gcc-'):
+            if re.match(r'gcc-\d$', src) or src == 'gcc-defaults':
+                # add gcc's own tests, if it has any
+                srcinfo = source_suite.sources[src]
+                if 'autopkgtest' in srcinfo.testsuite:
+                    tests.append((src, ver))
+                for test in ['binutils', 'fglrx-installer', 'doxygen', 'linux']:
+                    try:
+                        tests.append((test, sources_info[test].version))
+                    except KeyError:
+                        # no package in that series? *shrug*, then not (mostly for testing)
+                        pass
+                return tests
+            else:
+                # for other compilers such as gcc-snapshot etc. we don't need
+                # to trigger anything
+                return []
+
         # Debian doesn't have linux-meta, but Ubuntu does
         # for linux themselves we don't want to trigger tests -- these should
         # all come from linux-meta*. A new kernel ABI without a corresponding
