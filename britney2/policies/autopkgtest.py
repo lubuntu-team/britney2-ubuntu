@@ -678,8 +678,13 @@ class AutopkgtestPolicy(BasePolicy):
         # all come from linux-meta*. A new kernel ABI without a corresponding
         # -meta won't be installed and thus we can't sensibly run tests against
         # it.
-        if src.startswith('linux') and src.replace('linux', 'linux-meta') in sources_info:
-            return []
+        if src.startswith('linux'):
+            if src.startswith('linux-signed'):
+                meta = src.replace('linux-signed', 'linux-meta')
+            else:
+                meta = src.replace('linux', 'linux-meta')
+            if meta in sources_info or meta in source_suite.sources:
+                return []
 
         # we want to test the package itself, if it still has a test in unstable
         # but only if the package actually exists on this arch
