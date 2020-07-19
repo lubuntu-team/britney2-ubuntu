@@ -876,7 +876,9 @@ class DependsPolicy(BasePolicy):
                     # ...but if the binary is allowed to become uninstallable,
                     # we don't care
                     # we still want the binary to be listed as uninstallable,
-                    # so the autopkgtest policy knows not to try to run tests
+                    # let the autopkgtest policy see that we did this so that
+                    # it can run the test anyway
+                    deps_info.setdefault('skip_dep_check', []).append(arch)
                     continue
                 verdict = PolicyVerdict.REJECTED_PERMANENTLY
                 excuse.add_verdict_info(verdict, "%s/%s has unsatisfiable dependency" % (
