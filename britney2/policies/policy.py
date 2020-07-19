@@ -883,6 +883,8 @@ class DependsPolicy(BasePolicy):
                     # so the autopkgtest policy knows not to try to run tests
                     excuse.add_verdict_info(verdict, "%s/%s has unsatisfiable dependency, but %s so never mind." % (
                         pkg_name, arch, skip_dep_check_reason))
+                    # let the autopkgtest policy see that we did this
+                    deps_info.setdefault('skip_dep_check', []).append(arch)
                     continue
                 verdict = PolicyVerdict.REJECTED_PERMANENTLY
                 excuse.add_verdict_info(verdict, "%s/%s has unsatisfiable dependency" % (
