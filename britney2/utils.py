@@ -728,6 +728,7 @@ def invalidate_excuses(excuses, valid, invalid, invalidated):
             exc = excuses[x]
             # if the item is valid and it is not marked as `forced', then we
             # invalidate this specfic dependency
+
             if x in valid and not exc.forced:
                 # mark this specific dependency as invalid
                 still_valid = exc.invalidate_dependency(ename, rdep_verdict)
