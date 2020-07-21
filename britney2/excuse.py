@@ -412,11 +412,15 @@ class Excuse(object):
                 info = "Impossible %s: %s -> %s" % (d.deptype, self.uvname, desc)
             else:
                 duv = excuses[dep].uvname
-                if d.valid:
-                    info = "%s: %s <a href=\"#%s\">%s</a>" % (d.deptype, self.uvname, duv, duv)
-                else:
+                verdict = excuses[dep].policy_verdict
+                if not d.valid or verdict in (PolicyVerdict.REJECTED_NEEDS_APPROVAL,
+                                              PolicyVerdict.REJECTED_CANNOT_DETERMINE_IF_PERMANENT,
+                                              PolicyVerdict.REJECTED_PERMANENTLY):
                     info = "%s: %s <a href=\"#%s\">%s</a> (not considered)" % (d.deptype, self.uvname, duv, duv)
-                    dep_issues[d.verdict].add("Invalidated by %s" % d.deptype.get_description())
+                    if not d.valid:
+                        dep_issues[d.verdict].add("Invalidated by %s" % d.deptype.get_description())
+                else:
+                    info = "%s: %s <a href=\"#%s\">%s</a>" % (d.deptype, self.uvname, duv, duv)
             dep_issues[d.verdict].add(info)
 
         seen = set()
