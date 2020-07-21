@@ -529,7 +529,8 @@ class Britney(object):
         self._policy_engine.add_policy(AgePolicy(self.options, self.suite_info, MINDAYS))
         self._policy_engine.add_policy(BuildDependsPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(BlockPolicy(self.options, self.suite_info))
-        self._policy_engine.add_policy(BuiltUsingPolicy(self.options, self.suite_info))
+        # XXX re-enable once https://bugs.launchpad.net/launchpad/+bug/1868558 is fixed
+        # self._policy_engine.add_policy(BuiltUsingPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(ImplicitDependencyPolicy(self.options, self.suite_info))
         if getattr(self.options, 'check_buildd', 'no') == 'yes':
             self._policy_engine.add_policy(BuiltOnBuilddPolicy(self.options, self.suite_info))
