@@ -156,6 +156,7 @@ class Excuse(object):
         self.hints = []
         self.forced = False
         self._policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+        self.invalidated_externally = False
 
         self.all_deps = []
         self.break_deps = []
@@ -218,6 +219,29 @@ class Excuse(object):
             # undo the rejection
             value = PolicyVerdict.PASS_HINTED
         self._policy_verdict = value
+
+    @property
+    def tentative_policy_verdict(self):
+        """If we've not finished running all of the policies, we can find out
+        what all of the policies that have run so far said."""
+        all_verdicts = {
+            info["verdict"]
+            if isinstance(info["verdict"], PolicyVerdict)
+            else PolicyVerdict[info["verdict"]]
+            for info in self.policy_info.values()
+        }
+
+        return max(all_verdicts)
+
+    def invalidate_externally(self, verdict):
+        """A policy might want to invalidate an excuse other than the one it
+        is currently looking at, e.g. if it later learns of a fact that it
+        didn't know when it was processing the first excuse.
+
+        We need to know, so that we can remove this excuse from the list of
+        actionable excuses."""
+        self.policy_verdict = verdict
+        self.invalidated_externally = True
 
     def set_vers(self, tver, uver):
         """Set the versions of the item from target and source suite"""

@@ -520,6 +520,9 @@ class ExcuseFinder(object):
                         if should_upgrade_srcarch(item):
                             actionable_items_add(item)
 
+        # If anything was discarded by a different excuse, it's not actionable any more
+        actionable_items = {item for item in actionable_items if not self.excuses[item.name].invalidated_externally}
+
         # process the `remove' hints, if the given package is not yet in actionable_items
         for hint in self.hints['remove']:
             src = hint.package
