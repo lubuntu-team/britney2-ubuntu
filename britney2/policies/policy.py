@@ -1318,7 +1318,7 @@ class BlockPolicy(BasePolicy):
             else:
                 verdict = PolicyVerdict.REJECTED_NEEDS_APPROVAL
                 if is_primary or block_cmd == 'block-udeb':
-                    tooltip = "please contact debian-release if update is needed"
+                    tooltip = "please contact %s-release if update is needed" % self._britney.options.distribution
                     # redirect people to d-i RM for udeb things:
                     if block_cmd == 'block-udeb':
                         tooltip = "please contact the d-i release manager if an update is needed"

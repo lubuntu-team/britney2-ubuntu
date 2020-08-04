@@ -61,7 +61,8 @@ class ExcuseFinder(object):
             excuse.add_verdict_info(
                 excuse.policy_verdict,
                 "Not touching package, as requested by %s "
-                "(contact debian-release if update is needed)" % hint.user)
+                "(contact %s-release if update is needed)" % (hint.user,
+                                                              self.options.distribution))
             excuse.addreason("block")
             self.excuses[excuse.name] = excuse
             return False
@@ -585,7 +586,8 @@ class ExcuseFinder(object):
                 excuse.add_verdict_info(
                     excuse.policy_verdict,
                     "Not removing package, due to block hint by %s "
-                    "(contact debian-release if update is needed)" % blockhint.user)
+                    "(contact %s-release if update is needed)" % (blockhint.user,
+                                                                  self.options.distribution))
                 excuse.addreason("block")
                 blocked = True
 
