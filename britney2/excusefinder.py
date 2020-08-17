@@ -619,10 +619,15 @@ class ExcuseFinder(object):
 
         # check that the list of actionable items matches the list of valid
         # excuses
-        assert valid == {x for x in excuses if excuses[x].is_valid}
+        assert_sets_equal(valid, {x for x in excuses if excuses[x].is_valid})
 
         # check that the rdeps for all invalid excuses were invalidated
-        assert invalidated == {x for x in excuses if not excuses[x].is_valid}
+        assert_sets_equal(invalidated, {x for x in excuses if not excuses[x].is_valid})
 
         actionable_items = {x for x in actionable_items if x.name in valid}
         return excuses, actionable_items
+
+
+def assert_sets_equal(a, b):
+    if a != b:
+        raise AssertionError("sets not equal a-b {} b-a {}".format(a-b, b-a))
