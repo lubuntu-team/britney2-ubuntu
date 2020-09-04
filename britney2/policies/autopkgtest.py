@@ -657,7 +657,7 @@ class AutopkgtestPolicy(BasePolicy):
         # serves no purpose. Just check some key packages which actually use
         # gcc during the test, and doxygen as an example for a libgcc user.
         if src.startswith('gcc-'):
-            if re.match(r'gcc-\d$', src) or src == 'gcc-defaults':
+            if re.match(r'gcc-\d+$', src) or src == 'gcc-defaults':
                 # add gcc's own tests, if it has any
                 srcinfo = source_suite.sources[src]
                 if 'autopkgtest' in srcinfo.testsuite:
