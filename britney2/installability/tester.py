@@ -163,9 +163,11 @@ class InstallabilityTester(object):
 
         if pkg_id in self._suite_contents:
             self._suite_contents.remove(pkg_id)
-            if pkg_id.architecture in self._cache_ess and pkg_id in self._cache_ess[pkg_id.architecture][0]:
-                # Removes a package from the "pseudo-essential set"
-                del self._cache_ess[pkg_id.architecture]
+            if pkg_id.architecture in self._cache_ess:
+                (start, ess_never, ess_choices) = self._cache_ess[pkg_id.architecture]
+                if pkg_id in start or any([pkg_id in choices for choices in ess_choices]):
+                    # Removes a package from the "pseudo-essential set"
+                    del self._cache_ess[pkg_id.architecture]
 
             if not self._universe.reverse_dependencies_of(pkg_id):
                 # no reverse relations - safe
