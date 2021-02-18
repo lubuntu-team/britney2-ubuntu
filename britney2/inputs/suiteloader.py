@@ -489,22 +489,23 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                                             binary_dir,
                                             'Packages')
                     filename = possibly_compressed(filename)
-                    udeb_filename = os.path.join(basedir,
-                                                 component,
-                                                 "debian-installer",
-                                                 binary_dir,
-                                                 "Packages")
-                    # We assume the udeb Packages file is present if the
-                    # regular one is present
-                    udeb_filename = possibly_compressed(udeb_filename)
                     self._read_packages_file(filename,
                                              arch,
                                              suite.sources,
                                              packages)
-                    self._read_packages_file(udeb_filename,
-                                             arch,
-                                             suite.sources,
-                                             packages)
+                    if getattr(self._base_config, 'has_udebs', 'yes') == 'yes':
+                        udeb_filename = os.path.join(basedir,
+                                                     component,
+                                                     "debian-installer",
+                                                     binary_dir,
+                                                     "Packages")
+                        # We assume the udeb Packages file is present if the
+                        # regular one is present
+                        udeb_filename = possibly_compressed(udeb_filename)
+                        self._read_packages_file(udeb_filename,
+                                                 arch,
+                                                 suite.sources,
+                                                 packages)
                 # create provides
                 provides = create_provides_map(packages)
                 binaries[arch] = packages
