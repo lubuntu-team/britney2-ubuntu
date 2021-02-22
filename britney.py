@@ -527,7 +527,14 @@ class Britney(object):
         if getattr(self.options, 'adt_enable') == 'yes':
             self._policy_engine.add_policy(AutopkgtestPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(AgePolicy(self.options, self.suite_info, MINDAYS))
-        self._policy_engine.add_policy(BuildDependsPolicy(self.options, self.suite_info))
+        # XXX this policy results in asymmetric enforcement of
+        # build-dependencies in the release pocket (nothing blocks
+        # propagation of a new package which will regress build-dep
+        # satisfaction of another package already in the release pocket, this
+        # only shows up via the NBS report); and this is a subset of what we
+        # already get from the rebuild tests, which the reality is we don't
+        # have capacity to enforce for the whole archive. - vorlon
+        # self._policy_engine.add_policy(BuildDependsPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(BlockPolicy(self.options, self.suite_info))
         # XXX re-enable once https://bugs.launchpad.net/launchpad/+bug/1868558 is fixed
         # self._policy_engine.add_policy(BuiltUsingPolicy(self.options, self.suite_info))
