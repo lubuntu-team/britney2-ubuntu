@@ -244,6 +244,10 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
         source_binaries = source.binaries
         source_provides = source.provides_table
         oodsrcs = defaultdict(set)
+        try:
+            all_buildarch = self._base_config.all_buildarch
+        except AttributeError:
+            all_buildarch = None
 
         def _merge_binaries_arch(arch):
             for pkg, value in target_binaries[arch].items():
@@ -260,13 +264,30 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                         self.logger.info("merge_binaries: pkg %s has no source, NBS?" % pkg)
                         continue
                     if target_version != source_version:
+                        arches_built = set([source_binaries[b.architecture][b.package_name].architecture
+                                           for b in source_sources[value.source].binaries
+                                           if b.architecture in (arch, all_buildarch)])
+                        only_builds_arch_all = arches_built == set(['all'])
+                        # If we only build arch:all packages in the source suite,
+                        # it will look like the package is unbuilt on the arches
+                        # other than the all buildarch. But we don't expect a build
+                        # there, so don't merge binaries from the target. If we
+                        # were to, it would look like any dropped non-arch-all
+                        # binaries had gone missing.
+                        if only_builds_arch_all and arch != all_buildarch:
+                            continue
+
                         current_arch = value.architecture
                         built = False
                         for b in source_sources[value.source].binaries:
                             if b.architecture == arch:
                                 source_value = source_binaries[arch][b.package_name]
+                                # arch:all packages show up in all Packages
+                                # files, but they are only indicative of a
+                                # build on the all_buildarch.
                                 if current_arch in (
-                                        source_value.architecture, 'all'):
+                                        source_value.architecture, 'all') or \
+                                        (source_value.architecture == 'all' and arch == all_buildarch):
                                     built = True
                                     break
                         if built:
