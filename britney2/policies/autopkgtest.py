@@ -147,7 +147,8 @@ class AutopkgtestPolicy(BasePolicy):
 
         self.swift_container = 'autopkgtest-' + options.series
         if self.options.adt_ppas:
-            self.swift_container += '-' + options.adt_ppas[-1].replace('/', '-')
+            # private PPAs require the auth credentials given
+            self.swift_container += '-' + options.adt_ppas[-1].rpartition('@')[2].replace('/', '-')
 
         # restrict adt_arches to architectures we actually run for
         self.adt_arches = []
@@ -469,7 +470,10 @@ class AutopkgtestPolicy(BasePolicy):
                     if status == 'REGRESSION':
                         if self.options.adt_retry_url_mech == 'run_id':
                             retry_url = self.options.adt_ci_url + 'api/v1/retry/' + run_id
-                        else:
+                        elif not any('@' in ppa for ppa in self.options.adt_ppas):
+                            # private PPAs currently should not display a retry
+                            # button until we can guarantee that the secrets
+                            # will not leak
                             retry_url = self.options.adt_ci_url + 'request.cgi?' + \
                                     urllib.parse.urlencode([('release', self.options.series),
                                                             ('arch', arch),

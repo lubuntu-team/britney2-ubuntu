@@ -2545,6 +2545,60 @@ class AT(TestAutopkgtestBase):
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})
 
+    def test_private_ppas(self):
+        '''Run test requests with an additional private PPA'''
+
+        self.data.add_default_packages(lightgreen=False)
+
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if line.startswith('ADT_PPAS'):
+                print('ADT_PPAS = user:password@joe/foo')
+            else:
+                sys.stdout.write(line)
+
+        exc = self.run_it(
+            [('lightgreen', {'Version': '2'}, 'autopkgtest')],
+            {'lightgreen': (True, {'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL'}})},
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
+        )[1]
+
+        # add results to PPA specific swift container
+        self.swift.set_results({'autopkgtest-testing-joe-foo': {
+            'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
+            'testing/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 2', tr('lightgreen/2')),
+            'testing/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        exc = self.run_it(
+            [],
+            {'lightgreen': (False, {'lightgreen/2': {'i386': 'REGRESSION', 'amd64': 'PASS'}})},
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
+        )[1]
+        # check if the right container name is used and that no secrets are
+        # leaked in the retry url (as it should be None now)
+        self.assertEqual(
+            exc['lightgreen']['policy_info']['autopkgtest'],
+            {'lightgreen/2': {
+                'amd64': [
+                    'PASS',
+                    'http://localhost:18085/autopkgtest-testing-joe-foo/'
+                    'testing/amd64/l/lightgreen/20150101_100101@/log.gz',
+                    None,
+                    'http://localhost:18085/autopkgtest-testing-joe-foo/'
+                    'testing/amd64/l/lightgreen/20150101_100101@/artifacts.tar.gz',
+                    None],
+                'i386': [
+                    'REGRESSION',
+                    'http://localhost:18085/autopkgtest-testing-joe-foo/'
+                    'testing/i386/l/lightgreen/20150101_100100@/log.gz',
+                    None,
+                    'http://localhost:18085/autopkgtest-testing-joe-foo/'
+                    'testing/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz',
+                    None]},
+             'verdict': 'REJECTED_PERMANENTLY'})
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, {})
+
     def test_disable_upgrade_tester(self):
         '''Run without second stage upgrade tester'''
 
