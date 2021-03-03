@@ -395,6 +395,10 @@ ADT_PPAS          =
 ADT_SHARED_RESULTS_CACHE =
 
 ADT_SWIFT_URL     = http://localhost:18085
+ADT_SWIFT_USER    = 
+ADT_SWIFT_PASS    = 
+ADT_SWIFT_AUTH_URL = 
+ADT_SWIFT_TENANT  = 
 ADT_CI_URL        = https://autopkgtest.ubuntu.com/
 ADT_HUGE          = 20
 
