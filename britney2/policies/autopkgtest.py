@@ -223,6 +223,9 @@ class AutopkgtestPolicy(BasePolicy):
                 auth_version=auth_version
                 )
         else:
+            if any('@' in ppa for ppa in self.options.adt_ppas):
+                raise RuntimeError('Private PPA configured but no swift credentials given')
+
             self.swift_conn = None
 
         # read in the new results
