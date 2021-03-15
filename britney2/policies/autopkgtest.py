@@ -147,8 +147,10 @@ class AutopkgtestPolicy(BasePolicy):
 
         self.swift_container = 'autopkgtest-' + options.series
         if self.options.adt_ppas:
-            # private PPAs require the auth credentials given
-            self.swift_container += '-' + options.adt_ppas[-1].rpartition('@')[2].replace('/', '-')
+            # private PPAs require the auth credentials given + we allow the
+            # PPA fingerprint attached at the end
+            # those need to be removed before the ppa-based name can be used
+            self.swift_container += '-' + options.adt_ppas[-1].rpartition('@')[2].replace('/', '-').partition(':')[0]
 
         # restrict adt_arches to architectures we actually run for
         self.adt_arches = []
@@ -207,6 +209,18 @@ class AutopkgtestPolicy(BasePolicy):
                     not self.options.adt_swift_tenant):
                 raise RuntimeError('Incomplete swift credentials given')
 
+            # once swift credentials are given, the results will be published
+            # to a private container
+            self.swift_container = 'private-' + self.swift_container
+
+            # check if all private PPAs have a fingerprint provided
+            # private PPAs need to follow the following pattern:
+            # user:token@team/name:fingerprint
+            for ppa in self.options.adt_ppas:
+                # TODO: write a test for this
+                if '@' in ppa and not re.match(r'^.+:.+@.+:.+$', ppa):
+                    raise RuntimeError('Private PPA %s not following required format (user:token@team/name:fingerprint)', ppa)
+
             import swiftclient
 
             if '/v2.0' in self.options.adt_swift_auth_url:
@@ -214,7 +228,7 @@ class AutopkgtestPolicy(BasePolicy):
             else:
                 auth_version = '1'
 
-            self.logger.info('Creating an authenticated swift connection for user %s', self.adt_swift_user)
+            self.logger.info('Creating an authenticated swift connection for user %s', self.options.adt_swift_user)
             self.swift_conn = swiftclient.Connection(
                 authurl=self.options.adt_swift_auth_url,
                 user=self.options.adt_swift_user,
