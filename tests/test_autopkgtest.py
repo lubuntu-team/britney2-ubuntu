@@ -16,6 +16,7 @@ import urllib.parse
 
 import apt_pkg
 import yaml
+from unittest.mock import patch, Mock
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_DIR)
@@ -116,7 +117,7 @@ class TestAutopkgtestBase(TestBase):
         with open(email_path, 'w', encoding='utf-8') as email:
             email.write(json.dumps(self.email_cache))
 
-        self.swift.start()
+        self.swift.start(swiftclient=True)
         (excuses_yaml, excuses_html, out) = self.run_britney()
         self.swift.stop()
 
@@ -2552,7 +2553,15 @@ class AT(TestAutopkgtestBase):
 
         for line in fileinput.input(self.britney_conf, inplace=True):
             if line.startswith('ADT_PPAS'):
-                print('ADT_PPAS = user:password@joe/foo')
+                print('ADT_PPAS = first/ppa user:password@joe/foo:DEADBEEF')
+            elif line.startswith('ADT_SWIFT_USER'):
+                print('ADT_SWIFT_USER = user')
+            elif line.startswith('ADT_SWIFT_PASS'):
+                print('ADT_SWIFT_PASS = pass')
+            elif line.startswith('ADT_SWIFT_TENANT'):
+                print('ADT_SWIFT_TENANT = tenant')
+            elif line.startswith('ADT_SWIFT_AUTH_URL'):
+                print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
             else:
                 sys.stdout.write(line)
 
@@ -2562,8 +2571,15 @@ class AT(TestAutopkgtestBase):
             {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
         )[1]
 
+        # check if the private PPA info is propagated to the AMQP queue
+        self.assertEqual(len(self.amqp_requests), 2)
+        for request in self.amqp_requests:
+            self.assertIn('"triggers": ["lightgreen/2"]', request)
+            self.assertIn('"ppas": ["first/ppa", "user:password@joe/foo:DEADBEEF"]', request)
+            self.assertIn('"readable-by": "user"', request)
+
         # add results to PPA specific swift container
-        self.swift.set_results({'autopkgtest-testing-joe-foo': {
+        self.swift.set_results({'private-autopkgtest-testing-joe-foo': {
             'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
             'testing/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 2', tr('lightgreen/2')),
             'testing/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
@@ -2581,20 +2597,86 @@ class AT(TestAutopkgtestBase):
             {'lightgreen/2': {
                 'amd64': [
                     'PASS',
-                    'http://localhost:18085/autopkgtest-testing-joe-foo/'
+                    'http://localhost:18085/private-autopkgtest-testing-joe-foo/'
                     'testing/amd64/l/lightgreen/20150101_100101@/log.gz',
                     None,
-                    'http://localhost:18085/autopkgtest-testing-joe-foo/'
+                    'http://localhost:18085/private-autopkgtest-testing-joe-foo/'
                     'testing/amd64/l/lightgreen/20150101_100101@/artifacts.tar.gz',
                     None],
                 'i386': [
                     'REGRESSION',
-                    'http://localhost:18085/autopkgtest-testing-joe-foo/'
+                    'http://localhost:18085/private-autopkgtest-testing-joe-foo/'
                     'testing/i386/l/lightgreen/20150101_100100@/log.gz',
                     None,
-                    'http://localhost:18085/autopkgtest-testing-joe-foo/'
+                    'http://localhost:18085/private-autopkgtest-testing-joe-foo/'
                     'testing/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz',
                     None]},
+             'verdict': 'REJECTED_PERMANENTLY'})
+        self.assertEqual(self.amqp_requests, set())
+        self.assertEqual(self.pending_requests, {})
+
+    def test_private_without_ppa(self):
+        '''Run a private test (without using a private PPA)'''
+
+        self.data.add_default_packages(lightgreen=False)
+
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if line.startswith('ADT_SWIFT_USER'):
+                print('ADT_SWIFT_USER = user')
+            elif line.startswith('ADT_SWIFT_PASS'):
+                print('ADT_SWIFT_PASS = pass')
+            elif line.startswith('ADT_SWIFT_TENANT'):
+                print('ADT_SWIFT_TENANT = tenant')
+            elif line.startswith('ADT_SWIFT_AUTH_URL'):
+                print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
+            else:
+                sys.stdout.write(line)
+
+        exc = self.run_it(
+            [('lightgreen', {'Version': '2'}, 'autopkgtest')],
+            {'lightgreen': (True, {'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL'}})},
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
+        )[1]
+
+        # check if the user info is propagated to the AMQP queue
+        self.assertEqual(len(self.amqp_requests), 2)
+        for request in self.amqp_requests:
+            self.assertIn('"triggers": ["lightgreen/2"]', request)
+            self.assertIn('"readable-by": "user"', request)
+
+        # add results to PPA specific swift container
+        self.swift.set_results({'private-autopkgtest-testing': {
+            'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
+            'testing/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 2', tr('lightgreen/2')),
+            'testing/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
+        }})
+
+        exc = self.run_it(
+            [],
+            {'lightgreen': (False, {'lightgreen/2': {'i386': 'REGRESSION', 'amd64': 'PASS'}})},
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
+        )[1]
+
+        # check if the right container name is used and that we still have the
+        # retry url (it should only be hidden for private PPAs)
+        self.assertEqual(
+            exc['lightgreen']['policy_info']['autopkgtest'],
+            {'lightgreen/2': {
+                'amd64': [
+                    'PASS',
+                    'http://localhost:18085/private-autopkgtest-testing/'
+                    'testing/amd64/l/lightgreen/20150101_100101@/log.gz',
+                    'https://autopkgtest.ubuntu.com/packages/l/lightgreen/testing/amd64',
+                    None,
+                    None],
+                'i386': [
+                    'REGRESSION',
+                    'http://localhost:18085/private-autopkgtest-testing/'
+                    'testing/i386/l/lightgreen/20150101_100100@/log.gz',
+                    'https://autopkgtest.ubuntu.com/packages/l/lightgreen/testing/i386',
+                    None,
+                    'https://autopkgtest.ubuntu.com/request.cgi?release=testing&arch=i386&package=lightgreen&'
+                    'trigger=lightgreen%2F2']},
              'verdict': 'REJECTED_PERMANENTLY'})
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})

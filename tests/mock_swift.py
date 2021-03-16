@@ -19,6 +19,10 @@ except ImportError:
     from urlparse import urlparse, parse_qs
 
 
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_DIR = os.path.dirname(TESTS_DIR)
+
+
 class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
     '''Mock swift container with autopkgtest results
 
@@ -124,7 +128,15 @@ class AutoPkgTestSwiftServer:
         '''
         SwiftHTTPRequestHandler.results = results
 
-    def start(self):
+    def start(self, swiftclient=False):
+        if swiftclient:
+            # since we're running britney directly, the only way to reliably
+            # mock out the swiftclient module is to override it in the local
+            # path with the dummy version we created
+            src = os.path.join(TESTS_DIR, 'mock_swiftclient.py')
+            dst = os.path.join(PROJECT_DIR, 'swiftclient.py')
+            os.symlink(src, dst)
+            
         assert self.server_pid is None, 'already started'
         if self.log:
             self.log.close()
@@ -148,11 +160,18 @@ class AutoPkgTestSwiftServer:
         sys.exit(0)
 
     def stop(self):
+        # in case we were 'mocking out' swiftclient, remove the symlink we
+        # created earlier during start()
+        swiftclient_mod = os.path.join(PROJECT_DIR, 'swiftclient.py')
+        if os.path.islink(swiftclient_mod):
+            os.unlink(swiftclient_mod)
+
         assert self.server_pid, 'not running'
         os.kill(self.server_pid, 15)
         os.waitpid(self.server_pid, 0)
         self.server_pid = None
         self.log.close()
+
 
 if __name__ == '__main__':
     srv = AutoPkgTestSwiftServer()
