@@ -202,7 +202,7 @@ class AutopkgtestPolicy(BasePolicy):
 
         # log into swift in case we need to fetch some private results
         # this is optional - if there are no credentials present, results will
-        # be fetched the traditional way
+        # be fetched without authentication
         if self.options.adt_swift_user:
             if (not self.options.adt_swift_pass or
                     not self.options.adt_swift_auth_url or
