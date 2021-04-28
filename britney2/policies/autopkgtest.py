@@ -145,6 +145,11 @@ class AutopkgtestPolicy(BasePolicy):
         except AttributeError:
             self.options.adt_ppas = []
 
+        try:
+            self.options.adt_private_shared = self.options.adt_private_shared.strip().split()
+        except AttributeError:
+            self.options.adt_private_shared = []
+
         self.swift_container = 'autopkgtest-' + options.series
         if self.options.adt_ppas:
             # private PPAs require the auth credentials given + we allow the
@@ -1112,7 +1117,9 @@ class AutopkgtestPolicy(BasePolicy):
         params['submit-time'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S%z')
 
         if self.swift_conn:
-            params['readable-by'] = self.options.adt_swift_user
+            params['swiftuser'] = self.options.adt_swift_user
+            if self.options.adt_private_shared:
+                params['readable-by'] = self.options.adt_private_shared
 
         if self.amqp_channel:
             import amqplib.client_0_8 as amqp

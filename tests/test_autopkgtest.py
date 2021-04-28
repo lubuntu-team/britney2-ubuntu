@@ -2562,6 +2562,8 @@ class AT(TestAutopkgtestBase):
                 print('ADT_SWIFT_TENANT = tenant')
             elif line.startswith('ADT_SWIFT_AUTH_URL'):
                 print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
+            elif line.startswith('ADT_PRIVATE_SHARED'):
+                print('ADT_PRIVATE_SHARED = user1 team2')
             else:
                 sys.stdout.write(line)
 
@@ -2576,7 +2578,8 @@ class AT(TestAutopkgtestBase):
         for request in self.amqp_requests:
             self.assertIn('"triggers": ["lightgreen/2"]', request)
             self.assertIn('"ppas": ["first/ppa", "user:password@joe/foo:DEADBEEF"]', request)
-            self.assertIn('"readable-by": "user"', request)
+            self.assertIn('"swiftuser": "user"', request)
+            self.assertIn('"readable-by": ["user1", "team2"]', request)
 
         # add results to PPA specific swift container
         self.swift.set_results({'private-autopkgtest-testing-joe-foo': {
@@ -2642,7 +2645,10 @@ class AT(TestAutopkgtestBase):
         self.assertEqual(len(self.amqp_requests), 2)
         for request in self.amqp_requests:
             self.assertIn('"triggers": ["lightgreen/2"]', request)
-            self.assertIn('"readable-by": "user"', request)
+            self.assertIn('"swiftuser": "user"', request)
+            # we did not give a list of users to give read-access, so make sure
+            # there are none
+            self.assertNotIn('"readable-by"', request)
 
         # add results to PPA specific swift container
         self.swift.set_results({'private-autopkgtest-testing': {
