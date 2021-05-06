@@ -48,6 +48,7 @@ def initialize_policy(test_name, policy_class, *args, **kwargs):
         adt_swift_tenant='',
         adt_swift_auth_url='',
         adt_private_shared=[],
+        adt_private_url='',
         adt_success_bounty=3,
         adt_regression_penalty=False,
         adt_retry_url_mech='run_id',

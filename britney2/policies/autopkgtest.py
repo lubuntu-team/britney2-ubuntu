@@ -1328,7 +1328,9 @@ class AutopkgtestPolicy(BasePolicy):
                                    run_id,
                                    'log.gz')
             else:
-                url = os.path.join(self.options.adt_swift_url,
+                # Private runs have a different base url
+                results_url = self.options.adt_private_url if self.swift_conn else self.options.adt_swift_url
+                url = os.path.join(results_url,
                                    self.swift_container,
                                    self.options.series,
                                    arch,

@@ -133,6 +133,7 @@ ADT_SWIFT_TENANT  =
 # List of launchpad users/teams that should have read access to any private
 # result logs
 ADT_PRIVATE_SHARED = 
+ADT_PRIVATE_URL    = 
 # Base URL for autopkgtest site, used for links in the excuses
 ADT_CI_URL        = https://example.com/
 # Enable the huge queue for packages that trigger vast amounts of tests to not

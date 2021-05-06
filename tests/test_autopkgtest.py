@@ -2564,6 +2564,8 @@ class AT(TestAutopkgtestBase):
                 print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
             elif line.startswith('ADT_PRIVATE_SHARED'):
                 print('ADT_PRIVATE_SHARED = user1 team2')
+            elif line.startswith('ADT_PRIVATE_URL'):
+                print('ADT_PRIVATE_URL = http://localhost:18085/private-results/')
             else:
                 sys.stdout.write(line)
 
@@ -2600,18 +2602,18 @@ class AT(TestAutopkgtestBase):
             {'lightgreen/2': {
                 'amd64': [
                     'PASS',
-                    'http://localhost:18085/private-autopkgtest-testing-joe-foo/'
+                    'http://localhost:18085/private-results/private-autopkgtest-testing-joe-foo/'
                     'testing/amd64/l/lightgreen/20150101_100101@/log.gz',
                     None,
-                    'http://localhost:18085/private-autopkgtest-testing-joe-foo/'
+                    'http://localhost:18085/private-results/private-autopkgtest-testing-joe-foo/'
                     'testing/amd64/l/lightgreen/20150101_100101@/artifacts.tar.gz',
                     None],
                 'i386': [
                     'REGRESSION',
-                    'http://localhost:18085/private-autopkgtest-testing-joe-foo/'
+                    'http://localhost:18085/private-results/private-autopkgtest-testing-joe-foo/'
                     'testing/i386/l/lightgreen/20150101_100100@/log.gz',
                     None,
-                    'http://localhost:18085/private-autopkgtest-testing-joe-foo/'
+                    'http://localhost:18085/private-results/private-autopkgtest-testing-joe-foo/'
                     'testing/i386/l/lightgreen/20150101_100100@/artifacts.tar.gz',
                     None]},
              'verdict': 'REJECTED_PERMANENTLY'})
@@ -2632,6 +2634,8 @@ class AT(TestAutopkgtestBase):
                 print('ADT_SWIFT_TENANT = tenant')
             elif line.startswith('ADT_SWIFT_AUTH_URL'):
                 print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
+            elif line.startswith('ADT_PRIVATE_URL'):
+                print('ADT_PRIVATE_URL = http://localhost:18085/private-results/')
             else:
                 sys.stdout.write(line)
 
@@ -2670,14 +2674,14 @@ class AT(TestAutopkgtestBase):
             {'lightgreen/2': {
                 'amd64': [
                     'PASS',
-                    'http://localhost:18085/private-autopkgtest-testing/'
+                    'http://localhost:18085/private-results/private-autopkgtest-testing/'
                     'testing/amd64/l/lightgreen/20150101_100101@/log.gz',
                     'https://autopkgtest.ubuntu.com/packages/l/lightgreen/testing/amd64',
                     None,
                     None],
                 'i386': [
                     'REGRESSION',
-                    'http://localhost:18085/private-autopkgtest-testing/'
+                    'http://localhost:18085/private-results/private-autopkgtest-testing/'
                     'testing/i386/l/lightgreen/20150101_100100@/log.gz',
                     'https://autopkgtest.ubuntu.com/packages/l/lightgreen/testing/i386',
                     None,
