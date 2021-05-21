@@ -1164,7 +1164,18 @@ class AutopkgtestPolicy(BasePolicy):
 
         # determine current test result status
         until = self.find_max_lower_force_reset_test(src, ver, arch)
-        ever_passed = self.check_ever_passed_before(src, ver, arch, until)
+
+        # Special-case triggers from linux-meta*: we cannot compare results
+        # against different kernels, as e. g. a DKMS module might work against
+        # the default kernel but fail against a different flavor; so for those,
+        # filter the considered results to only those against our kernel
+        if trigger.startswith('linux-meta'):
+            only_trigger = trigger.split('/', 1)[0]
+            self.logger.info('This is a kernel; we will only look for results triggered by %s when considering regressions',
+                             trigger)
+        else:
+            only_trigger = None
+        ever_passed = self.check_ever_passed_before(src, ver, arch, until, only_trigger=only_trigger)
 
         fail_result = 'REGRESSION' if ever_passed else 'ALWAYSFAIL'
 
@@ -1176,15 +1187,6 @@ class AutopkgtestPolicy(BasePolicy):
             run_id = r[2]
 
             if r[0] in {Result.FAIL, Result.OLD_FAIL}:
-                # Special-case triggers from linux-meta*: we cannot compare
-                # results against different kernels, as e. g. a DKMS module
-                # might work against the default kernel but fail against a
-                # different flavor; so for those, ignore the "ever
-                # passed" check; FIXME: check against trigsrc only
-                if self.options.adt_baseline != 'reference' and \
-                  (trigger.startswith('linux-meta') or trigger.startswith('linux/')):
-                    baseline_result = Result.FAIL
-
                 if baseline_result == Result.FAIL:
                     result = 'ALWAYSFAIL'
                 elif baseline_result in {Result.NONE, Result.OLD_FAIL}:
@@ -1256,7 +1258,7 @@ class AutopkgtestPolicy(BasePolicy):
 
         return (result, ver, run_id, url)
 
-    def check_ever_passed_before(self, src, max_ver, arch, min_ver=None):
+    def check_ever_passed_before(self, src, max_ver, arch, min_ver=None, only_trigger=None):
         '''Check if tests for src ever passed on arch for specified range
 
         If min_ver is specified, it checks that all versions in
@@ -1264,7 +1266,11 @@ class AutopkgtestPolicy(BasePolicy):
         [min_ver, inf) have passed.'''
 
         # FIXME: add caching
-        for srcmap in self.test_results.values():
+        for (trigger, srcmap) in self.test_results.items():
+            if only_trigger:
+                trig = trigger.split('/', 1)[0]
+                if only_trigger != trig:
+                    continue
             try:
                 too_high = apt_pkg.version_compare(srcmap[src][arch][1], max_ver) > 0
                 too_low = apt_pkg.version_compare(srcmap[src][arch][1], min_ver) <= 0 if min_ver else False
