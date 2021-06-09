@@ -32,7 +32,7 @@ import sys
 import time
 import urllib.parse
 from urllib.error import HTTPError
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 import apt_pkg
 
@@ -208,11 +208,9 @@ class AutopkgtestPolicy(BasePolicy):
         # log into swift in case we need to fetch some private results
         # this is optional - if there are no credentials present, results will
         # be fetched without authentication
-        if self.options.adt_swift_user:
-            if (not self.options.adt_swift_pass or
-                    not self.options.adt_swift_auth_url or
-                    not self.options.adt_swift_tenant):
-                raise RuntimeError('Incomplete swift credentials given')
+        if self.options.adt_swift_token:
+            if self.options.adt_swift_url.startswith('file://'):
+                raise RuntimeError('Token authentication requires swift remote storage')
 
             # once swift credentials are given, the results will be published
             # to a private container
@@ -225,27 +223,9 @@ class AutopkgtestPolicy(BasePolicy):
                 # TODO: write a test for this
                 if '@' in ppa and not re.match(r'^.+:.+@.+:.+$', ppa):
                     raise RuntimeError('Private PPA %s not following required format (user:token@team/name:fingerprint)', ppa)
-
-            import swiftclient
-
-            if '/v2.0' in self.options.adt_swift_auth_url:
-                auth_version = '2.0'
-            else:
-                auth_version = '1'
-
-            self.logger.info('Creating an authenticated swift connection for user %s', self.options.adt_swift_user)
-            self.swift_conn = swiftclient.Connection(
-                authurl=self.options.adt_swift_auth_url,
-                user=self.options.adt_swift_user,
-                key=self.options.adt_swift_pass,
-                tenant_name=self.options.adt_swift_tenant,
-                auth_version=auth_version
-                )
         else:
             if any('@' in ppa for ppa in self.options.adt_ppas):
                 raise RuntimeError('Private PPA configured but no swift credentials given')
-
-            self.swift_conn = None
 
         # read in the new results
         if self.options.adt_swift_url.startswith('file://'):
@@ -855,10 +835,12 @@ class AutopkgtestPolicy(BasePolicy):
 
     latest_run_for_package._cache = collections.defaultdict(dict)
 
-    def download_retry(self, url):
+    def download_retry(self, url, token=None):
+        headers = {'X-Auth-Token': token} if token else {}
+        request = Request(url, headers=headers)
         for retry in range(5):
             try:
-                req = urlopen(url, timeout=30)
+                req = urlopen(request, timeout=30)
                 code = req.getcode()
                 if 200 <= code < 300:
                     return req
@@ -903,54 +885,32 @@ class AutopkgtestPolicy(BasePolicy):
                 query['marker'] = query['prefix'] + latest_run_id
 
         # request new results from swift
-        if self.swift_conn:
-            # when we have an authenticated swift connection, use that to
-            # fetch the result_path list as we might be fetching from an
-            # otherwise unaccessible container
-            from swiftclient.exceptions import ClientException
-
-            try:
-                _, result_paths = self.swift_conn.get_container(
-                    self.swift_container,
-                    query_string=urllib.parse.urlencode(query))
-            except ClientException as e:
-                # 401 "Unauthorized" is swift's way of saying "container does not exist"
-                if e.http_status == '401' or e.http_status == '404':
-                    self.logger.info('fetch_swift_results: %s does not exist yet or is inaccessible', self.swift_container)
-                    return
-                # Other status codes are usually a transient
-                # network/infrastructure failure. Ignoring this can lead to
-                # re-requesting tests which we already have results for, so
-                # fail hard on this and let the next run retry.
-                self.logger.error('Failure to fetch swift results from %s: %s', self.swift_container, str(e))
-                sys.exit(1)
-        else:
-            url = os.path.join(swift_url, self.swift_container)
-            url += '?' + urllib.parse.urlencode(query)
-            f = None
-            try:
-                f = self.download_retry(url)
-                if f.getcode() == 200:
-                    result_paths = f.read().decode().strip().splitlines()
-                elif f.getcode() == 204:  # No content
-                    result_paths = []
-                else:
-                    # we should not ever end up here as we expect a HTTPError in
-                    # other cases; e. g. 3XX is something that tells us to adjust
-                    # our URLS, so fail hard on those
-                    raise NotImplementedError('fetch_swift_results(%s): cannot handle HTTP code %i' %
-                                              (url, f.getcode()))
-            except IOError as e:
-                # 401 "Unauthorized" is swift's way of saying "container does not exist"
-                if hasattr(e, 'code') and e.code == 401:
-                    self.logger.info('fetch_swift_results: %s does not exist yet or is inaccessible', url)
-                    return
-                # same as above in the swift authenticated case
-                self.logger.error('Failure to fetch swift results from %s: %s', url, str(e))
-                sys.exit(1)
-            finally:
-                if f is not None:
-                    f.close()
+        url = os.path.join(swift_url, self.swift_container)
+        url += '?' + urllib.parse.urlencode(query)
+        f = None
+        try:
+            f = self.download_retry(url, self.options.adt_swift_token)
+            if f.getcode() == 200:
+                result_paths = f.read().decode().strip().splitlines()
+            elif f.getcode() == 204:  # No content
+                result_paths = []
+            else:
+                # we should not ever end up here as we expect a HTTPError in
+                # other cases; e. g. 3XX is something that tells us to adjust
+                # our URLS, so fail hard on those
+                raise NotImplementedError('fetch_swift_results(%s): cannot handle HTTP code %i' %
+                                          (url, f.getcode()))
+        except IOError as e:
+            # 401 "Unauthorized" is swift's way of saying "container does not exist"
+            if hasattr(e, 'code') and e.code == 401:
+                self.logger.info('fetch_swift_results: %s does not exist yet or is inaccessible', url)
+                return
+            # same as above in the swift authenticated case
+            self.logger.error('Failure to fetch swift results from %s: %s', url, str(e))
+            sys.exit(1)
+        finally:
+            if f is not None:
+                f.close()
 
         for p in result_paths:
             self.fetch_one_result(
@@ -966,29 +926,13 @@ class AutopkgtestPolicy(BasePolicy):
 
         f = None
         try:
-            if self.swift_conn:
-                from swiftclient.exceptions import ClientException
-
-                # We don't need any additional retry logic as swiftclient
-                # already performs retries (5 by default).
-                url = os.path.join(path, name)
-                try:
-                    _, contents = self.swift_conn.get_object(container, url)
-                except ClientException as e:
-                    self.logger.error('Failure to fetch %s from container %s: %s',
-                                      url, container, str(e))
-                    if e.http_status == '404':
-                        return
-                    sys.exit(1)
-                tar_bytes = io.BytesIO(contents)
+            url = os.path.join(swift_url, container, path, name)
+            f = self.download_retry(url, self.options.adt_swift_token)
+            if f.getcode() == 200:
+                tar_bytes = io.BytesIO(f.read())
             else:
-                url = os.path.join(swift_url, container, path, name)
-                f = self.download_retry(url)
-                if f.getcode() == 200:
-                    tar_bytes = io.BytesIO(f.read())
-                else:
-                    raise NotImplementedError('fetch_one_result(%s): cannot handle HTTP code %i' %
-                                              (url, f.getcode()))
+                raise NotImplementedError('fetch_one_result(%s): cannot handle HTTP code %i' %
+                                          (url, f.getcode()))
         except IOError as e:
             self.logger.error('Failure to fetch %s: %s', url, str(e))
             # we tolerate "not found" (something went wrong on uploading the
@@ -1116,7 +1060,7 @@ class AutopkgtestPolicy(BasePolicy):
             qname = 'debci-%s-%s' % (self.options.series, arch)
         params['submit-time'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S%z')
 
-        if self.swift_conn:
+        if self.options.adt_swift_user:
             params['swiftuser'] = self.options.adt_swift_user
             if self.options.adt_private_shared:
                 params['readable-by'] = self.options.adt_private_shared
@@ -1329,7 +1273,7 @@ class AutopkgtestPolicy(BasePolicy):
                                    'log.gz')
             else:
                 # Private runs have a different base url
-                results_url = self.options.adt_private_url if self.swift_conn else self.options.adt_swift_url
+                results_url = self.options.adt_private_url if self.options.adt_swift_user else self.options.adt_swift_url
                 url = os.path.join(results_url,
                                    self.swift_container,
                                    self.options.series,

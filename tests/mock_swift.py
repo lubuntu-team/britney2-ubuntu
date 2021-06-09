@@ -32,6 +32,7 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
     '''
     # map container -> result.tar path -> (exitcode, testpkg-version[, testinfo])
     results = {}
+    expected_token = 'SomeSecretToken'
 
     def do_GET(self):
         p = urlparse(self.path)
@@ -43,7 +44,22 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
         else:
             self.list_container(container, parse_qs(p.query))
 
+    def check_if_authorized(self, container):
+        status = True
+        if container.startswith('private-'):
+            # private container, so we need authentication
+            token = self.headers.get('X-Auth-Token')
+            if not token:
+                self.send_error(401, 'Unauthorized')
+                status = False
+            elif self.expected_token != token:
+                self.send_error(403, 'Forbidden')
+                status = False
+        return status
+
     def serve_file(self, container, path):
+        if not self.check_if_authorized(container):
+            return
         if os.path.basename(path) != 'result.tar':
             self.send_error(404, 'File not found (only result.tar supported)')
             return
@@ -85,6 +101,8 @@ class SwiftHTTPRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(tar.getvalue())
 
     def list_container(self, container, query):
+        if not self.check_if_authorized(container):
+            return
         try:
             objs = set(['%s/result.tar' % r for r in self.results[container]])
         except KeyError:
@@ -128,15 +146,7 @@ class AutoPkgTestSwiftServer:
         '''
         SwiftHTTPRequestHandler.results = results
 
-    def start(self, swiftclient=False):
-        if swiftclient:
-            # since we're running britney directly, the only way to reliably
-            # mock out the swiftclient module is to override it in the local
-            # path with the dummy version we created
-            src = os.path.join(TESTS_DIR, 'mock_swiftclient.py')
-            dst = os.path.join(PROJECT_DIR, 'swiftclient.py')
-            os.symlink(src, dst)
-            
+    def start(self):
         assert self.server_pid is None, 'already started'
         if self.log:
             self.log.close()
@@ -160,12 +170,6 @@ class AutoPkgTestSwiftServer:
         sys.exit(0)
 
     def stop(self):
-        # in case we were 'mocking out' swiftclient, remove the symlink we
-        # created earlier during start()
-        swiftclient_mod = os.path.join(PROJECT_DIR, 'swiftclient.py')
-        if os.path.islink(swiftclient_mod):
-            os.unlink(swiftclient_mod)
-
         assert self.server_pid, 'not running'
         os.kill(self.server_pid, 15)
         os.waitpid(self.server_pid, 0)
