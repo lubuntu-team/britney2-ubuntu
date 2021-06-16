@@ -117,7 +117,7 @@ class TestAutopkgtestBase(TestBase):
         with open(email_path, 'w', encoding='utf-8') as email:
             email.write(json.dumps(self.email_cache))
 
-        self.swift.start()
+        self.swift.start(swiftclient=True)
         (excuses_yaml, excuses_html, out) = self.run_britney()
         self.swift.stop()
 
@@ -2556,8 +2556,12 @@ class AT(TestAutopkgtestBase):
                 print('ADT_PPAS = first/ppa user:password@joe/foo:DEADBEEF')
             elif line.startswith('ADT_SWIFT_USER'):
                 print('ADT_SWIFT_USER = user')
-            elif line.startswith('ADT_SWIFT_TOKEN'):
-                print('ADT_SWIFT_TOKEN = SomeSecretToken')
+            elif line.startswith('ADT_SWIFT_PASS'):
+                print('ADT_SWIFT_PASS = pass')
+            elif line.startswith('ADT_SWIFT_TENANT'):
+                print('ADT_SWIFT_TENANT = tenant')
+            elif line.startswith('ADT_SWIFT_AUTH_URL'):
+                print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
             elif line.startswith('ADT_PRIVATE_SHARED'):
                 print('ADT_PRIVATE_SHARED = user1 team2')
             elif line.startswith('ADT_PRIVATE_URL'):
@@ -2624,8 +2628,12 @@ class AT(TestAutopkgtestBase):
         for line in fileinput.input(self.britney_conf, inplace=True):
             if line.startswith('ADT_SWIFT_USER'):
                 print('ADT_SWIFT_USER = user')
-            elif line.startswith('ADT_SWIFT_TOKEN'):
-                print('ADT_SWIFT_TOKEN = SomeSecretToken')
+            elif line.startswith('ADT_SWIFT_PASS'):
+                print('ADT_SWIFT_PASS = pass')
+            elif line.startswith('ADT_SWIFT_TENANT'):
+                print('ADT_SWIFT_TENANT = tenant')
+            elif line.startswith('ADT_SWIFT_AUTH_URL'):
+                print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
             elif line.startswith('ADT_PRIVATE_URL'):
                 print('ADT_PRIVATE_URL = http://localhost:18085/private-results/')
             else:

@@ -124,10 +124,12 @@ ADT_SHARED_RESULTS_CACHE =
 # or file location if results are pre-fetched
 #ADT_SWIFT_URL     = https://example.com/some/url
 ADT_SWIFT_URL     = file:///path/to/britney/state/debci.json
-# Swift authentication user and token for access to private containers
+# Swift identity with read access to the private result container
 # (this is required whenever a private PPA is used for testing)
-ADT_SWIFT_USER    =
-ADT_SWIFT_TOKEN   =
+ADT_SWIFT_USER    = 
+ADT_SWIFT_PASS    = 
+ADT_SWIFT_AUTH_URL = 
+ADT_SWIFT_TENANT  = 
 # List of launchpad users/teams that should have read access to any private
 # result logs
 ADT_PRIVATE_SHARED = 
