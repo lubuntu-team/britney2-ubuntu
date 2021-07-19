@@ -2560,6 +2560,8 @@ class AT(TestAutopkgtestBase):
                 print('ADT_SWIFT_PASS = pass')
             elif line.startswith('ADT_SWIFT_TENANT'):
                 print('ADT_SWIFT_TENANT = tenant')
+            elif line.startswith('ADT_SWIFT_REGION'):
+                print('ADT_SWIFT_REGION = region')
             elif line.startswith('ADT_SWIFT_AUTH_URL'):
                 print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
             elif line.startswith('ADT_PRIVATE_SHARED'):
@@ -2632,6 +2634,8 @@ class AT(TestAutopkgtestBase):
                 print('ADT_SWIFT_PASS = pass')
             elif line.startswith('ADT_SWIFT_TENANT'):
                 print('ADT_SWIFT_TENANT = tenant')
+            elif line.startswith('ADT_SWIFT_REGION'):
+                print('ADT_SWIFT_REGION = region')
             elif line.startswith('ADT_SWIFT_AUTH_URL'):
                 print('ADT_SWIFT_AUTH_URL = http://127.0.0.1:5000/v2.0/')
             elif line.startswith('ADT_PRIVATE_URL'):

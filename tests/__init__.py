@@ -399,6 +399,7 @@ ADT_SWIFT_USER    =
 ADT_SWIFT_PASS    = 
 ADT_SWIFT_AUTH_URL = 
 ADT_SWIFT_TENANT  = 
+ADT_SWIFT_REGION  = 
 ADT_PRIVATE_SHARED = 
 ADT_PRIVATE_URL    =
 ADT_CI_URL        = https://autopkgtest.ubuntu.com/

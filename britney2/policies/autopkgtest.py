@@ -211,7 +211,8 @@ class AutopkgtestPolicy(BasePolicy):
         if self.options.adt_swift_user:
             if (not self.options.adt_swift_pass or
                     not self.options.adt_swift_auth_url or
-                    not self.options.adt_swift_tenant):
+                    not self.options.adt_swift_tenant or
+                    not self.options.adt_swift_region):
                 raise RuntimeError('Incomplete swift credentials given')
 
             # once swift credentials are given, the results will be published
@@ -228,10 +229,8 @@ class AutopkgtestPolicy(BasePolicy):
 
             import swiftclient
 
-            if '/v2.0' in self.options.adt_swift_auth_url:
-                auth_version = '2.0'
-            else:
-                auth_version = '1'
+            if '/v2.0' not in self.options.adt_swift_auth_url:
+                raise RuntimeError('Unsupported swift auth version')
 
             self.logger.info('Creating an authenticated swift connection for user %s', self.options.adt_swift_user)
             self.swift_conn = swiftclient.Connection(
@@ -239,7 +238,8 @@ class AutopkgtestPolicy(BasePolicy):
                 user=self.options.adt_swift_user,
                 key=self.options.adt_swift_pass,
                 tenant_name=self.options.adt_swift_tenant,
-                auth_version=auth_version
+                auth_version='2.0',
+                os_options={'region_name': self.options.adt_swift_region}
                 )
         else:
             if any('@' in ppa for ppa in self.options.adt_ppas):
@@ -910,12 +910,12 @@ class AutopkgtestPolicy(BasePolicy):
             from swiftclient.exceptions import ClientException
 
             try:
-                _, result_paths = self.swift_conn.get_container(
+                _, returned_paths = self.swift_conn.get_container(
                     self.swift_container,
                     query_string=urllib.parse.urlencode(query))
             except ClientException as e:
                 # 401 "Unauthorized" is swift's way of saying "container does not exist"
-                if e.http_status == '401' or e.http_status == '404':
+                if e.http_status == 401 or e.http_status == 404:
                     self.logger.info('fetch_swift_results: %s does not exist yet or is inaccessible', self.swift_container)
                     return
                 # Other status codes are usually a transient
@@ -924,6 +924,7 @@ class AutopkgtestPolicy(BasePolicy):
                 # fail hard on this and let the next run retry.
                 self.logger.error('Failure to fetch swift results from %s: %s', self.swift_container, str(e))
                 sys.exit(1)
+            result_paths = [p['subdir'] for p in returned_paths]
         else:
             url = os.path.join(swift_url, self.swift_container)
             url += '?' + urllib.parse.urlencode(query)
@@ -977,7 +978,7 @@ class AutopkgtestPolicy(BasePolicy):
                 except ClientException as e:
                     self.logger.error('Failure to fetch %s from container %s: %s',
                                       url, container, str(e))
-                    if e.http_status == '404':
+                    if e.http_status == 404:
                         return
                     sys.exit(1)
                 tar_bytes = io.BytesIO(contents)
