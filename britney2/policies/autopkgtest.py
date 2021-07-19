@@ -519,8 +519,10 @@ class AutopkgtestPolicy(BasePolicy):
                     html_archmsg.append(message)
 
                 # render HTML line for testsrc entry, but only when action is
-                # or may be required
-                if r - {'PASS', 'NEUTRAL', 'RUNNING-ALWAYSFAIL', 'ALWAYSFAIL', 'IGNORE-FAIL'}:
+                # or may be required or when britney is configured to print
+                # everything
+                if (self.options.adt_show_irrelevant or
+                        r - {'PASS', 'NEUTRAL', 'RUNNING-ALWAYSFAIL', 'ALWAYSFAIL', 'IGNORE-FAIL'}):
                     results_info.append("autopkgtest for %s: %s" % (testname, ', '.join(html_archmsg)))
 
         if verdict != PolicyVerdict.PASS:
