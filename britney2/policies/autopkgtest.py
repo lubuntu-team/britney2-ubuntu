@@ -492,10 +492,22 @@ class AutopkgtestPolicy(BasePolicy):
                     if status == 'REGRESSION':
                         if self.options.adt_retry_url_mech == 'run_id':
                             retry_url = self.options.adt_ci_url + 'api/v1/retry/' + run_id
+                        elif self.options.adt_private_retry:
+                            # if a custom retry url mechanism has been given,
+                            # use that - but instead of passing PPAs with
+                            # sensitive credentials, we pass additional context
+                            # that will help the backend identify what env
+                            # needs to be used
+                            retry_url = self.options.adt_private_retry + \
+                                    urllib.parse.urlencode([('release', self.options.series),
+                                                            ('arch', arch),
+                                                            ('package', testsrc),
+                                                            ('trigger', trigger),
+                                                            ('context', self.swift_container)])
                         elif not any('@' in ppa for ppa in self.options.adt_ppas):
-                            # private PPAs currently should not display a retry
-                            # button until we can guarantee that the secrets
-                            # will not leak
+                            # otherwise private PPAs currently should not
+                            # display a retry button as we can not guarantee
+                            # that the secrets will not leak
                             retry_url = self.options.adt_ci_url + 'request.cgi?' + \
                                     urllib.parse.urlencode([('release', self.options.series),
                                                             ('arch', arch),

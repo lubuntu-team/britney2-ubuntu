@@ -135,6 +135,7 @@ ADT_SWIFT_REGION  =
 # result logs
 ADT_PRIVATE_SHARED = 
 ADT_PRIVATE_URL    = 
+ADT_PRIVATE_RETRY  = 
 # Base URL for autopkgtest site, used for links in the excuses
 ADT_CI_URL        = https://example.com/
 # Enable the huge queue for packages that trigger vast amounts of tests to not
