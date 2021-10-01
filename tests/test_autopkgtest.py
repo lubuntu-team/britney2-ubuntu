@@ -146,6 +146,43 @@ class TestAutopkgtestBase(TestBase):
         db.commit()
         return db
 
+    def set_results(self, results):
+        '''Wrapper to set autopkgtest results in both swift and sqlite3'''
+        self.swift.set_results(results)
+
+        # swift bucket name is irrelevant for sqlite
+        for i in results.values():
+            for k,v in i.items():
+                (series, arch, discard, source, latest) = k.split('/')
+                retcode = v[0]
+                if not v[1]:
+                    source_ver = None
+                else:
+                    source_ver = v[1].split(' ')[1]
+                try:
+                    trigger = v[2]['custom_environment'][0].split('=')[1]
+                except (IndexError, KeyError):
+                    trigger = None
+
+                try:
+                    self.db.execute('INSERT INTO test (release, arch, package) '
+                                    'VALUES (?, ?, ?)',
+                                    (series, arch, source))
+                except sqlite3.IntegrityError:
+                    # Completely normal if we have more than one result for
+                    # the same source package; ignore
+                    pass
+
+                self.db.execute('INSERT INTO result '
+                                '(test_id, run_id, version, triggers, '
+                                ' exitcode) '
+                                'SELECT test.id, ?, ?, ?, ? FROM test '
+                                'WHERE release=? AND arch=? AND package=?',
+                                (latest, source_ver, trigger, retcode,
+                                 series, arch, source))
+
+        self.db.commit()
+
     def run_it(self, unstable_add, expect_status, expect_excuses={}):
         '''Run britney with some unstable packages and verify excuses.
 
@@ -299,7 +336,7 @@ class AT(TestAutopkgtestBase):
         self.sourceppa_cache['purple'] = {'2': ''}
 
         # The package has passed before on i386
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/p/purple/20150101_100000@': (0, 'purple 1', tr('purple/1')),
             'testing/amd64/p/purple/20150101_100000@': (0, 'purple 1', tr('purple/1')),
             'testing/amd64/p/purple/20200101_100000@': (0, 'purple 2', tr('purple/2')),
@@ -325,7 +362,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(darkgreen=False)
 
         # The package has failed before, and with a trigger too on amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (4, 'green 1'),
             'testing/amd64/d/darkgreen/20150101_100000@': (4, 'green 1', tr('failedbefore/1')),
         }})
@@ -370,7 +407,7 @@ class AT(TestAutopkgtestBase):
 
         # green has passed on amd64 before
         # lightgreen has passed on i386, therefore we should block on it returning
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/g/green/20150101_100000@': (0, 'green 4', tr('green/1')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
         }})
@@ -402,7 +439,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False)
 
         # green has passed before on i386 only, therefore ALWAYSFAIL on amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
@@ -445,7 +482,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False)
 
         # green has passed before on i386 only, therefore ALWAYSFAIL on amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
@@ -463,7 +500,7 @@ class AT(TestAutopkgtestBase):
         self.assertNotIn('brittle', exc['green']['policy_info']['autopkgtest'])
 
         # second run collects the results
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
@@ -507,7 +544,7 @@ class AT(TestAutopkgtestBase):
 
         # third run should not trigger any new tests, should all be in the
         # cache
-        self.swift.set_results({})
+        self.set_results({})
         out = self.run_it(
             [],
             {'green': (True, {'green/2': {'amd64': 'PASS', 'i386': 'PASS'},
@@ -525,7 +562,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False)
 
         # green has passed before on i386 only, therefore ALWAYSFAIL on amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
@@ -540,7 +577,7 @@ class AT(TestAutopkgtestBase):
             {'green': [('old-version', '1'), ('new-version', '2')]})
 
         # second run collects the results
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
             'testing/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
@@ -572,7 +609,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1'),
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1'),
             'testing/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1'),
@@ -601,7 +638,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
@@ -657,7 +694,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
@@ -686,7 +723,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('green/1')),
@@ -718,7 +755,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False)
 
         # green has passed before on amd64, doesn't exist on i386
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/g/green64/20150101_100000@': (0, 'green64 0.1', tr('passedbefore/1')),
         }})
 
@@ -753,7 +790,7 @@ class AT(TestAutopkgtestBase):
                                       'green': ['amd64', 'i386']}})
 
         # second run collects the results
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
@@ -844,7 +881,7 @@ class AT(TestAutopkgtestBase):
                                       'Conflicts': 'blue'},
                       testsuite='autopkgtest', add_src=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
             'testing/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
@@ -876,7 +913,7 @@ class AT(TestAutopkgtestBase):
                                       'Conflicts': 'blue'},
                       testsuite='autopkgtest', add_src=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
             'testing/i386/g/green/20150101_100200@': (0, 'green 2', tr('green/2')),
@@ -901,7 +938,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False, lightgreen=False)
 
         # old lightgreen fails, thus new green should be held back
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/1.1')),
             'testing/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/1.1')),
             'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1')),
@@ -964,7 +1001,7 @@ class AT(TestAutopkgtestBase):
                               'debci-testing-i386:lightgreen {"triggers": ["lightgreen/2"]}']))
 
         # next run collects the results
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2', tr('lightgreen/2')),
             'testing/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2', tr('lightgreen/2')),
         }})
@@ -989,7 +1026,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/2')),
@@ -1030,7 +1067,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False, lightgreen=False)
 
         # old lightgreen fails, thus new green should be held back
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/1.1')),
             'testing/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/1.1')),
             'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('green/1')),
@@ -1065,7 +1102,7 @@ class AT(TestAutopkgtestBase):
         self.assertEqual(self.pending_requests, {})
 
         # lightgreen 2 stays unbuilt in britney, but we get a test result for it
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100200@': (0, 'lightgreen 2', tr('green/1.1')),
             'testing/amd64/l/lightgreen/20150101_102000@': (0, 'lightgreen 2', tr('green/1.1')),
         }})
@@ -1095,7 +1132,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False, lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
         }})
 
@@ -1120,7 +1157,7 @@ class AT(TestAutopkgtestBase):
         self.assertEqual(len(self.amqp_requests), 6)
 
         # we only get a result for lightgreen 2, not for the requested 1
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100001@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 0.5', tr('green/1')),
@@ -1176,7 +1213,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False, lightgreen=False)
 
         # green has passed before on i386 only, therefore ALWAYSFAIL on amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
@@ -1242,7 +1279,7 @@ class AT(TestAutopkgtestBase):
         self.data.add('brown', False, {'Depends': 'grey'}, testsuite='autopkgtest')
         self.data.add('brown', True, {'Depends': 'grey'}, testsuite='autopkgtest')
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/b/black/20150101_100000@': (0, 'black 1', tr('black/1')),
             'testing/amd64/b/black/20150102_100000@': (99, 'black blacklisted', tr('black/2')),
             'testing/amd64/g/grey/20150101_100000@': (99, 'grey blacklisted', tr('grey/1')),
@@ -1271,7 +1308,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(black=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/b/black/20150101_100000@': (0, 'black 1', tr('black/1')),
             'testing/amd64/b/black/20150102_100000@': (99, 'black blacklisted', tr('black/2')),
             'testing/i386/b/black/20150101_100000@': (0, 'black 1', tr('black/1')),
@@ -1294,7 +1331,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(black=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/b/black/20150101_100000@': (0, 'black 1', tr('black/1')),
             'testing/i386/b/black/20150101_100001@': (0, 'black 1', tr('black/1')),
             'testing/amd64/b/black/20150102_100000@': (4, 'black 2', tr('black/2')),
@@ -1316,7 +1353,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('newgreen/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('newgreen/2')),
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('newgreen/2')),
@@ -1345,7 +1382,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(darkgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/1')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('darkgreen/1')),
         }})
@@ -1362,7 +1399,7 @@ class AT(TestAutopkgtestBase):
                          {'darkgreen/2': {'darkgreen': ['amd64', 'i386']}})
 
         # second run gets the results for darkgreen 2
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 2', tr('darkgreen/2')),
             'testing/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 2', tr('darkgreen/2')),
         }})
@@ -1406,7 +1443,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('green/1')),
             'testing/amd64/g/green/20150101_100000@': (0, 'green 1', tr('green/1')),
             'testing/i386/g/green/20150101_100010@': (0, 'green 2', tr('green/2')),
@@ -1446,7 +1483,7 @@ class AT(TestAutopkgtestBase):
 
         # third run gets the results for green and lightgreen, darkgreen is
         # still running
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100020@': (0, 'green 3', tr('green/3')),
             'testing/amd64/g/green/20150101_100020@': (0, 'green 3', tr('green/3')),
             'testing/i386/l/lightgreen/20150101_100010@': (0, 'lightgreen 1', tr('green/3')),
@@ -1464,7 +1501,7 @@ class AT(TestAutopkgtestBase):
                          {'green/3': {'darkgreen': ['amd64', 'i386']}})
 
         # fourth run finally gets the new darkgreen result
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 1', tr('green/3')),
             'testing/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 1', tr('green/3')),
         }})
@@ -1483,7 +1520,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('passedbefore/1')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('passedbefore/1')),
         }})
@@ -1494,7 +1531,7 @@ class AT(TestAutopkgtestBase):
             {'green': (False, {'darkgreen': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})})
 
         # second run: i386 result has version 1.1
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100010@': (0, 'darkgreen 1.1', tr('green/2'))
         }})
         self.run_it(
@@ -1504,7 +1541,7 @@ class AT(TestAutopkgtestBase):
                                })})
 
         # third run: amd64 result has version 1.2
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/d/darkgreen/20150101_100010@': (0, 'darkgreen 1.2', tr('green/2')),
         }})
         self.run_it(
@@ -1519,7 +1556,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(lightgreen=False)
 
         # one tmpfail result without testpkg-version, should be ignored
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'testing/i386/l/lightgreen/20150101_100101@': (16, None, tr('lightgreen/2')),
             'testing/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('lightgreen/1')),
@@ -1533,7 +1570,7 @@ class AT(TestAutopkgtestBase):
                          {'lightgreen/2': {'lightgreen': ['i386']}})
 
         # one more tmpfail result, should not confuse britney with None version
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100201@': (16, None, tr('lightgreen/2')),
         }})
         self.run_it(
@@ -1550,7 +1587,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False)
 
         # first run fails
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 2', tr('green/1')),
             'testing/i386/g/green/20150101_100101@': (4, 'green 2', tr('green/2')),
             'testing/amd64/g/green/20150101_100000@': (0, 'green 2', tr('green/1')),
@@ -1574,7 +1611,7 @@ class AT(TestAutopkgtestBase):
 
         # re-running test manually succeeded (note: darkgreen result should be
         # cached already)
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
             'testing/amd64/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100201@': (0, 'lightgreen 1', tr('green/2')),
@@ -1601,7 +1638,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(libc6=False)
 
         # new libc6 works fine with green
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('libc6/2')),
             'testing/amd64/g/green/20150101_100000@': (0, 'green 1', tr('libc6/2')),
         }})
@@ -1625,7 +1662,7 @@ class AT(TestAutopkgtestBase):
 
         # new green fails; that's not libc6's fault though, so it should stay
         # valid
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100100@': (4, 'green 2', tr('green/2')),
             'testing/amd64/g/green/20150101_100100@': (4, 'green 2', tr('green/2')),
         }})
@@ -1647,7 +1684,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False, lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100101@': (0, 'green 1', tr('green/1')),
             'testing/amd64/g/green/20150101_100101@': (0, 'green 1', tr('green/1')),
             'testing/i386/g/green/20150101_100201@': (0, 'green 2', tr('green/2')),
@@ -1674,7 +1711,7 @@ class AT(TestAutopkgtestBase):
         # green
         self.data.remove_all(True)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             # add new result for lightgreen 1
             'testing/i386/l/lightgreen/20150101_100301@': (0, 'lightgreen 1', tr('green/2')),
             'testing/amd64/l/lightgreen/20150101_100301@': (0, 'lightgreen 1', tr('green/2')),
@@ -1710,7 +1747,7 @@ class AT(TestAutopkgtestBase):
 # #        self.data.add_default_packages(lightgreen=False)
 # #
 # #        # lightgreen has passed before on i386 only, therefore ALWAYSFAIL on amd64
-# #        self.swift.set_results({'autopkgtest-testing': {
+# #        self.set_results({'autopkgtest-testing': {
 # #            'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
 # #        }})
 # #
@@ -1770,7 +1807,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/r/rainbow/20150101_100000@': (0, 'rainbow 1', tr('passedbefore/1')),
         }})
 
@@ -1818,7 +1855,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
@@ -1846,7 +1883,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
@@ -1889,7 +1926,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
@@ -1931,7 +1968,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
@@ -1972,7 +2009,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
@@ -2001,7 +2038,7 @@ class AT(TestAutopkgtestBase):
         self.create_hint('autopkgtest', 'force-skiptest green/2')
 
         # regression of green, darkgreen ok, lightgreen running
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
             'testing/i386/g/green/20150101_100200@': (4, 'green 2', tr('green/2')),
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
@@ -2025,7 +2062,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False)
 
         # green has passed before on i386 only, therefore ALWAYSFAIL on amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
@@ -2048,7 +2085,7 @@ class AT(TestAutopkgtestBase):
 
         self.create_hint('freeze', 'block-all source')
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
             'testing/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
         }})
@@ -2058,7 +2095,7 @@ class AT(TestAutopkgtestBase):
             {'lightgreen': (False, {'lightgreen': {'amd64': 'RUNNING', 'i386': 'RUNNING'}})}
         )
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 2', tr('lightgreen/2')),
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 2', tr('lightgreen/2')),
         }})
@@ -2074,7 +2111,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'testing/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
         }})
@@ -2095,7 +2132,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'testing/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 2', tr('lightgreen/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
@@ -2118,7 +2155,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('lightgreen/1')),
             'testing/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
         }})
@@ -2139,7 +2176,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 1', tr('lightgreen/1')),
             'testing/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
             'testing/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 3', tr('lightgreen/3')),
@@ -2161,7 +2198,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lightgreen/20150101_100100@': (4, 'lightgreen 0.1', tr('lightgreen/0.1')),
             'testing/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'testing/amd64/l/lightgreen/20150103_100101@': (4, 'lightgreen 1', tr('green/2')),
@@ -2183,7 +2220,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False, lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'testing/amd64/l/lightgreen/20150102_100100@': (4, 'lightgreen 1', tr('green/2')),
             'testing/amd64/l/lightgreen/20150103_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
@@ -2235,7 +2272,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False, lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'testing/amd64/l/lightgreen/20150102_100101@': (4, 'lightgreen 1', tr('green/2')),
             'testing/amd64/l/lightgreen/20150103_100102@': (0, 'lightgreen 2', tr('lightgreen/2')),
@@ -2263,7 +2300,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False, lightgreen=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 1', tr('lightgreen/1')),
             'testing/amd64/l/lightgreen/20150102_100101@': (0, 'lightgreen 1', tr('green/2')),
             'testing/amd64/l/lightgreen/20150103_100102@': (0, 'lightgreen 2', tr('lightgreen/2')),
@@ -2296,7 +2333,7 @@ class AT(TestAutopkgtestBase):
         self.data.add('dkms', False, {})
         self.data.add('fancy-dkms', False, {'Source': 'fancy', 'Depends': 'dkms (>= 1)'}, testsuite='autopkgtest-pkg-dkms')
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/f/fancy/20150101_100101@': (0, 'fancy 0.1', tr('passedbefore/1'))
         }})
 
@@ -2344,7 +2381,7 @@ class AT(TestAutopkgtestBase):
 
         # works against linux-meta and -64only, fails against grumpy i386, no
         # result yet for grumpy amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/f/fancy/20150101_100301@': (0, 'fancy 0.5', tr('passedbefore/1')),
             'testing/i386/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
             'testing/amd64/f/fancy/20150101_100101@': (0, 'fancy 1', tr('linux-meta/1')),
@@ -2373,7 +2410,7 @@ class AT(TestAutopkgtestBase):
 
         # works against linux-meta and -64only, fails against grumpy i386, no
         # result yet for grumpy amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             # old results without trigger info
             'testing/i386/f/fancy/20140101_100101@': (0, 'fancy 1', {}),
             'testing/amd64/f/fancy/20140101_100101@': (8, 'fancy 1', {}),
@@ -2415,7 +2452,7 @@ class AT(TestAutopkgtestBase):
         self.data.add('linux-libc-dev', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-image', False, {'Source': 'linux-meta', 'Depends': 'linux-image-1'})
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/amd64/l/lxc/20150101_100101@': (0, 'lxc 0.1', tr('passedbefore/1'))
         }})
 
@@ -2449,7 +2486,7 @@ class AT(TestAutopkgtestBase):
         self.data.add('linux-image-1', False, {'Source': 'linux'}, testsuite='autopkgtest')
         self.data.add('linux-firmware', False, {'Source': 'linux-firmware'}, testsuite='autopkgtest')
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/f/fancy/20150101_090000@': (0, 'fancy 0.5', tr('passedbefore/1')),
             'testing/i386/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
             'testing/amd64/l/linux/20150101_100000@': (0, 'linux 2', tr('linux-meta/0.2')),
@@ -2476,7 +2513,7 @@ class AT(TestAutopkgtestBase):
         )
 
         # now linux-meta is ready to go
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/f/fancy/20150101_100000@': (0, 'fancy 1', tr('linux-meta/0.2')),
             'testing/amd64/f/fancy/20150101_100000@': (0, 'fancy 1', tr('linux-meta/0.2')),
         }})
@@ -2503,7 +2540,7 @@ class AT(TestAutopkgtestBase):
         self.data.add('notme', False, {'Depends': 'libgcc1'}, testsuite='autopkgtest')
 
         # binutils has passed before on i386 only, therefore ALWAYSFAIL on amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/b/binutils/20150101_100000@': (0, 'binutils 1', tr('passedbefore/1')),
         }})
 
@@ -2519,7 +2556,7 @@ class AT(TestAutopkgtestBase):
         self.data.add('gcc-7', False, {}, testsuite='autopkgtest')
 
         # gcc-7 has passed before on i386 only, therefore ALWAYSFAIL on amd64
-        self.swift.set_results({'autopkgtest-series': {
+        self.set_results({'autopkgtest-series': {
             'series/i386/g/gcc-7/20150101_100000@': (0, 'gcc-7 1', tr('passedbefore/1')),
         }})
 
@@ -2594,7 +2631,7 @@ class AT(TestAutopkgtestBase):
         self.assertEqual(len(self.amqp_requests), 2)
 
         # add results to PPA specific swift container
-        self.swift.set_results({'autopkgtest-testing-awesome-developers-staging': {
+        self.set_results({'autopkgtest-testing-awesome-developers-staging': {
             'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 1', tr('passedbefore/1')),
             'testing/i386/l/lightgreen/20150101_100100@': (4, 'lightgreen 2', tr('lightgreen/2')),
             'testing/amd64/l/lightgreen/20150101_100101@': (0, 'lightgreen 2', tr('lightgreen/2')),
@@ -2658,7 +2695,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(lightgreen=False)
 
         # first run to create autopkgtest-results.cache
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100000@': (0, 'lightgreen 2', tr('lightgreen/2')),
             'testing/amd64/l/lightgreen/20150101_100000@': (0, 'lightgreen 2', tr('lightgreen/2')),
         }})
@@ -2683,7 +2720,7 @@ class AT(TestAutopkgtestBase):
                 sys.stdout.write(line)
 
         # second run, should now not update cache
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 3', tr('lightgreen/3')),
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 3', tr('lightgreen/3')),
         }})
@@ -2798,7 +2835,7 @@ class AT(TestAutopkgtestBase):
         self.data.add_default_packages(green=False)
 
         # green has passed before on i386 only, therefore ALWAYSFAIL on amd64
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/g/green/20150101_100000@': (0, 'green 1', tr('passedbefore/1')),
         }})
 
@@ -2816,7 +2853,7 @@ class AT(TestAutopkgtestBase):
         self.assertEqual(exc['green']['policy_info']['age']['age-requirement'], 40)
 
         # second run collects the results
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
             'testing/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
@@ -2868,7 +2905,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/1')),
             'testing/amd64/l/lightgreen/20150101_100101@': (4, 'lightgreen 1', tr('green/2')),
@@ -2903,7 +2940,7 @@ class AT(TestAutopkgtestBase):
 
         self.data.add_default_packages(green=False)
 
-        self.swift.set_results({'autopkgtest-testing': {
+        self.set_results({'autopkgtest-testing': {
             'testing/i386/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/amd64/d/darkgreen/20150101_100000@': (0, 'darkgreen 1', tr('green/2')),
             'testing/i386/l/lightgreen/20150101_100100@': (0, 'lightgreen 1', tr('green/2')),
