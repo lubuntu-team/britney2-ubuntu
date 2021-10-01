@@ -12,6 +12,7 @@ import fileinput
 import unittest
 import json
 import pprint
+import sqlite3
 import urllib.parse
 
 import apt_pkg
@@ -44,11 +45,14 @@ class TestAutopkgtestBase(TestBase):
     def setUp(self):
         super().setUp()
         self.fake_amqp = os.path.join(self.data.path, 'amqp')
+        self.db_path = os.path.join(self.data.path, 'autopkgtest.db')
 
-        # Set fake AMQP and Swift server
+        # Set fake AMQP and Swift server and autopkgtest.db
         for line in fileinput.input(self.britney_conf, inplace=True):
             if 'ADT_AMQP' in line:
                 print('ADT_AMQP = file://%s' % self.fake_amqp)
+            elif 'ADT_DB_URL' in line:
+                print('ADT_DB_URL = file://%s' % self.db_path)
             else:
                 sys.stdout.write(line)
 
@@ -82,8 +86,65 @@ class TestAutopkgtestBase(TestBase):
         self.swift = mock_swift.AutoPkgTestSwiftServer(port=18085)
         self.swift.set_results({})
 
+        self.db = self.init_sqlite_db(self.db_path)
+
     def tearDown(self):
         del self.swift
+        self.db.close()
+        try:
+            os.unlink(self.db_path)
+        except FileNotFoundError: pass
+
+    # https://git.launchpad.net/autopkgtest-cloud/tree/charms/focal/autopkgtest-web/webcontrol/publish-db,
+    # https://git.launchpad.net/autopkgtest-cloud/tree/charms/focal/autopkgtest-web/webcontrol/helpers/utils.py
+    def init_sqlite_db(self, path):
+        """Create DB if it does not exist, and connect to it"""
+
+        db = sqlite3.connect(path)
+        db.execute("PRAGMA journal_mode = MEMORY")
+        db.execute(
+            "CREATE TABLE current_version("
+            "  release CHAR[20], "
+            "  pocket CHAR[40], "
+            "  component CHAR[10],"
+            "  package CHAR[50], "
+            "  version CHAR[120], "
+            "  PRIMARY KEY(release, package))"
+        )
+        db.execute("CREATE INDEX IF NOT EXISTS current_version_pocket_ix "
+                   "ON current_version(pocket, component)")
+
+        db.execute(
+            "CREATE TABLE url_last_checked("
+            "  url CHAR[100], "
+            "  timestamp CHAR[50], "
+            "  PRIMARY KEY(url))"
+        )
+
+        db.execute('CREATE TABLE IF NOT EXISTS test ('
+                   '  id INTEGER PRIMARY KEY, '
+                   '  release CHAR[20], '
+                   '  arch CHAR[20], '
+                   '  package char[120])')
+        db.execute('CREATE TABLE IF NOT EXISTS result ('
+                   '  test_id INTEGER, '
+                   '  run_id CHAR[30], '
+                   '  version VARCHAR[200], '
+                   '  triggers TEXT, '
+                   '  duration INTEGER, '
+                   '  exitcode INTEGER, '
+                   '  requester TEXT, '
+                   '  PRIMARY KEY(test_id, run_id), '
+                   '  FOREIGN KEY(test_id) REFERENCES test(id))')
+        # /packages/<name> mostly benefits from the index on package (0.8s -> 0.01s),
+        # but adding the other fields improves it a further 50% to 0.005s.
+        db.execute('CREATE UNIQUE INDEX IF NOT EXISTS test_package_uix ON test('
+                   '  package, release, arch)')
+        db.execute('CREATE INDEX IF NOT EXISTS result_run_ix ON result('
+                   '  run_id desc)')
+
+        db.commit()
+        return db
 
     def run_it(self, unstable_add, expect_status, expect_excuses={}):
         '''Run britney with some unstable packages and verify excuses.
