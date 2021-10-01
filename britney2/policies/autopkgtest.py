@@ -807,7 +807,7 @@ class AutopkgtestPolicy(BasePolicy):
             try:
                 req = urlopen(url, timeout=30)
                 code = req.getcode()
-                if 200 <= code < 300:
+                if not code or 200 <= code < 300:
                     return req
             except socket.timeout as e:
                 self.logger.info(
