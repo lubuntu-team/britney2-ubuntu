@@ -124,6 +124,7 @@ class AutopkgtestPolicy(BasePolicy):
         self.pending_tests_file = os.path.join(self.state_dir, 'autopkgtest-pending.json')
         self.testsuite_triggers = {}
         self.result_in_baseline_cache = collections.defaultdict(dict)
+        self.database = os.path.join(self.state_dir, 'autopkgtest.db')
 
         # results map: trigger -> src -> arch -> [passed, version, run_id, seen]
         # - trigger is "source/version" of an unstable package that triggered
@@ -139,6 +140,11 @@ class AutopkgtestPolicy(BasePolicy):
             self.results_cache_file = self.options.adt_shared_results_cache
         else:
             self.results_cache_file = os.path.join(self.state_dir, 'autopkgtest-results.cache')
+
+        if hasattr(self.options,'adt_db_url') and self.options.adt_db_url:
+            if not self.fetch_db():
+                self.logger.error('No autopkgtest db present, exiting')
+                sys.exit(1)
 
         try:
             self.options.adt_ppas = self.options.adt_ppas.strip().split()
@@ -156,6 +162,34 @@ class AutopkgtestPolicy(BasePolicy):
                 self.adt_arches.append(arch)
             else:
                 self.logger.info("Ignoring ADT_ARCHES %s as it is not in architectures list", arch)
+
+    def fetch_db(self):
+        f = None
+        try:
+            f = self.download_retry(self.options.adt_db_url)
+            http_code = f.getcode()
+            # file:/// urls don't have the http niceties
+            if not http_code or http_code == 200:
+                new_file = self.database + '.new'
+                with open(new_file,'wb') as f_out:
+                    while True:
+                        data=f.read(2048*1024)
+                        if not data:
+                            break
+                        f_out.write(data)
+                if http_code and os.path.getsize(new_file) != int(f.getheader('content-length')):
+                    self.logger.info('Short read downloading autopkgtest results')
+                    os.unlink(new_file)
+                else:
+                    os.rename(new_file, self.database)
+            else:
+                self.logger.error('Failure to fetch autopkgtest results %s: HTTP code=%d', self.options.adt_db_url, f.getcode())
+        except IOError as e:
+            self.logger.error('Failure to fetch autopkgtest results %s: %s', self.options.adt_db_url, str(e))
+        finally:
+            if f is not None:
+                f.close()
+        return os.path.exists(self.database)
 
     def register_hints(self, hint_parser):
         hint_parser.register_hint_type('force-badtest', britney2.hints.split_into_one_hint_per_package)

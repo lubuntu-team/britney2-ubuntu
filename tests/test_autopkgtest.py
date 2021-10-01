@@ -242,6 +242,29 @@ class AT(TestAutopkgtestBase):
     # Tests for generic packages
     ################################################################
 
+    def test_fail_on_missing_database(self):
+        '''Fails if autopkgtest.db is requested but not available'''
+
+        os.unlink(self.db_path)
+
+        self.data.add_default_packages(lightgreen=False)
+
+        britney_failed = 0
+        try:
+            self.run_it(
+                # uninstallable unstable version
+                [('lightgreen', {'Version': '1.1~beta', 'Depends': 'libc6 (>= 0.9), libgreen1 (>= 2)'}, 'autopkgtest')],
+                {'lightgreen': (False, {})},
+                {'lightgreen': [('old-version', '1'), ('new-version', '1.1~beta'),
+                                ('reason', 'depends'),
+                                ('excuses', 'uninstallable on arch amd64, not running autopkgtest there')
+                                ]
+                 })[1]
+        except AssertionError as e:
+            britney_failed = 1
+
+        self.assertEqual(britney_failed, 1, "DB missing but britney succeeded")
+
     def test_no_request_for_uninstallable(self):
         '''Does not request a test for an uninstallable package'''
 
