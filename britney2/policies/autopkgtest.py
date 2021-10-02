@@ -28,6 +28,7 @@ import io
 import itertools
 import re
 import socket
+import sqlite3
 import sys
 import time
 import urllib.parse
@@ -124,7 +125,7 @@ class AutopkgtestPolicy(BasePolicy):
         self.pending_tests_file = os.path.join(self.state_dir, 'autopkgtest-pending.json')
         self.testsuite_triggers = {}
         self.result_in_baseline_cache = collections.defaultdict(dict)
-        self.database = os.path.join(self.state_dir, 'autopkgtest.db')
+        self.database_path = os.path.join(self.state_dir, 'autopkgtest.db')
 
         # results map: trigger -> src -> arch -> [passed, version, run_id, seen]
         # - trigger is "source/version" of an unstable package that triggered
@@ -145,6 +146,7 @@ class AutopkgtestPolicy(BasePolicy):
             if not self.fetch_db():
                 self.logger.error('No autopkgtest db present, exiting')
                 sys.exit(1)
+            self.db = sqlite3.connect(self.database_path)
 
         try:
             self.options.adt_ppas = self.options.adt_ppas.strip().split()
@@ -170,7 +172,7 @@ class AutopkgtestPolicy(BasePolicy):
             http_code = f.getcode()
             # file:/// urls don't have the http niceties
             if not http_code or http_code == 200:
-                new_file = self.database + '.new'
+                new_file = self.database_path + '.new'
                 with open(new_file,'wb') as f_out:
                     while True:
                         data=f.read(2048*1024)
@@ -181,7 +183,7 @@ class AutopkgtestPolicy(BasePolicy):
                     self.logger.info('Short read downloading autopkgtest results')
                     os.unlink(new_file)
                 else:
-                    os.rename(new_file, self.database)
+                    os.rename(new_file, self.database_path)
             else:
                 self.logger.error('Failure to fetch autopkgtest results %s: HTTP code=%d', self.options.adt_db_url, f.getcode())
         except IOError as e:
@@ -189,7 +191,7 @@ class AutopkgtestPolicy(BasePolicy):
         finally:
             if f is not None:
                 f.close()
-        return os.path.exists(self.database)
+        return os.path.exists(self.database_path)
 
     def register_hints(self, hint_parser):
         hint_parser.register_hint_type('force-badtest', britney2.hints.split_into_one_hint_per_package)
@@ -1004,6 +1006,71 @@ class AutopkgtestPolicy(BasePolicy):
         for trigger in result_triggers:
             self.add_trigger_to_results(trigger, src, ver, arch, run_id, seen, result)
 
+    def fetch_sqlite_results(self, src, arch):
+        '''Retrieve new results for source package/arch from sqlite
+
+        Remove matching pending_tests entries.
+        '''
+
+        # determine latest run_id from results
+        latest_run_id = ''
+        if not self.options.adt_shared_results_cache:
+            latest_run_id = self.latest_run_for_package(src, arch)
+        if not latest_run_id:
+            latest_run_id = ''
+
+        cur = self.db.cursor()
+        for row in cur.execute('SELECT r.exitcode,r.version,r.triggers,'
+                               '       r.run_id FROM test AS t '
+                               'LEFT JOIN result AS r ON t.id=r.test_id '
+                               'WHERE t.release=? AND t.arch=? '
+                               'AND t.package=? AND r.run_id >= ?',
+                               (self.options.series,arch, src, latest_run_id)):
+            exitcode, ver, triggers, run_id = row
+            if not ver:
+                if exitcode in (4, 12, 20):
+                    # repair it
+                    ver = "unknown"
+                else:
+                    self.logger.error('%s/%s/%s is damaged, ignoring',
+                                      arch, src, run_id)
+                    # ignore this; this will leave an orphaned request
+                    # in autopkgtest-pending.json and thus require
+                    # manual retries after fixing the tmpfail, but we
+                    # can't just blindly attribute it to some pending
+                    # test.
+                    return
+
+            # parse recorded triggers in test result
+            if triggers:
+                result_triggers = [i for i in triggers.split(' ', 1) if '/' in i]
+            else:
+                self.logger.error('%s result has no ADT_TEST_TRIGGERS, ignoring')
+                continue
+
+            # 20200101_000000 is 15 chars long
+            seen = round(calendar.timegm(time.strptime(run_id[0:15], '%Y%m%d_%H%M%S')))
+
+            # allow some skipped tests, but nothing else
+            if exitcode in [0, 2]:
+                result = Result.PASS
+            elif exitcode == 8:
+                result = Result.NEUTRAL
+            else:
+                result = Result.FAIL
+
+            self.logger.info(
+                'Fetched test result for %s/%s/%s %s (triggers: %s): %s',
+                src, ver, arch, run_id, result_triggers, result.name.lower())
+
+            # remove matching test requests
+            for trigger in result_triggers:
+                self.remove_from_pending(trigger, src, arch)
+
+            # add this result
+            for trigger in result_triggers:
+                self.add_trigger_to_results(trigger, src, ver, arch, run_id, seen, result)
+
     def remove_from_pending(self, trigger, src, arch):
         try:
             arch_list = self.pending_tests[trigger][src]
@@ -1105,17 +1172,21 @@ class AutopkgtestPolicy(BasePolicy):
                     result[3] + int(self.options.adt_retry_older_than) * SECPERDAY < self._now:
                 # We might want to retry this failure, so continue
                 pass
-            elif not uses_swift:
+            elif not uses_swift and not hasattr(self,'db'):
                 # We're done if we don't retrigger and we're not using swift
                 return
             elif result_state in {Result.PASS, Result.NEUTRAL}:
                 self.logger.debug('%s/%s triggered by %s already known', src, arch, trigger)
                 return
 
-        # Without swift we don't expect new results
-        if uses_swift:
+        # Without swift or autopkgtest.db we don't expect new results
+        if hasattr(self,'db'):
+            self.fetch_sqlite_results(src, arch)
+        elif uses_swift:
             self.logger.info('Checking for new results for failed %s/%s for trigger %s', src, arch, trigger)
             self.fetch_swift_results(self.options.adt_swift_url, src, arch)
+
+        if hasattr(self,'db') or uses_swift:
             # do we have one now?
             try:
                 self.test_results[trigger][src][arch]
