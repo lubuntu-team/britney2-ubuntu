@@ -97,18 +97,6 @@ class ExcuseFinder(object):
         source_u.section and excuse.set_section(source_u.section)
         excuse.set_distribution(self.options.distribution)
 
-        # if there is a `remove' hint and the requested version is the same as the
-        # version in testing, then stop here and return False
-        # (as a side effect, a removal may generate such excuses for both the source
-        # package and its binary packages on each architecture)
-        for hint in self.hints.search('remove', package=src, version=source_t.version):
-            excuse.add_hint(hint)
-            excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
-            excuse.add_verdict_info(excuse.policy_verdict, "Removal request by %s" % (hint.user))
-            excuse.add_verdict_info(excuse.policy_verdict, "Trying to remove package, not update it")
-            self.excuses[excuse.name] = excuse
-            return False
-
         # the starting point is that there is nothing wrong and nothing worth doing
         anywrongver = False
         anyworthdoing = False
@@ -247,6 +235,19 @@ class ExcuseFinder(object):
 
         if not anyworthdoing:
             # nothing worth doing, we don't add an excuse to the list, we just return false
+            return False
+
+        # if there is a `remove' hint and the requested version is the same as the
+        # version in testing, then stop here and return False
+        # (as a side effect, a removal may generate such excuses for both the source
+        # package and its binary packages on each architecture)
+        for hint in self.hints.search('remove', package=src, version=source_t.version):
+            excuse = Excuse(item)
+            excuse.add_hint(hint)
+            excuse.policy_verdict = PolicyVerdict.REJECTED_PERMANENTLY
+            excuse.add_verdict_info(excuse.policy_verdict, "Removal request by %s" % (hint.user))
+            excuse.add_verdict_info(excuse.policy_verdict, "Trying to remove package, not update it")
+            self.excuses[excuse.name] = excuse
             return False
 
         # there is something worth doing
