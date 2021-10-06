@@ -1523,11 +1523,6 @@ class ImplicitDependencyPolicy(BasePolicy):
             # source for pkg not in unstable: candidate for removal
             return True
 
-        source_t = target_suite.sources[src]
-        for hint in self.hints.search('remove', package=src, version=source_t.version):
-            # removal hint for the source in testing: candidate for removal
-            return True
-
         if target_suite.is_cruft(pkg):
             # if pkg is cruft in testing, removal will be tried
             return True
