@@ -1286,32 +1286,38 @@ class AutopkgtestPolicy(BasePolicy):
 
     def find_max_lower_force_reset_test(self, src, ver, arch):
         '''Find the maximum force-reset-test hint before/including ver'''
-        hints = self.hints.search('force-reset-test', package=src)
         found_ver = None
 
-        if hints:
-            for hint in hints:
-                for mi in hint.packages:
-                    if (mi.architecture in ['source', arch] and
-                            mi.version != 'all' and
-                            apt_pkg.version_compare(mi.version, ver) <= 0 and
-                            (found_ver is None or apt_pkg.version_compare(found_ver, mi.version) < 0)):
-                        found_ver = mi.version
+        if not hasattr(self, 'reset_hints'):
+            self.reset_hints = self.hints.search('force-reset-test')
+
+        for hint in self.reset_hints:
+            for mi in hint.packages:
+                if mi.package != src:
+                    continue
+                if (mi.architecture in ['source', arch] and
+                        mi.version != 'all' and
+                        apt_pkg.version_compare(mi.version, ver) <= 0 and
+                        (found_ver is None or apt_pkg.version_compare(found_ver, mi.version) < 0)):
+                    found_ver = mi.version
 
         return found_ver
 
     def has_higher_force_reset_test(self, src, ver, arch):
         '''Find if there is a minimum force-reset-test hint after/including ver'''
-        hints = self.hints.search('force-reset-test', package=src)
 
-        if hints:
-            self.logger.info('Checking hints for %s/%s/%s: %s' % (src, ver, arch, [str(h) for h in hints]))
-            for hint in hints:
-                for mi in hint.packages:
-                    if (mi.architecture in ['source', arch] and
-                            mi.version != 'all' and
-                            apt_pkg.version_compare(mi.version, ver) >= 0):
-                        return True
+        if not hasattr(self, 'reset_hints'):
+            self.reset_hints = self.hints.search('force-reset-test')
+
+        for hint in self.reset_hints:
+            self.logger.info('Checking hints for %s/%s/%s: %s' % (src, ver, arch, str(hint)))
+            for mi in hint.packages:
+                if mi.package != src:
+                    continue
+                if (mi.architecture in ['source', arch] and
+                        mi.version != 'all' and
+                        apt_pkg.version_compare(mi.version, ver) >= 0):
+                    return True
 
         return False
 
