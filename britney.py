@@ -446,11 +446,8 @@ class Britney(object):
             pass
 
         # integrity checks
-        if self.options.nuninst_cache and self.options.print_uninst:  # pragma: no cover
-            self.logger.error("nuninst_cache and print_uninst are mutually exclusive!")
-            sys.exit(1)
         # if the configuration file exists, then read it and set the additional options
-        elif not os.path.isfile(self.options.config):  # pragma: no cover
+        if not os.path.isfile(self.options.config):  # pragma: no cover
             self.logger.error("Unable to read the configuration file (%s), exiting!", self.options.config)
             sys.exit(1)
 
