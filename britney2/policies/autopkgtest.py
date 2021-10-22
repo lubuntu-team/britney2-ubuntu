@@ -1025,7 +1025,7 @@ class AutopkgtestPolicy(BasePolicy):
                                'LEFT JOIN result AS r ON t.id=r.test_id '
                                'WHERE t.release=? AND t.arch=? '
                                'AND t.package=? AND r.run_id >= ?',
-                               (self.options.series,arch, src, latest_run_id)):
+                               (self.options.series, arch, src, latest_run_id)):
             exitcode, ver, triggers, run_id = row
             if not ver:
                 if exitcode in (4, 12, 20):
@@ -1049,10 +1049,10 @@ class AutopkgtestPolicy(BasePolicy):
                 continue
 
             # 20200101_000000 is 15 chars long
-            seen = round(calendar.timegm(time.strptime(run_id[0:15], '%Y%m%d_%H%M%S')))
+            seen = round(calendar.timegm(time.strptime(run_id[:15], '%Y%m%d_%H%M%S')))
 
             # allow some skipped tests, but nothing else
-            if exitcode in [0, 2]:
+            if exitcode in (0, 2):
                 result = Result.PASS
             elif exitcode == 8:
                 result = Result.NEUTRAL
