@@ -1415,10 +1415,10 @@ class AutopkgtestPolicy(BasePolicy):
             self.reset_hints = self.hints.search('force-reset-test')
 
         for hint in self.reset_hints:
-            self.logger.info('Checking hints for %s/%s/%s: %s' % (src, ver, arch, str(hint)))
             for mi in hint.packages:
                 if mi.package != src:
                     continue
+                self.logger.info('Checking hints for %s/%s/%s: %s' % (src, ver, arch, str(hint)))
                 if (mi.architecture in ['source', arch] and
                         mi.version != 'all' and
                         apt_pkg.version_compare(mi.version, ver) >= 0):
