@@ -1228,7 +1228,21 @@ class AutopkgtestPolicy(BasePolicy):
         result_reference = [Result.NONE, None, '', 0]
         if self.options.adt_baseline == 'reference':
             try:
-                result_reference = self.test_results[REF_TRIG][src][arch]
+                try:
+                    result_reference = self.test_results[REF_TRIG][src][arch]
+                except KeyError:
+                    uses_swift = not self.options.adt_swift_url.startswith('file://')
+                    # Without swift or autopkgtest.db we don't expect new results
+                    if hasattr(self,'db'):
+                        self.logger.info('Checking for new results for %s/%s for trigger %s', src, arch, REF_TRIG)
+                        self.fetch_sqlite_results(src, arch)
+                    elif uses_swift:
+                        self.logger.info('Checking for new results for %s/%s for trigger %s', src, arch, REF_TRIG)
+                        self.fetch_swift_results(self.options.adt_swift_url, src, arch)
+
+                    # do we have one now?
+                    result_reference = self.test_results[REF_TRIG][src][arch]
+
                 self.logger.debug('Found result for src %s in reference: %s',
                                   src, result_reference[0].name)
             except KeyError:
