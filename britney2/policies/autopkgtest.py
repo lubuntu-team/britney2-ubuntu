@@ -1043,7 +1043,7 @@ class AutopkgtestPolicy(BasePolicy):
 
             # parse recorded triggers in test result
             if triggers:
-                result_triggers = [i for i in triggers.split(' ', 1) if '/' in i]
+                result_triggers = [i for i in triggers.split(' ') if '/' in i]
             else:
                 self.logger.error('%s result has no ADT_TEST_TRIGGERS, ignoring')
                 continue
