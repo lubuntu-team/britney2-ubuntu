@@ -1024,7 +1024,7 @@ class AutopkgtestPolicy(BasePolicy):
                                '       r.run_id FROM test AS t '
                                'LEFT JOIN result AS r ON t.id=r.test_id '
                                'WHERE t.release=? AND t.arch=? '
-                               'AND t.package=? AND r.run_id >= ?',
+                               'AND t.package=? AND r.run_id > ?',
                                (self.options.series, arch, src, latest_run_id)):
             exitcode, ver, triggers, run_id = row
             if not ver:
