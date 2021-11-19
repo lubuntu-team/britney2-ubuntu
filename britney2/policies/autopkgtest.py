@@ -562,6 +562,7 @@ class AutopkgtestPolicy(BasePolicy):
         pkg_universe = self.britney.pkg_universe
         target_suite = self.suite_info.target_suite
         source_suite = item.suite
+        sources_t = target_suite.sources
         sources_s = item.suite.sources
         packages_s_a = item.suite.binaries[arch]
         source_name = item.package
@@ -646,9 +647,11 @@ class AutopkgtestPolicy(BasePolicy):
             if binary.architecture == arch:
                 try:
                     source_of_bin = packages_s_a[binary.package_name].source
-                    triggers.add(
-                        source_of_bin + '/' +
-                        sources_s[source_of_bin].version)
+                    if (sources_t.get(source_of_bin, None) is None or
+                            sources_s[source_of_bin].version != sources_t[source_of_bin].version):
+                        triggers.add(
+                            source_of_bin + '/' +
+                            sources_s[source_of_bin].version)
                 except KeyError:
                     # Apparently the package was removed from
                     # unstable e.g. if packages are replaced
@@ -657,9 +660,11 @@ class AutopkgtestPolicy(BasePolicy):
                 if binary not in source_data_srcdist.binaries:
                     for tdep_src in self.testsuite_triggers.get(binary.package_name, set()):
                         try:
-                            triggers.add(
-                                tdep_src + '/' +
-                                sources_s[tdep_src].version)
+                            if (sources_t.get(tdep_src, None) is None or
+                                    sources_s[tdep_src].version != sources_t[tdep_src].version):
+                                triggers.add(
+                                    tdep_src + '/' +
+                                    sources_s[tdep_src].version)
                         except KeyError:
                             # Apparently the source was removed from
                             # unstable (testsuite_triggers are unified
