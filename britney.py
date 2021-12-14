@@ -1461,9 +1461,6 @@ class Britney(object):
         """
         self.logger.info("> Processing hints from the auto hinter")
 
-        self.logger.info(">> Skipping auto hinting due to recursion problem")
-        return []
-
         sources_t = self.suite_info.target_suite.sources
         excuses = self.excuses
 
