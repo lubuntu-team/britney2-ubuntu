@@ -475,7 +475,7 @@ class AutopkgtestPolicy(BasePolicy):
                         history_url = cloud_url % {
                             'h': srchash(testsrc), 's': testsrc,
                             'r': self.options.series, 'a': arch}
-                    if status == 'REGRESSION':
+                    if status in ['REGRESSION', 'RUNNING-REFERENCE']:
                         if self.options.adt_retry_url_mech == 'run_id':
                             retry_url = self.options.adt_ci_url + 'api/v1/retry/' + run_id
                         else:
