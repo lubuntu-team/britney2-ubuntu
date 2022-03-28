@@ -15,7 +15,7 @@ from britney2.policies.policy import BasePolicy, PolicyVerdict
 LAUNCHPAD_URL = "https://api.launchpad.net/1.0/"
 PRIMARY = LAUNCHPAD_URL + "ubuntu/+archive/primary"
 INCLUDE = ["~bileto-ppa-service/", "~ci-train-ppa-service/"]
-EXCLUDE = ["~ci-train-ppa-service/+archive/ubuntu/4810", "~ci-train-ppa-service/+archive/ubuntu/4815", "~ci-train-ppa-service/+archive/ubuntu/4816"]
+EXCLUDE = ["~ci-train-ppa-service/+archive/ubuntu/4813", "~ci-train-ppa-service/+archive/ubuntu/4815", "~ci-train-ppa-service/+archive/ubuntu/4816"]
 
 
 class SourcePPAPolicy(BasePolicy, Rest):
