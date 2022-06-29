@@ -45,7 +45,7 @@ http://people.canonical.com/~ubuntu-archive/proposed-migration/{series}/update_e
 
 https://wiki.ubuntu.com/ProposedMigration
 
-If you have any questions about this email, please ask them in #ubuntu-release channel on Freenode IRC.
+If you have any questions about this email, please ask them in #ubuntu-release channel on libera.chat.
 
 Regards, Ubuntu Release Team.
 """
