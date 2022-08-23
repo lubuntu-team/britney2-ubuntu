@@ -1285,9 +1285,6 @@ class AutopkgtestPolicy(BasePolicy):
         binaries_info = target_suite.binaries[arch]
 
         # determine current test result status
-        baseline_result = self.result_in_baseline(src, arch)[0]
-
-        # determine current test result status
         until = self.find_max_lower_force_reset_test(src, ver, arch)
 
         # Special-case triggers from linux-meta*: we cannot compare results
@@ -1312,6 +1309,9 @@ class AutopkgtestPolicy(BasePolicy):
             run_id = r[2]
 
             if r[0] in {Result.FAIL, Result.OLD_FAIL}:
+                # determine current test result status
+                baseline_result = self.result_in_baseline(src, arch)[0]
+
                 if baseline_result == Result.FAIL:
                     result = 'ALWAYSFAIL'
                 elif baseline_result in {Result.NONE, Result.OLD_FAIL}:
@@ -1369,6 +1369,7 @@ class AutopkgtestPolicy(BasePolicy):
         except KeyError:
             # no result for src/arch; still running?
             if arch in self.pending_tests.get(trigger, {}).get(src, []):
+                baseline_result = self.result_in_baseline(src, arch)[0]
                 if baseline_result != Result.FAIL and not self.has_force_badtest(src, ver, arch):
                     result = 'RUNNING'
                 else:
