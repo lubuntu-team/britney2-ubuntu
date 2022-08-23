@@ -1168,11 +1168,12 @@ class AutopkgtestPolicy(BasePolicy):
         if has_result:
             result_state = result[0]
             version = result[1]
-            baseline = self.result_in_baseline(src, arch)
             if result_state in {Result.OLD_PASS, Result.OLD_FAIL, Result.OLD_NEUTRAL}:
                 pass
             elif result_state == Result.FAIL and \
-                    baseline[0] in {Result.PASS, Result.NEUTRAL, Result.OLD_PASS, Result.OLD_NEUTRAL} and \
+                    self.result_in_baseline(src, arch)[0] in \
+                    {Result.PASS, Result.NEUTRAL, Result.OLD_PASS,
+                     Result.OLD_NEUTRAL} and \
                     self.options.adt_retry_older_than and \
                     result[3] + int(self.options.adt_retry_older_than) * SECPERDAY < self._now:
                 # We might want to retry this failure, so continue
