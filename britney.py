@@ -223,6 +223,7 @@ from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.policies.sourceppa import SourcePPAPolicy
 from britney2.policies.sruadtregression import SRUADTRegressionPolicy
 from britney2.policies.email import EmailPolicy
+from britney2.policies.cloud import CloudPolicy
 from britney2.policies.lpexcusebugs import LPExcuseBugsPolicy
 from britney2.utils import (log_and_format_old_libraries,
                             read_nuninst, write_nuninst, write_heidi,
@@ -552,6 +553,7 @@ class Britney(object):
             self._policy_engine.add_policy(EmailPolicy(self.options,
                                                        self.suite_info,
                                                        dry_run=add_email_policy == 'dry-run'))
+        self._policy_engine.add_policy(CloudPolicy(self.options, self.suite_info, dry_run=self.options.dry_run))
 
     @property
     def hints(self):
