@@ -553,7 +553,11 @@ class Britney(object):
             self._policy_engine.add_policy(EmailPolicy(self.options,
                                                        self.suite_info,
                                                        dry_run=add_email_policy == 'dry-run'))
-        self._policy_engine.add_policy(CloudPolicy(self.options, self.suite_info, dry_run=self.options.dry_run))
+        add_cloud_policy = getattr(self.options, 'cloud_enable', 'no')
+        if add_cloud_policy in ('yes', 'dry-run'):
+            self._policy_engine.add_policy(CloudPolicy(self.options,
+                                                       self.suite_info,
+                                                       dry_run=add_cloud_policy == 'dry-run'))
 
     @property
     def hints(self):
