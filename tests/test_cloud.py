@@ -17,8 +17,7 @@ import xml.etree.ElementTree as ET
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_DIR)
 
-from britney2.policies.cloud import CloudPolicy, ERR_MESSAGE
-from tests.test_sourceppa import FakeOptions
+from britney2.policies.cloud import CloudPolicy, ERR_MESSAGE, MissingURNException
 
 class FakeItem:
     package = "chromium-browser"
@@ -26,6 +25,15 @@ class FakeItem:
 
 class FakeSourceData:
     version = "55.0"
+
+class FakeOptions:
+    distribution = "testbuntu"
+    series = "zazzy"
+    unstable = "/tmp"
+    verbose = False
+    cloud_source = "zazzy-proposed"
+    cloud_source_type = "archive"
+    cloud_azure_zazzy_urn = "fake-urn-value"
 
 class T(unittest.TestCase):
     def setUp(self):
@@ -35,38 +43,29 @@ class T(unittest.TestCase):
     def tearDown(self):
         self.policy._cleanup_work_directory()
 
-    def test_retrieve_series_and_pocket_from_path(self):
-        """Retrieves the series and pocket from the suite path.
-        Ensure an exception is raised if the regex fails to match.
-        """
-        result = self.policy._retrieve_series_and_pocket_from_path("data/jammy-proposed")
-        self.assertTupleEqual(result, ("jammy", "proposed"))
-
-        self.assertRaises(
-            RuntimeError, self.policy._retrieve_series_and_pocket_from_path, "data/badpath"
-        )
-
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_run_cloud_tests_called_for_package_in_manifest(self, mock_run):
         """Cloud tests should run for a package in the cloud package set.
         """
         self.policy.package_set = set(["chromium-browser"])
-        self.policy.series = "jammy"
-        self.policy.pocket = "proposed"
+        self.policy.options.series = "jammy"
+        self.policy.source = "jammy-proposed"
 
         self.policy.apply_src_policy_impl(
             None, FakeItem, None, FakeSourceData, None
         )
 
-        mock_run.assert_called_once_with("chromium-browser", "jammy", "proposed")
+        mock_run.assert_called_once_with(
+            "chromium-browser", "jammy", "jammy-proposed", "archive"
+        )
 
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_run_cloud_tests_not_called_for_package_not_in_manifest(self, mock_run):
         """Cloud tests should not run for packages not in the cloud package set"""
 
         self.policy.package_set = set(["vim"])
-        self.policy.series = "jammy"
-        self.policy.pocket = "proposed"
+        self.policy.options.series = "jammy"
+        self.policy.source = "jammy-proposed"
 
         self.policy.apply_src_policy_impl(
             None, FakeItem, None, FakeSourceData, None
@@ -79,8 +78,8 @@ class T(unittest.TestCase):
     def test_no_tests_run_during_dry_run(self, mock_run, smtp):
         self.policy = CloudPolicy(FakeOptions, {}, dry_run=True)
         self.policy.package_set = set(["chromium-browser"])
-        self.policy.series = "jammy"
-        self.policy.pocket = "proposed"
+        self.policy.options.series = "jammy"
+        self.policy.source = "jammy-proposed"
 
         self.policy.apply_src_policy_impl(
             None, FakeItem, None, FakeSourceData, None
@@ -91,8 +90,8 @@ class T(unittest.TestCase):
 
     def test_finding_results_file(self):
         """Ensure result file output from Cloud Test Framework can be found"""
-        path = pathlib.PurePath(CloudPolicy.WORK_DIR, "TEST-FakeTests-20230101010101.xml")
-        path2 = pathlib.PurePath(CloudPolicy.WORK_DIR, "Test-OtherTests-20230101010101.xml")
+        path = pathlib.PurePath(self.policy.work_dir, "TEST-FakeTests-20230101010101.xml")
+        path2 = pathlib.PurePath(self.policy.work_dir, "Test-OtherTests-20230101010101.xml")
         with open(path, "a"): pass
         with open(path2, "a"): pass
 
@@ -128,13 +127,61 @@ class T(unittest.TestCase):
                 "failing_test2": "Error reason 2"
             }
         }
-        self.policy.series = "jammy"
-        self.policy.pocket = "proposed"
+        self.policy.options.series = "jammy"
+        self.policy.source = "jammy-proposed"
         message = self.policy._format_email_message(ERR_MESSAGE, ["work@canonical.com"], "vim", "9.0", failures)
 
         self.assertIn("To: work@canonical.com", message)
         self.assertIn("vim 9.0", message)
         self.assertIn("Error reason 2", message)
+
+    def test_urn_retrieval(self):
+        """Test that URN retrieval throws the expected error when not configured."""
+        self.assertRaises(
+            MissingURNException, self.policy._retrieve_urn, "jammy"
+        )
+
+        urn = self.policy._retrieve_urn("zazzy")
+        self.assertEqual(urn, "fake-urn-value")
+
+    def test_generation_of_verdict_info(self):
+        """Test that the verdict info correctly states which clouds had failures and/or errors"""
+        failures = {
+            "cloud1": {
+                "test_name1": "message1",
+                "test_name2": "message2"
+            },
+            "cloud2": {
+                "test_name3": "message3"
+            }
+        }
+
+        errors = {
+            "cloud1": {
+                "test_name4": "message4",
+            },
+            "cloud3": {
+                "test_name5": "message5"
+            }
+        }
+
+        info = self.policy._generate_verdict_info(failures, errors)
+
+        expected_failure_info = "Cloud testing failed for cloud1,cloud2."
+        expected_error_info = "Cloud testing had errors for cloud1,cloud3."
+
+        self.assertIn(expected_failure_info, info)
+        self.assertIn(expected_error_info, info)
+
+    def test_determine_install_flag(self):
+        """Ensure the correct flag is determined and errors are raised for unknown source types"""
+        install_flag = self.policy._determine_install_flag("archive")
+        self.assertEqual(install_flag, "--install-archive-package")
+
+        install_flag = self.policy._determine_install_flag("ppa")
+        self.assertEqual(install_flag, "--install-ppa-package")
+
+        self.assertRaises(RuntimeError, self.policy._determine_install_flag, "something")
 
     def _create_fake_test_result_file(self, num_pass=1, num_err=0, num_fail=0):
         """Helper function to generate an xunit test result file.
@@ -145,8 +192,8 @@ class T(unittest.TestCase):
 
         Returns the path to the created file.
         """
-        os.makedirs(CloudPolicy.WORK_DIR, exist_ok=True)
-        path = pathlib.PurePath(CloudPolicy.WORK_DIR, "TEST-FakeTests-20230101010101.xml")
+        os.makedirs(self.policy.work_dir, exist_ok=True)
+        path = pathlib.PurePath(self.policy.work_dir, "TEST-FakeTests-20230101010101.xml")
 
         root = ET.Element("testsuite", attrib={"name": "FakeTests-1234567890"})
 
