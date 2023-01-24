@@ -6,7 +6,7 @@ import shutil
 import smtplib
 import socket
 import subprocess
-import xunitparser
+import xml.etree.ElementTree as ET
 
 from britney2 import SuiteClass
 from britney2.policies.policy import BasePolicy
@@ -221,13 +221,38 @@ class CloudPolicy(BasePolicy):
         """
         for file_path in results_file_paths:
             with open(file_path) as file:
-                ts, tr = xunitparser.parse(file)
+                xml = ET.parse(file)
+                root = xml.getroot()
 
-                for testcase, message in tr.failures:
-                    self.store_test_result(self.failures, cloud, testcase.methodname, message)
+                if root.tag == "testsuites":
+                    for testsuite in root:
+                        self._parse_xunit_testsuite(cloud, testsuite)
+                else:
+                    self._parse_xunit_testsuite(cloud, root)
 
-                for testcase, message in tr.errors:
-                    self.store_test_result(self.errors, cloud, testcase.methodname, message)
+    def _parse_xunit_testsuite(self, cloud, root):
+        """Parses the xunit testsuite and stores any failure or error test results.
+
+        :param cloud The name of the cloud, used for storing the results.
+        :param root An XML tree root.
+        """
+        for el in root:
+            if el.tag == "testcase":
+                for e in el:
+                    if e.tag == "failure":
+                        type = e.attrib.get('type')
+                        message = e.attrib.get('message')
+                        info = "{}: {}".format(type, message)
+                        self.store_test_result(
+                            self.failures, cloud, el.attrib.get('name'), info
+                        )
+                    if e.tag == "error":
+                        type = e.attrib.get('type')
+                        message = e.attrib.get('message')
+                        info = "{}: {}".format(type, message)
+                        self.store_test_result(
+                            self.errors, cloud, el.attrib.get('name'), info
+                        )
 
     def store_test_result(self, results, cloud, test_name, message):
         """Adds the test to the results hash under the given cloud.
