@@ -6,10 +6,10 @@
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
 
-import json
 import os
 import pathlib
 import sys
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
@@ -26,18 +26,18 @@ class FakeItem:
 class FakeSourceData:
     version = "55.0"
 
-class FakeOptions:
-    distribution = "testbuntu"
-    series = "zazzy"
-    unstable = "/tmp"
-    verbose = False
-    cloud_source = "zazzy-proposed"
-    cloud_source_type = "archive"
-    cloud_azure_zazzy_urn = "fake-urn-value"
-
 class T(unittest.TestCase):
     def setUp(self):
-        self.policy = CloudPolicy(FakeOptions, {})
+        self.fake_options = SimpleNamespace(
+            distrubtion = "testbuntu",
+            series = "zazzy",
+            unstable = "/tmp",
+            verbose = False,
+            cloud_source = "zazzy-proposed",
+            cloud_source_type = "archive",
+            cloud_azure_zazzy_urn = "fake-urn-value"
+        )
+        self.policy = CloudPolicy(self.fake_options, {})
         self.policy._setup_work_directory()
 
     def tearDown(self):
@@ -49,14 +49,13 @@ class T(unittest.TestCase):
         """
         self.policy.package_set = set(["chromium-browser"])
         self.policy.options.series = "jammy"
-        self.policy.source = "jammy-proposed"
 
         self.policy.apply_src_policy_impl(
             None, FakeItem, None, FakeSourceData, None
         )
 
         mock_run.assert_called_once_with(
-            "chromium-browser", "jammy", "jammy-proposed", "archive"
+            "chromium-browser", "jammy", ["proposed"], "archive"
         )
 
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
@@ -65,7 +64,6 @@ class T(unittest.TestCase):
 
         self.policy.package_set = set(["vim"])
         self.policy.options.series = "jammy"
-        self.policy.source = "jammy-proposed"
 
         self.policy.apply_src_policy_impl(
             None, FakeItem, None, FakeSourceData, None
@@ -76,7 +74,7 @@ class T(unittest.TestCase):
     @patch("britney2.policies.cloud.smtplib")
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_no_tests_run_during_dry_run(self, mock_run, smtp):
-        self.policy = CloudPolicy(FakeOptions, {}, dry_run=True)
+        self.policy = CloudPolicy(self.fake_options, {}, dry_run=True)
         self.policy.package_set = set(["chromium-browser"])
         self.policy.options.series = "jammy"
         self.policy.source = "jammy-proposed"
@@ -173,15 +171,94 @@ class T(unittest.TestCase):
         self.assertIn(expected_failure_info, info)
         self.assertIn(expected_error_info, info)
 
-    def test_determine_install_flag(self):
-        """Ensure the correct flag is determined and errors are raised for unknown source types"""
-        install_flag = self.policy._determine_install_flag("archive")
-        self.assertEqual(install_flag, "--install-archive-package")
+    def test_format_install_flags_with_ppas(self):
+        """Ensure the correct flags are returned with PPA sources"""
+        expected_flags = [
+            "--install-ppa-package", "tmux/ppa_url=fingerprint",
+            "--install-ppa-package", "tmux/ppa_url2=fingerprint"
+        ]
+        install_flags = self.policy._format_install_flags(
+            "tmux", ["ppa_url=fingerprint", "ppa_url2=fingerprint"], "ppa"
+        )
 
-        install_flag = self.policy._determine_install_flag("ppa")
-        self.assertEqual(install_flag, "--install-ppa-package")
+        self.assertListEqual(install_flags, expected_flags)
 
-        self.assertRaises(RuntimeError, self.policy._determine_install_flag, "something")
+    def test_format_install_flags_with_archive(self):
+        """Ensure the correct flags are returned with archive sources"""
+        expected_flags = ["--install-archive-package", "tmux/proposed"]
+        install_flags = self.policy._format_install_flags("tmux", ["proposed"], "archive")
+
+        self.assertListEqual(install_flags, expected_flags)
+
+    def test_format_install_flags_with_incorrect_type(self):
+        """Ensure errors are raised for unknown source types"""
+
+        self.assertRaises(RuntimeError, self.policy._format_install_flags, "tmux", ["a_source"], "something")
+
+    def test_parse_ppas(self):
+        """Ensure correct conversion from Britney format to cloud test format
+        Also check that public PPAs are not used due to fingerprint requirement for cloud
+        tests.
+        """
+        input_ppas = [
+           "deadsnakes/ppa",
+            "user:token@team/name:fingerprint"
+        ]
+
+        expected_ppas = [
+            "https://user:token@private-ppa.launchpadcontent.net/team/name/ubuntu=fingerprint"
+        ]
+
+        output_ppas = self.policy._parse_ppas(input_ppas)
+        self.assertListEqual(output_ppas, expected_ppas)
+
+    def test_errors_raised_if_invalid_ppa_input(self):
+        """Test that error are raised if input PPAs don't match expected format"""
+        self.assertRaises(
+            RuntimeError, self.policy._parse_ppas, ["user:token@team/name"]
+        )
+
+        self.assertRaises(
+            RuntimeError, self.policy._parse_ppas, ["user:token@team=fingerprint"]
+        )
+
+    def test_retrieve_package_install_source_from_test_output(self):
+        """Ensure retrieving the package install source from apt output only returns the line we
+        want and not other lines containing the package name.
+
+        Ensure it returns nothing if multiple candidates are found because that means the parsing
+        needs to be updated.
+        """
+        package = "tmux"
+
+        with open(pathlib.PurePath(self.policy.work_dir, self.policy.TEST_LOG_FILE), "w") as file:
+            file.write("Get: something \n".format(package))
+            file.write("Get: lib-{} \n".format(package))
+
+        install_source = self.policy._retrieve_package_install_source_from_test_output(package)
+        self.assertIsNone(install_source)
+
+        with open(pathlib.PurePath(self.policy.work_dir, self.policy.TEST_LOG_FILE), "a") as file:
+            file.write("Get: {} \n".format(package))
+
+        install_source = self.policy._retrieve_package_install_source_from_test_output(package)
+        self.assertEqual(install_source, "Get: tmux \n")
+
+    @patch("britney2.policies.cloud.CloudPolicy._retrieve_package_install_source_from_test_output")
+    def test_store_extra_test_result_info(self, mock):
+        """Ensure nothing is done if there are no failures/errors.
+        Ensure that if there are failures/errors that any extra info retrieved is stored in the
+        results dict Results -> Cloud -> extra_info
+        """
+        self.policy._store_extra_test_result_info("FakeCloud", "tmux")
+        mock.assert_not_called()
+
+        self.policy.failures = {"FakeCloud": {"failing_test": "failure reason"}}
+        mock.return_value = "source information"
+        self.policy._store_extra_test_result_info("FakeCloud", "tmux")
+        self.assertEqual(
+            self.policy.failures["FakeCloud"]["extra_info"]["install_source"], "source information"
+        )
 
     def _create_fake_test_result_file(self, num_pass=1, num_err=0, num_fail=0):
         """Helper function to generate an xunit test result file.

@@ -18,7 +18,7 @@ class MissingURNException(Exception):
 FAIL_MESSAGE = """From: Ubuntu Release Team <noreply+proposed-migration@ubuntu.com>
 To: {recipients}
 X-Proposed-Migration: notice
-Subject: [proposed-migration] {package} {version} in {series}, {source} failed Cloud tests.
+Subject: [proposed-migration] {package} {version} in {series} failed Cloud tests.
 
 Hi,
 
@@ -36,7 +36,7 @@ Regards, Ubuntu Release Team.
 ERR_MESSAGE = """From: Ubuntu Release Team <noreply+proposed-migration@ubuntu.com>
 To: {recipients}
 X-Proposed-Migration: notice
-Subject: [proposed-migration] {package} {version} in {series}, {source} had errors running Cloud Tests.
+Subject: [proposed-migration] {package} {version} in {series} had errors running Cloud Tests.
 
 Hi,
 
@@ -51,6 +51,7 @@ Regards, Ubuntu Release Team.
 class CloudPolicy(BasePolicy):
     PACKAGE_SET_FILE = "cloud_package_set"
     DEFAULT_EMAILS = ["cpc@canonical.com"]
+    TEST_LOG_FILE = "CTF.log"
 
     def __init__(self, options, suite_info, dry_run=False):
         super().__init__(
@@ -68,8 +69,15 @@ class CloudPolicy(BasePolicy):
         self.failure_emails = getattr(self.options, "cloud_failure_emails", self.DEFAULT_EMAILS)
         self.error_emails = getattr(self.options, "cloud_error_emails", self.DEFAULT_EMAILS)
 
-        self.source = getattr(self.options, "cloud_source")
-        self.source_type = getattr(self.options, "cloud_source_type")
+        adt_ppas = getattr(self.options, "adt_ppas", [])
+        ppas = self._parse_ppas(adt_ppas)
+
+        if len(ppas) == 0:
+            self.sources = ["proposed"]
+            self.source_type = "archive"
+        else:
+            self.sources = ppas
+            self.source_type = "ppa"
 
         self.failures = {}
         self.errors = {}
@@ -85,7 +93,7 @@ class CloudPolicy(BasePolicy):
 
         if self.dry_run:
             self.logger.info(
-                "Cloud Policy: Dry run would test {} in {}, {}".format(item.package , self.options.series, self.source)
+                "Cloud Policy: Dry run would test {} in {}".format(item.package , self.options.series)
             )
             return PolicyVerdict.PASS
 
@@ -93,10 +101,10 @@ class CloudPolicy(BasePolicy):
         self.failures = {}
         self.errors = {}
 
-        self._run_cloud_tests(item.package, self.options.series, self.source, self.source_type)
+        self._run_cloud_tests(item.package, self.options.series, self.sources, self.source_type)
 
         if len(self.failures) > 0 or len(self.errors) > 0:
-            self._send_emails_if_needed(item.package, source_data_srcdist.version, self.options.series, self.source)
+            self._send_emails_if_needed(item.package, source_data_srcdist.version, self.options.series)
 
             self._cleanup_work_directory()
             verdict = PolicyVerdict.REJECTED_PERMANENTLY
@@ -124,24 +132,23 @@ class CloudPolicy(BasePolicy):
 
         return package_set
 
-    def _run_cloud_tests(self, package, series, source, source_type):
+    def _run_cloud_tests(self, package, series, sources, source_type):
         """Runs any cloud tests for the given package.
         Nothing is returned but test failures and errors are stored in instance variables.
 
         :param package The name of the package to test
         :param series The Ubuntu codename for the series (e.g. jammy)
-        :param source Where the package should be installed from (e.g. proposed or a PPA)
+        :param sources List of sources where the package should be installed from (e.g. [proposed] or PPAs)
         :param source_type Either 'archive' or 'ppa'
         """
-        self._run_azure_tests(package, series, source, source_type)
+        self._run_azure_tests(package, series, sources, source_type)
 
-    def _send_emails_if_needed(self, package, version, series, source):
+    def _send_emails_if_needed(self, package, version, series):
         """Sends email(s) if there are test failures and/or errors
 
         :param package The name of the package that was tested
         :param version The version number of the package
         :param series The Ubuntu codename for the series (e.g. jammy)
-        :param source Where the package should be installed from (e.g. proposed or a PPA)
         """
         if len(self.failures) > 0:
             emails = self.failure_emails
@@ -159,34 +166,42 @@ class CloudPolicy(BasePolicy):
             self.logger.info("Cloud Policy: Sending error email for {}, to {}".format(package, emails))
             self._send_email(emails, message)
 
-    def _run_azure_tests(self, package, series, source, source_type):
+    def _run_azure_tests(self, package, series, sources, source_type):
         """Runs Azure's required package tests.
 
         :param package The name of the package to test
         :param series The Ubuntu codename for the series (e.g. jammy)
-        :param source Where the package should be installed from (e.g. proposed or a PPA)
+        :param sources List of sources where the package should be installed from (e.g. [proposed] or PPAs)
         :param source_type Either 'archive' or 'ppa'
         """
         urn = self._retrieve_urn(series)
-        install_flag = self._determine_install_flag(source_type)
 
-        self.logger.info("Cloud Policy: Running Azure tests for: {} in {}, {}".format(package, series, source))
-        subprocess.run(
+        self.logger.info("Cloud Policy: Running Azure tests for: {} in {}".format(package, series))
+        params = [
+            "/snap/bin/cloud-test-framework",
+            "--instance-prefix", "britney-{}-{}".format(package, series)
+        ]
+        params.extend(self._format_install_flags(package, sources, source_type))
+        params.extend(
             [
-                "/snap/bin/cloud-test-framework",
-                "--instance-prefix", "britney-{}-{}-{}".format(package, series, source),
-                install_flag, "{}/{}".format(package, source),
                 "azure_gen2",
-                "--location", "westeurope",
-                "--vm-size", "Standard_D2s_v5",
+                "--location", getattr(self.options, "cloud_azure_location", "westeurope"),
+                "--vm-size", getattr(self.options, "cloud_azure_vm_size", "Standard_D2s_v5"),
                 "--urn", urn,
                 "run-test", "package-install-with-reboot",
-            ],
-            cwd=self.work_dir
+            ]
         )
+
+        with open(PurePath(self.work_dir, self.TEST_LOG_FILE), "w") as file:
+            subprocess.run(
+                params,
+                cwd=self.work_dir,
+                stdout=file
+            )
 
         results_file_paths = self._find_results_files(r"TEST-NetworkTests-[0-9]*.xml")
         self._parse_xunit_test_results("Azure", results_file_paths)
+        self._store_extra_test_result_info(self, package)
 
     def _retrieve_urn(self, series):
         """Retrieves an URN from the configuration options based on series.
@@ -243,18 +258,18 @@ class CloudPolicy(BasePolicy):
                         type = e.attrib.get('type')
                         message = e.attrib.get('message')
                         info = "{}: {}".format(type, message)
-                        self.store_test_result(
+                        self._store_test_result(
                             self.failures, cloud, el.attrib.get('name'), info
                         )
                     if e.tag == "error":
                         type = e.attrib.get('type')
                         message = e.attrib.get('message')
                         info = "{}: {}".format(type, message)
-                        self.store_test_result(
+                        self._store_test_result(
                             self.errors, cloud, el.attrib.get('name'), info
                         )
 
-    def store_test_result(self, results, cloud, test_name, message):
+    def _store_test_result(self, results, cloud, test_name, message):
         """Adds the test to the results hash under the given cloud.
 
         Results format:
@@ -275,10 +290,61 @@ class CloudPolicy(BasePolicy):
 
         results[cloud][test_name] = message
 
+    def _store_extra_test_result_info(self, cloud, package):
+        """Stores any information beyond the test results and stores it in the results dicts
+        under Cloud->extra_info
+
+        Stores any information retrieved under the cloud's section in failures/errors but will
+        store nothing if failures/errors are empty.
+
+        :param cloud The name of the cloud
+        :param package The name of the package to test
+        """
+        if len(self.failures) == 0 and len(self.errors) == 0:
+            return
+
+        extra_info = {}
+
+        install_source = self._retrieve_package_install_source_from_test_output(package)
+        if install_source:
+            extra_info["install_source"] = install_source
+
+        if len(self.failures.get(cloud, {})) > 0:
+            self._store_test_result(self.failures, cloud, "extra_info", extra_info)
+
+        if len(self.errors.get(cloud, {})) > 0:
+            self._store_test_result(self.errors, cloud, "extra_info", extra_info)
+
+    def _retrieve_package_install_source_from_test_output(self, package):
+        """Checks the test logs for apt logs which show where the package was installed from.
+        Useful if multiple PPA sources are defined since we won't explicitly know the exact source.
+
+        Will return nothing unless exactly one matching line is found.
+
+        :param package The name of the package to test
+        """
+        possible_locations = []
+        with open(PurePath(self.work_dir, self.TEST_LOG_FILE), "r") as file:
+            for line in file:
+                if package not in line:
+                    continue
+
+                if "Get:" not in line:
+                    continue
+
+                if " {} ".format(package) not in line:
+                    continue
+
+                possible_locations.append(line)
+
+        if len(possible_locations) == 1:
+            return possible_locations[0]
+        else:
+            return None
+
     def _format_email_message(self, template, emails, package, version, test_results):
         """Insert given parameters into the email template."""
         series = self.options.series
-        source = self.source
         results = json.dumps(test_results, indent=4)
         recipients = ", ".join(emails)
         message = template.format(**locals())
@@ -312,13 +378,55 @@ class CloudPolicy(BasePolicy):
 
         return info
 
-    def _determine_install_flag(self, source_type):
-        if source_type == "archive":
-            return "--install-archive-package"
-        elif source_type == "ppa":
-            return "--install-ppa-package"
-        else:
-            raise RuntimeError("Cloud Policy: Unexpected source type, {}".format(source_type))
+    def _format_install_flags(self, package, sources, source_type):
+        """Determine the flags required to install the package from the given sources
+
+        :param package The name of the package to test
+        :param sources List of sources where the package should be installed from (e.g. [proposed] or PPAs)
+        :param source_type Either 'archive' or 'ppa'
+        """
+        install_flags = []
+
+        for source in sources:
+            if source_type == "archive":
+                install_flags.append("--install-archive-package")
+                install_flags.append("{}/{}".format(package, source))
+            elif source_type == "ppa":
+                install_flags.append("--install-ppa-package")
+                install_flags.append("{}/{}".format(package, source))
+            else:
+                raise RuntimeError("Cloud Policy: Unexpected source type, {}".format(source_type))
+
+        return install_flags
+
+    def _parse_ppas(self, ppas):
+        """Parse PPA list to store in format expected by cloud tests
+
+        Since currently only private PPAs in Britney are provided with fingerprints we will
+        only use those.
+
+        Britney private PPA format:
+            'user:token@team/name:fingerprint'
+        Cloud private PPA format:
+            'https://user:token@private-ppa.launchpadcontent.net/team/name/ubuntu=fingerprint
+
+        :param ppas List of PPAs in Britney approved format
+        :return A list of PPAs in valid cloud test format. Can return an empty list if none found.
+        """
+        cloud_ppas = []
+
+        for ppa in ppas:
+            if '@' in ppa:
+                match = re.match("^(?P<auth>.+:.+)@(?P<name>.+):(?P<fingerprint>.+$)", ppa)
+                if not match:
+                    raise RuntimeError('Private PPA %s not following required format (user:token@team/name:fingerprint)', ppa)
+
+                formatted_ppa = "https://{}@private-ppa.launchpadcontent.net/{}/ubuntu={}".format(
+                    match.group("auth"), match.group("name"), match.group("fingerprint")
+                )
+                cloud_ppas.append(formatted_ppa)
+
+        return cloud_ppas
 
     def _setup_work_directory(self):
         """Create a directory for tests to be run in."""
