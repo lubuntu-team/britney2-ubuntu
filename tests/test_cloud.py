@@ -201,11 +201,12 @@ class T(unittest.TestCase):
         tests.
         """
         input_ppas = [
-           "deadsnakes/ppa",
+            "deadsnakes/ppa:fingerprint",
             "user:token@team/name:fingerprint"
         ]
 
         expected_ppas = [
+            "https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu=fingerprint",
             "https://user:token@private-ppa.launchpadcontent.net/team/name/ubuntu=fingerprint"
         ]
 
@@ -214,6 +215,10 @@ class T(unittest.TestCase):
 
     def test_errors_raised_if_invalid_ppa_input(self):
         """Test that error are raised if input PPAs don't match expected format"""
+        self.assertRaises(
+            RuntimeError, self.policy._parse_ppas, ["team/name"]
+        )
+
         self.assertRaises(
             RuntimeError, self.policy._parse_ppas, ["user:token@team/name"]
         )

@@ -69,7 +69,7 @@ class CloudPolicy(BasePolicy):
         self.failure_emails = getattr(self.options, "cloud_failure_emails", self.DEFAULT_EMAILS)
         self.error_emails = getattr(self.options, "cloud_error_emails", self.DEFAULT_EMAILS)
 
-        adt_ppas = getattr(self.options, "adt_ppas", [])
+        adt_ppas = getattr(self.options, "adt_ppas", "").split()
         ppas = self._parse_ppas(adt_ppas)
 
         if len(ppas) == 0:
@@ -402,13 +402,16 @@ class CloudPolicy(BasePolicy):
     def _parse_ppas(self, ppas):
         """Parse PPA list to store in format expected by cloud tests
 
-        Since currently only private PPAs in Britney are provided with fingerprints we will
-        only use those.
+        Only supports PPAs provided with a fingerprint
 
         Britney private PPA format:
             'user:token@team/name:fingerprint'
+        Britney public PPA format:
+            'team/name:fingerprint'
         Cloud private PPA format:
             'https://user:token@private-ppa.launchpadcontent.net/team/name/ubuntu=fingerprint
+        Cloud public PPA format:
+            'https://ppa.launchpadcontent.net/team/name/ubuntu=fingerprint
 
         :param ppas List of PPAs in Britney approved format
         :return A list of PPAs in valid cloud test format. Can return an empty list if none found.
@@ -423,6 +426,15 @@ class CloudPolicy(BasePolicy):
 
                 formatted_ppa = "https://{}@private-ppa.launchpadcontent.net/{}/ubuntu={}".format(
                     match.group("auth"), match.group("name"), match.group("fingerprint")
+                )
+                cloud_ppas.append(formatted_ppa)
+            else:
+                match = re.match("^(?P<name>.+):(?P<fingerprint>.+$)", ppa)
+                if not match:
+                    raise RuntimeError('Public PPA %s not following required format (team/name:fingerprint)', ppa)
+
+                formatted_ppa = "https://ppa.launchpadcontent.net/{}/ubuntu={}".format(
+                    match.group("name"), match.group("fingerprint")
                 )
                 cloud_ppas.append(formatted_ppa)
 
