@@ -2546,6 +2546,32 @@ class AT(TestAutopkgtestBase):
         self.assertEqual(self.amqp_requests, set())
         self.assertEqual(self.pending_requests, {})
 
+    def test_ppas_fingerprint(self):
+        '''Run test requests with PPAs where fingerprint is provided'''
+
+        self.data.add_default_packages(lightgreen=False)
+
+        for line in fileinput.input(self.britney_conf, inplace=True):
+            if line.startswith('ADT_PPAS'):
+                print('ADT_PPAS = joe/foo:fingerprint awesome-developers/staging')
+            else:
+                sys.stdout.write(line)
+
+        exc = self.run_it(
+            [('lightgreen', {'Version': '2'}, 'autopkgtest')],
+            {'lightgreen': (True, {'lightgreen': {'amd64': 'RUNNING-ALWAYSFAIL'}})},
+            {'lightgreen': [('old-version', '1'), ('new-version', '2')]}
+        )[1]
+
+        for arch in ['i386', 'amd64']:
+            self.assertTrue(
+                ('debci-ppa-testing-%s:lightgreen {"triggers": ["lightgreen/2"], '
+                 '"ppas": ["joe/foo", "awesome-developers/staging"]}') % arch in self.amqp_requests or
+                ('debci-ppa-testing-%s:lightgreen {"ppas": ["joe/foo", '
+                 '"awesome-developers/staging"], "triggers": ["lightgreen/2"]}') % arch in self.amqp_requests,
+                self.amqp_requests)
+        self.assertEqual(len(self.amqp_requests), 2)
+
     def test_private_ppas(self):
         '''Run test requests with an additional private PPA'''
 

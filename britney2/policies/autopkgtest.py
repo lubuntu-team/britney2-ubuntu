@@ -142,6 +142,12 @@ class AutopkgtestPolicy(BasePolicy):
 
         try:
             self.options.adt_ppas = self.options.adt_ppas.strip().split()
+            # We also allow, for certain other use-cases, passing the PPA
+            # fingerprint to for each of the PPAs. This however is not
+            # currently used by the ADT policy, so get rid of it.
+            for i, ppa in enumerate(self.options.adt_ppas):
+                if '@' not in ppa and ':' in ppa:
+                    self.options.adt_ppas[i] = ppa.split(':')[0]
         except AttributeError:
             self.options.adt_ppas = []
 
