@@ -406,6 +406,7 @@ ADT_PRIVATE_RETRY  =
 ADT_CI_URL        = https://autopkgtest.ubuntu.com/
 ADT_HUGE          = 20
 ADT_SHOW_IRRELEVANT = no
+ADT_DB_URL        = 
 
 ADT_SUCCESS_BOUNTY     =
 ADT_REGRESSION_PENALTY =

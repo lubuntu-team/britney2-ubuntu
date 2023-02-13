@@ -171,7 +171,7 @@ class SRUADTRegressionPolicy(BasePolicy, Rest):
                     bug_mail = "%s@bugs.launchpad.net" % bug
                     server = smtplib.SMTP(self.email_host)
                     server.sendmail(
-                        "noreply@canonical.com",
+                        "noreply+proposed-migration@ubuntu.com",
                         bug_mail,
                         MESSAGE.format(**locals()),
                     )

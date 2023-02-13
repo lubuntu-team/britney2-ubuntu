@@ -28,7 +28,7 @@ BOTS = {
     USER + "katie",
 }
 
-MESSAGE = """From: Ubuntu Release Team <noreply@canonical.com>
+MESSAGE = """From: Ubuntu Release Team <noreply+proposed-migration@ubuntu.com>
 To: {recipients}
 X-Proposed-Migration: notice
 Subject: [proposed-migration] {source_name} {version} stuck in {series}-proposed for {age} day{plural}.
@@ -45,7 +45,7 @@ http://people.canonical.com/~ubuntu-archive/proposed-migration/{series}/update_e
 
 https://wiki.ubuntu.com/ProposedMigration
 
-If you have any questions about this email, please ask them in #ubuntu-release channel on Freenode IRC.
+If you have any questions about this email, please ask them in #ubuntu-release channel on libera.chat.
 
 Regards, Ubuntu Release Team.
 """
@@ -287,7 +287,7 @@ class EmailPolicy(BasePolicy, Rest):
                         )
                     )
                     server = smtplib.SMTP(self.email_host)
-                    server.sendmail("noreply@canonical.com", emails, msg)
+                    server.sendmail("noreply+proposed-migration@ubuntu.com", emails, msg)
                     server.quit()
                     # record the age at which the mail should have been sent
                     last_sent = last_due

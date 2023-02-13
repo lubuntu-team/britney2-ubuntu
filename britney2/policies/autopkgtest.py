@@ -28,6 +28,7 @@ import io
 import itertools
 import re
 import socket
+import sqlite3
 import sys
 import time
 import urllib.parse
@@ -124,6 +125,7 @@ class AutopkgtestPolicy(BasePolicy):
         self.pending_tests_file = os.path.join(self.state_dir, 'autopkgtest-pending.json')
         self.testsuite_triggers = {}
         self.result_in_baseline_cache = collections.defaultdict(dict)
+        self.database_path = os.path.join(self.state_dir, 'autopkgtest.db')
 
         # results map: trigger -> src -> arch -> [passed, version, run_id, seen]
         # - trigger is "source/version" of an unstable package that triggered
@@ -139,6 +141,12 @@ class AutopkgtestPolicy(BasePolicy):
             self.results_cache_file = self.options.adt_shared_results_cache
         else:
             self.results_cache_file = os.path.join(self.state_dir, 'autopkgtest-results.cache')
+
+        if hasattr(self.options,'adt_db_url') and self.options.adt_db_url:
+            if not self.fetch_db():
+                self.logger.error('No autopkgtest db present, exiting')
+                sys.exit(1)
+            self.db = sqlite3.connect(self.database_path)
 
         try:
             self.options.adt_ppas = self.options.adt_ppas.strip().split()
@@ -170,6 +178,34 @@ class AutopkgtestPolicy(BasePolicy):
                 self.adt_arches.append(arch)
             else:
                 self.logger.info("Ignoring ADT_ARCHES %s as it is not in architectures list", arch)
+
+    def fetch_db(self):
+        f = None
+        try:
+            f = self.download_retry(self.options.adt_db_url)
+            http_code = f.getcode()
+            # file:/// urls don't have the http niceties
+            if not http_code or http_code == 200:
+                new_file = self.database_path + '.new'
+                with open(new_file,'wb') as f_out:
+                    while True:
+                        data=f.read(2048*1024)
+                        if not data:
+                            break
+                        f_out.write(data)
+                if http_code and os.path.getsize(new_file) != int(f.getheader('content-length')):
+                    self.logger.info('Short read downloading autopkgtest results')
+                    os.unlink(new_file)
+                else:
+                    os.rename(new_file, self.database_path)
+            else:
+                self.logger.error('Failure to fetch autopkgtest results %s: HTTP code=%d', self.options.adt_db_url, f.getcode())
+        except IOError as e:
+            self.logger.error('Failure to fetch autopkgtest results %s: %s', self.options.adt_db_url, str(e))
+        finally:
+            if f is not None:
+                f.close()
+        return os.path.exists(self.database_path)
 
     def register_hints(self, hint_parser):
         hint_parser.register_hint_type('force-badtest', britney2.hints.split_into_one_hint_per_package)
@@ -495,7 +531,7 @@ class AutopkgtestPolicy(BasePolicy):
                         history_url = cloud_url % {
                             'h': srchash(testsrc), 's': testsrc,
                             'r': self.options.series, 'a': arch}
-                    if status == 'REGRESSION':
+                    if status in ['REGRESSION', 'RUNNING-REFERENCE']:
                         if self.options.adt_retry_url_mech == 'run_id':
                             retry_url = self.options.adt_ci_url + 'api/v1/retry/' + run_id
                         elif self.options.adt_private_retry:
@@ -599,6 +635,7 @@ class AutopkgtestPolicy(BasePolicy):
         pkg_universe = self.britney.pkg_universe
         target_suite = self.suite_info.target_suite
         source_suite = item.suite
+        sources_t = target_suite.sources
         sources_s = item.suite.sources
         packages_s_a = item.suite.binaries[arch]
         source_name = item.package
@@ -683,9 +720,11 @@ class AutopkgtestPolicy(BasePolicy):
             if binary.architecture == arch:
                 try:
                     source_of_bin = packages_s_a[binary.package_name].source
-                    triggers.add(
-                        source_of_bin + '/' +
-                        sources_s[source_of_bin].version)
+                    if (sources_t.get(source_of_bin, None) is None or
+                            sources_s[source_of_bin].version != sources_t[source_of_bin].version):
+                        triggers.add(
+                            source_of_bin + '/' +
+                            sources_s[source_of_bin].version)
                 except KeyError:
                     # Apparently the package was removed from
                     # unstable e.g. if packages are replaced
@@ -694,9 +733,11 @@ class AutopkgtestPolicy(BasePolicy):
                 if binary not in source_data_srcdist.binaries:
                     for tdep_src in self.testsuite_triggers.get(binary.package_name, set()):
                         try:
-                            triggers.add(
-                                tdep_src + '/' +
-                                sources_s[tdep_src].version)
+                            if (sources_t.get(tdep_src, None) is None or
+                                    sources_s[tdep_src].version != sources_t[tdep_src].version):
+                                triggers.add(
+                                    tdep_src + '/' +
+                                    sources_s[tdep_src].version)
                         except KeyError:
                             # Apparently the source was removed from
                             # unstable (testsuite_triggers are unified
@@ -880,7 +921,7 @@ class AutopkgtestPolicy(BasePolicy):
             try:
                 req = urlopen(url, timeout=30)
                 code = req.getcode()
-                if 200 <= code < 300:
+                if not code or 200 <= code < 300:
                     return req
             except socket.timeout as e:
                 self.logger.info(
@@ -1081,6 +1122,71 @@ class AutopkgtestPolicy(BasePolicy):
         for trigger in result_triggers:
             self.add_trigger_to_results(trigger, src, ver, arch, run_id, seen, result)
 
+    def fetch_sqlite_results(self, src, arch):
+        '''Retrieve new results for source package/arch from sqlite
+
+        Remove matching pending_tests entries.
+        '''
+
+        # determine latest run_id from results
+        latest_run_id = ''
+        if not self.options.adt_shared_results_cache:
+            latest_run_id = self.latest_run_for_package(src, arch)
+        if not latest_run_id:
+            latest_run_id = ''
+
+        cur = self.db.cursor()
+        for row in cur.execute('SELECT r.exitcode,r.version,r.triggers,'
+                               '       r.run_id FROM test AS t '
+                               'LEFT JOIN result AS r ON t.id=r.test_id '
+                               'WHERE t.release=? AND t.arch=? '
+                               'AND t.package=? AND r.run_id > ?',
+                               (self.options.series, arch, src, latest_run_id)):
+            exitcode, ver, triggers, run_id = row
+            if not ver:
+                if exitcode in (4, 12, 20):
+                    # repair it
+                    ver = "unknown"
+                else:
+                    self.logger.error('%s/%s/%s is damaged, ignoring',
+                                      arch, src, run_id)
+                    # ignore this; this will leave an orphaned request
+                    # in autopkgtest-pending.json and thus require
+                    # manual retries after fixing the tmpfail, but we
+                    # can't just blindly attribute it to some pending
+                    # test.
+                    return
+
+            # parse recorded triggers in test result
+            if triggers:
+                result_triggers = [i for i in triggers.split(' ') if '/' in i]
+            else:
+                self.logger.error('%s result has no ADT_TEST_TRIGGERS, ignoring')
+                continue
+
+            # 20200101_000000 is 15 chars long
+            seen = round(calendar.timegm(time.strptime(run_id[:15], '%Y%m%d_%H%M%S')))
+
+            # allow some skipped tests, but nothing else
+            if exitcode in (0, 2):
+                result = Result.PASS
+            elif exitcode == 8:
+                result = Result.NEUTRAL
+            else:
+                result = Result.FAIL
+
+            self.logger.info(
+                'Fetched test result for %s/%s/%s %s (triggers: %s): %s',
+                src, ver, arch, run_id, result_triggers, result.name.lower())
+
+            # remove matching test requests
+            for trigger in result_triggers:
+                self.remove_from_pending(trigger, src, arch)
+
+            # add this result
+            for trigger in result_triggers:
+                self.add_trigger_to_results(trigger, src, ver, arch, run_id, seen, result)
+
     def remove_from_pending(self, trigger, src, arch):
         try:
             arch_list = self.pending_tests[trigger][src]
@@ -1180,26 +1286,31 @@ class AutopkgtestPolicy(BasePolicy):
         if has_result:
             result_state = result[0]
             version = result[1]
-            baseline = self.result_in_baseline(src, arch)
             if result_state in {Result.OLD_PASS, Result.OLD_FAIL, Result.OLD_NEUTRAL}:
                 pass
             elif result_state == Result.FAIL and \
-                    baseline[0] in {Result.PASS, Result.NEUTRAL, Result.OLD_PASS, Result.OLD_NEUTRAL} and \
+                    self.result_in_baseline(src, arch)[0] in \
+                    {Result.PASS, Result.NEUTRAL, Result.OLD_PASS,
+                     Result.OLD_NEUTRAL} and \
                     self.options.adt_retry_older_than and \
                     result[3] + int(self.options.adt_retry_older_than) * SECPERDAY < self._now:
                 # We might want to retry this failure, so continue
                 pass
-            elif not uses_swift:
+            elif not uses_swift and not hasattr(self,'db'):
                 # We're done if we don't retrigger and we're not using swift
                 return
             elif result_state in {Result.PASS, Result.NEUTRAL}:
                 self.logger.debug('%s/%s triggered by %s already known', src, arch, trigger)
                 return
 
-        # Without swift we don't expect new results
-        if uses_swift:
+        # Without swift or autopkgtest.db we don't expect new results
+        if hasattr(self,'db'):
+            self.fetch_sqlite_results(src, arch)
+        elif uses_swift:
             self.logger.info('Checking for new results for failed %s/%s for trigger %s', src, arch, trigger)
             self.fetch_swift_results(self.options.adt_swift_url, src, arch)
+
+        if hasattr(self,'db') or uses_swift:
             # do we have one now?
             try:
                 self.test_results[trigger][src][arch]
@@ -1241,7 +1352,21 @@ class AutopkgtestPolicy(BasePolicy):
         result_reference = [Result.NONE, None, '', 0]
         if self.options.adt_baseline == 'reference':
             try:
-                result_reference = self.test_results[REF_TRIG][src][arch]
+                try:
+                    result_reference = self.test_results[REF_TRIG][src][arch]
+                except KeyError:
+                    uses_swift = not self.options.adt_swift_url.startswith('file://')
+                    # Without swift or autopkgtest.db we don't expect new results
+                    if hasattr(self,'db'):
+                        self.logger.info('Checking for new results for %s/%s for trigger %s', src, arch, REF_TRIG)
+                        self.fetch_sqlite_results(src, arch)
+                    elif uses_swift:
+                        self.logger.info('Checking for new results for %s/%s for trigger %s', src, arch, REF_TRIG)
+                        self.fetch_swift_results(self.options.adt_swift_url, src, arch)
+
+                    # do we have one now?
+                    result_reference = self.test_results[REF_TRIG][src][arch]
+
                 self.logger.debug('Found result for src %s in reference: %s',
                                   src, result_reference[0].name)
             except KeyError:
@@ -1278,11 +1403,19 @@ class AutopkgtestPolicy(BasePolicy):
         binaries_info = target_suite.binaries[arch]
 
         # determine current test result status
-        baseline_result = self.result_in_baseline(src, arch)[0]
-
-        # determine current test result status
         until = self.find_max_lower_force_reset_test(src, ver, arch)
-        ever_passed = self.check_ever_passed_before(src, ver, arch, until)
+
+        # Special-case triggers from linux-meta*: we cannot compare results
+        # against different kernels, as e. g. a DKMS module might work against
+        # the default kernel but fail against a different flavor; so for those,
+        # filter the considered results to only those against our kernel
+        if trigger.startswith('linux-meta'):
+            only_trigger = trigger.split('/', 1)[0]
+            self.logger.info('This is a kernel; we will only look for results triggered by %s when considering regressions',
+                             trigger)
+        else:
+            only_trigger = None
+        ever_passed = self.check_ever_passed_before(src, ver, arch, until, only_trigger=only_trigger)
 
         fail_result = 'REGRESSION' if ever_passed else 'ALWAYSFAIL'
 
@@ -1294,14 +1427,8 @@ class AutopkgtestPolicy(BasePolicy):
             run_id = r[2]
 
             if r[0] in {Result.FAIL, Result.OLD_FAIL}:
-                # Special-case triggers from linux-meta*: we cannot compare
-                # results against different kernels, as e. g. a DKMS module
-                # might work against the default kernel but fail against a
-                # different flavor; so for those, ignore the "ever
-                # passed" check; FIXME: check against trigsrc only
-                if self.options.adt_baseline != 'reference' and \
-                  (trigger.startswith('linux-meta') or trigger.startswith('linux/')):
-                    baseline_result = Result.FAIL
+                # determine current test result status
+                baseline_result = self.result_in_baseline(src, arch)[0]
 
                 if baseline_result == Result.FAIL:
                     result = 'ALWAYSFAIL'
@@ -1362,6 +1489,7 @@ class AutopkgtestPolicy(BasePolicy):
         except KeyError:
             # no result for src/arch; still running?
             if arch in self.pending_tests.get(trigger, {}).get(src, []):
+                baseline_result = self.result_in_baseline(src, arch)[0]
                 if baseline_result != Result.FAIL and not self.has_force_badtest(src, ver, arch):
                     result = 'RUNNING'
                 else:
@@ -1376,7 +1504,7 @@ class AutopkgtestPolicy(BasePolicy):
 
         return (result, ver, run_id, url)
 
-    def check_ever_passed_before(self, src, max_ver, arch, min_ver=None):
+    def check_ever_passed_before(self, src, max_ver, arch, min_ver=None, only_trigger=None):
         '''Check if tests for src ever passed on arch for specified range
 
         If min_ver is specified, it checks that all versions in
@@ -1384,7 +1512,11 @@ class AutopkgtestPolicy(BasePolicy):
         [min_ver, inf) have passed.'''
 
         # FIXME: add caching
-        for srcmap in self.test_results.values():
+        for (trigger, srcmap) in self.test_results.items():
+            if only_trigger:
+                trig = trigger.split('/', 1)[0]
+                if only_trigger != trig:
+                    continue
             try:
                 too_high = apt_pkg.version_compare(srcmap[src][arch][1], max_ver) > 0
                 too_low = apt_pkg.version_compare(srcmap[src][arch][1], min_ver) <= 0 if min_ver else False
@@ -1400,32 +1532,38 @@ class AutopkgtestPolicy(BasePolicy):
 
     def find_max_lower_force_reset_test(self, src, ver, arch):
         '''Find the maximum force-reset-test hint before/including ver'''
-        hints = self.hints.search('force-reset-test', package=src)
         found_ver = None
 
-        if hints:
-            for hint in hints:
-                for mi in hint.packages:
-                    if (mi.architecture in ['source', arch] and
-                            mi.version != 'all' and
-                            apt_pkg.version_compare(mi.version, ver) <= 0 and
-                            (found_ver is None or apt_pkg.version_compare(found_ver, mi.version) < 0)):
-                        found_ver = mi.version
+        if not hasattr(self, 'reset_hints'):
+            self.reset_hints = self.hints.search('force-reset-test')
+
+        for hint in self.reset_hints:
+            for mi in hint.packages:
+                if mi.package != src:
+                    continue
+                if (mi.architecture in ['source', arch] and
+                        mi.version != 'all' and
+                        apt_pkg.version_compare(mi.version, ver) <= 0 and
+                        (found_ver is None or apt_pkg.version_compare(found_ver, mi.version) < 0)):
+                    found_ver = mi.version
 
         return found_ver
 
     def has_higher_force_reset_test(self, src, ver, arch):
         '''Find if there is a minimum force-reset-test hint after/including ver'''
-        hints = self.hints.search('force-reset-test', package=src)
 
-        if hints:
-            self.logger.info('Checking hints for %s/%s/%s: %s' % (src, ver, arch, [str(h) for h in hints]))
-            for hint in hints:
-                for mi in hint.packages:
-                    if (mi.architecture in ['source', arch] and
-                            mi.version != 'all' and
-                            apt_pkg.version_compare(mi.version, ver) >= 0):
-                        return True
+        if not hasattr(self, 'reset_hints'):
+            self.reset_hints = self.hints.search('force-reset-test')
+
+        for hint in self.reset_hints:
+            for mi in hint.packages:
+                if mi.package != src:
+                    continue
+                self.logger.info('Checking hints for %s/%s/%s: %s' % (src, ver, arch, str(hint)))
+                if (mi.architecture in ['source', arch] and
+                        mi.version != 'all' and
+                        apt_pkg.version_compare(mi.version, ver) >= 0):
+                    return True
 
         return False
 

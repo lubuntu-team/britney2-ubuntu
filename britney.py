@@ -223,6 +223,7 @@ from britney2.policies.autopkgtest import AutopkgtestPolicy
 from britney2.policies.sourceppa import SourcePPAPolicy
 from britney2.policies.sruadtregression import SRUADTRegressionPolicy
 from britney2.policies.email import EmailPolicy
+from britney2.policies.cloud import CloudPolicy
 from britney2.policies.lpexcusebugs import LPExcuseBugsPolicy
 from britney2.utils import (log_and_format_old_libraries,
                             read_nuninst, write_nuninst, write_heidi,
@@ -446,11 +447,8 @@ class Britney(object):
             pass
 
         # integrity checks
-        if self.options.nuninst_cache and self.options.print_uninst:  # pragma: no cover
-            self.logger.error("nuninst_cache and print_uninst are mutually exclusive!")
-            sys.exit(1)
         # if the configuration file exists, then read it and set the additional options
-        elif not os.path.isfile(self.options.config):  # pragma: no cover
+        if not os.path.isfile(self.options.config):  # pragma: no cover
             self.logger.error("Unable to read the configuration file (%s), exiting!", self.options.config)
             sys.exit(1)
 
@@ -555,6 +553,11 @@ class Britney(object):
             self._policy_engine.add_policy(EmailPolicy(self.options,
                                                        self.suite_info,
                                                        dry_run=add_email_policy == 'dry-run'))
+        add_cloud_policy = getattr(self.options, 'cloud_enable', 'no')
+        if add_cloud_policy in ('yes', 'dry-run'):
+            self._policy_engine.add_policy(CloudPolicy(self.options,
+                                                       self.suite_info,
+                                                       dry_run=add_cloud_policy == 'dry-run'))
 
     @property
     def hints(self):
