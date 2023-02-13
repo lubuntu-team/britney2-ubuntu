@@ -149,15 +149,15 @@ class AutopkgtestPolicy(BasePolicy):
             self.db = sqlite3.connect(self.database_path)
 
         try:
-            self.options.adt_ppas = self.options.adt_ppas.strip().split()
+            self.adt_ppas = self.options.adt_ppas.strip().split()
             # We also allow, for certain other use-cases, passing the PPA
             # fingerprint to for each of the PPAs. This however is not
             # currently used by the ADT policy, so get rid of it.
-            for i, ppa in enumerate(self.options.adt_ppas):
+            for i, ppa in enumerate(self.adt_ppas):
                 if '@' not in ppa and ':' in ppa:
-                    self.options.adt_ppas[i] = ppa.split(':')[0]
+                    self.adt_ppas[i] = ppa.split(':')[0]
         except AttributeError:
-            self.options.adt_ppas = []
+            self.adt_ppas = []
 
         try:
             self.options.adt_private_shared = self.options.adt_private_shared.strip().split()
@@ -165,11 +165,11 @@ class AutopkgtestPolicy(BasePolicy):
             self.options.adt_private_shared = []
 
         self.swift_container = 'autopkgtest-' + options.series
-        if self.options.adt_ppas:
+        if self.adt_ppas:
             # private PPAs require the auth credentials given + we allow the
             # PPA fingerprint attached at the end
             # those need to be removed before the ppa-based name can be used
-            self.swift_container += '-' + options.adt_ppas[-1].rpartition('@')[2].replace('/', '-').partition(':')[0]
+            self.swift_container += '-' + self.adt_ppas[-1].rpartition('@')[2].replace('/', '-').partition(':')[0]
 
         # restrict adt_arches to architectures we actually run for
         self.adt_arches = []
@@ -264,7 +264,7 @@ class AutopkgtestPolicy(BasePolicy):
             # check if all private PPAs have a fingerprint provided
             # private PPAs need to follow the following pattern:
             # user:token@team/name:fingerprint
-            for ppa in self.options.adt_ppas:
+            for ppa in self.adt_ppas:
                 # TODO: write a test for this
                 if '@' in ppa and not re.match(r'^.+:.+@.+:.+$', ppa):
                     raise RuntimeError('Private PPA %s not following required format (user:token@team/name:fingerprint)', ppa)
@@ -284,7 +284,7 @@ class AutopkgtestPolicy(BasePolicy):
                 os_options={'region_name': self.options.adt_swift_region}
                 )
         else:
-            if any('@' in ppa for ppa in self.options.adt_ppas):
+            if any('@' in ppa for ppa in self.adt_ppas):
                 raise RuntimeError('Private PPA configured but no swift credentials given')
 
             self.swift_conn = None
@@ -524,7 +524,7 @@ class AutopkgtestPolicy(BasePolicy):
                     artifact_url = None
                     retry_url = None
                     history_url = None
-                    if self.options.adt_ppas:
+                    if self.adt_ppas:
                         if log_url.endswith('log.gz'):
                             artifact_url = log_url.replace('log.gz', 'artifacts.tar.gz')
                     else:
@@ -546,7 +546,7 @@ class AutopkgtestPolicy(BasePolicy):
                                                             ('package', testsrc),
                                                             ('trigger', trigger),
                                                             ('context', self.swift_container)])
-                        elif not any('@' in ppa for ppa in self.options.adt_ppas):
+                        elif not any('@' in ppa for ppa in self.adt_ppas):
                             # otherwise private PPAs currently should not
                             # display a retry button as we can not guarantee
                             # that the secrets will not leak
@@ -555,7 +555,7 @@ class AutopkgtestPolicy(BasePolicy):
                                                             ('arch', arch),
                                                             ('package', testsrc),
                                                             ('trigger', trigger)] +
-                                                           [('ppa', p) for p in self.options.adt_ppas])
+                                                           [('ppa', p) for p in self.adt_ppas])
 
                     tests_info.setdefault(testname, {})[arch] = \
                         [status, log_url, history_url, artifact_url, retry_url]
@@ -1232,10 +1232,10 @@ class AutopkgtestPolicy(BasePolicy):
             return
 
         params = {'triggers': triggers}
-        if self.options.adt_ppas:
+        if self.adt_ppas:
             # Note: the PPA might be a private PPA, and then the PPA parameter
             # includes the authorization token.
-            params['ppas'] = self.options.adt_ppas
+            params['ppas'] = self.adt_ppas
             qname = 'debci-ppa-%s-%s' % (self.options.series, arch)
         elif huge:
             qname = 'debci-huge-%s-%s' % (self.options.series, arch)
