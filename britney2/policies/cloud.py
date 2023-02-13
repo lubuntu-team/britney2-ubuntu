@@ -69,7 +69,9 @@ class CloudPolicy(BasePolicy):
         self.failure_emails = getattr(self.options, "cloud_failure_emails", self.DEFAULT_EMAILS)
         self.error_emails = getattr(self.options, "cloud_error_emails", self.DEFAULT_EMAILS)
 
-        adt_ppas = getattr(self.options, "adt_ppas", "").split()
+        adt_ppas = getattr(self.options, "adt_ppas", "")
+        if not isinstance(adt_ppas, list):
+            adt_ppas = adt_ppas.split()
         ppas = self._parse_ppas(adt_ppas)
 
         if len(ppas) == 0:
