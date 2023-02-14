@@ -55,7 +55,11 @@ class T(unittest.TestCase):
             "azure": {
                 "archive": {
                     "zazzy": {
-                        "chromium-browser": "55.0"
+                        "chromium-browser": {
+                            "version": "55.0",
+                            "failures": 0,
+                            "errors": 0,
+                        }
                     }
                 }
             }
@@ -70,13 +74,17 @@ class T(unittest.TestCase):
         mock_run.assert_not_called()
 
         # A new package appears, tests should run
-        expected_state["azure"]["archive"]["zazzy"]["hello"] = "2.10"
+        expected_state["azure"]["archive"]["zazzy"]["hello"] = {
+            "version": "2.10",
+            "failures": 0,
+            "errors": 0,
+        }
         self.policy._run_cloud_tests("hello", "2.10", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         mock_run.assert_called()
 
         # A new version of existing package, tests should run
-        expected_state["azure"]["archive"]["zazzy"]["chromium-browser"] = "55.1"
+        expected_state["azure"]["archive"]["zazzy"]["chromium-browser"]["version"] = "55.1"
         self.policy._run_cloud_tests("chromium-browser", "55.1", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         self.assertEqual(mock_run.call_count, 2)

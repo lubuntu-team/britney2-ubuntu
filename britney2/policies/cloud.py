@@ -87,6 +87,7 @@ class CloudPolicy(BasePolicy):
 
         self.failures = {}
         self.errors = {}
+        self.email_needed = False
 
     def initialise(self, britney):
         super().initialise(britney)
@@ -112,7 +113,8 @@ class CloudPolicy(BasePolicy):
                               self.sources, self.source_type)
 
         if len(self.failures) > 0 or len(self.errors) > 0:
-            self._send_emails_if_needed(item.package, source_data_srcdist.version, self.options.series)
+            if self.email_needed:
+                self._send_emails_if_needed(item.package, source_data_srcdist.version, self.options.series)
 
             self._cleanup_work_directory()
             verdict = PolicyVerdict.REJECTED_PERMANENTLY
@@ -139,7 +141,13 @@ class CloudPolicy(BasePolicy):
             self.state[cloud][source_type] = {}
         if series not in self.state[cloud][source_type]:
             self.state[cloud][source_type][series] = {}
-        self.state[cloud][source_type][series][package] = version
+        self.state[cloud][source_type][series][package] = { 
+            "version": version,
+            "failures": len(self.failures),
+            "errors": len(self.errors)
+        }
+        
+        self.email_needed = True
 
         self._save_state()
 
@@ -154,9 +162,25 @@ class CloudPolicy(BasePolicy):
         :param cloud The name of the cloud being tested (e.g. azure)
         """
         try:
-            return self.state[cloud][source_type][series][package] == version
+            return self.state[cloud][source_type][series][package]["version"] == version
         except KeyError:
             return False
+
+    def _set_previous_failure_and_error(self, package, version, series, source_type, cloud):
+        """Sets the failures and errors from the previous run.
+        This takes which cloud we're testing into consideration.
+
+        :param package The name of the package to test
+        :param version Version of the package
+        :param series The Ubuntu codename for the series (e.g. jammy)
+        :param source_type Either 'archive' or 'ppa'
+        :param cloud The name of the cloud being tested (e.g. azure)
+        """
+        if self.state[cloud][source_type][series][package]["failures"] > 0:
+            self.failures[cloud] = {}
+
+        if self.state[cloud][source_type][series][package]["errors"] > 0:
+            self.errors[cloud] = {}
 
     def _load_state(self):
         """Load the save state of which packages have already been tested."""
@@ -233,6 +257,7 @@ class CloudPolicy(BasePolicy):
         :param source_type Either 'archive' or 'ppa'
         """
         if self._check_if_tests_run(package, version, series, source_type, "azure"):
+            self._set_previous_failure_and_error(package, version, series, source_type, "azure")
             return
 
         urn = self._retrieve_urn(series)
