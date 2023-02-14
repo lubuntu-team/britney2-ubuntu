@@ -7,6 +7,7 @@
 # (at your option) any later version.
 
 import os
+import json
 import pathlib
 import sys
 from types import SimpleNamespace
@@ -35,13 +36,54 @@ class T(unittest.TestCase):
             verbose = False,
             cloud_source = "zazzy-proposed",
             cloud_source_type = "archive",
-            cloud_azure_zazzy_urn = "fake-urn-value"
+            cloud_azure_zazzy_urn = "fake-urn-value",
+            cloud_state_file = "/tmp/test_state.json"
         )
         self.policy = CloudPolicy(self.fake_options, {})
         self.policy._setup_work_directory()
 
     def tearDown(self):
         self.policy._cleanup_work_directory()
+
+    @patch("britney2.policies.cloud.CloudPolicy._store_extra_test_result_info")
+    @patch("britney2.policies.cloud.CloudPolicy._parse_xunit_test_results")
+    @patch("subprocess.run")
+    def test_run_cloud_tests_state_handling(self, mock_run, mock_xunit, mock_extra):
+        """Cloud tests should save state and not re-run tests for packages
+           already tested."""
+        expected_state = {
+            "azure": {
+                "archive": {
+                    "zazzy": {
+                        "chromium-browser": "55.0"
+                    }
+                }
+            }
+        }
+        with open(self.policy.options.cloud_state_file, "w") as file:
+            json.dump(expected_state, file)
+        self.policy._load_state()
+
+        # Package already tested, no tests should run
+        self.policy._run_cloud_tests("chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
+        self.assertDictEqual(expected_state, self.policy.state)
+        mock_run.assert_not_called()
+
+        # A new package appears, tests should run
+        expected_state["azure"]["archive"]["zazzy"]["hello"] = "2.10"
+        self.policy._run_cloud_tests("hello", "2.10", "zazzy", ["proposed"], "archive")
+        self.assertDictEqual(expected_state, self.policy.state)
+        mock_run.assert_called()
+
+        # A new version of existing package, tests should run
+        expected_state["azure"]["archive"]["zazzy"]["chromium-browser"] = "55.1"
+        self.policy._run_cloud_tests("chromium-browser", "55.1", "zazzy", ["proposed"], "archive")
+        self.assertDictEqual(expected_state, self.policy.state)
+        self.assertEqual(mock_run.call_count, 2)
+
+        # Make sure the state was saved properly
+        with open(self.policy.options.cloud_state_file, "r") as file:
+            self.assertDictEqual(expected_state, json.load(file))
 
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_run_cloud_tests_called_for_package_in_manifest(self, mock_run):
@@ -55,7 +97,7 @@ class T(unittest.TestCase):
         )
 
         mock_run.assert_called_once_with(
-            "chromium-browser", "jammy", ["proposed"], "archive"
+            "chromium-browser", "55.0", "jammy", ["proposed"], "archive"
         )
 
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")

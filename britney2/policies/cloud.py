@@ -50,6 +50,7 @@ Regards, Ubuntu Release Team.
 """
 class CloudPolicy(BasePolicy):
     PACKAGE_SET_FILE = "cloud_package_set"
+    STATE_FILE = "cloud_state"
     DEFAULT_EMAILS = ["cpc@canonical.com"]
     TEST_LOG_FILE = "CTF.log"
 
@@ -68,6 +69,9 @@ class CloudPolicy(BasePolicy):
         self.work_dir = getattr(self.options, "cloud_work_dir", "cloud_tests")
         self.failure_emails = getattr(self.options, "cloud_failure_emails", self.DEFAULT_EMAILS)
         self.error_emails = getattr(self.options, "cloud_error_emails", self.DEFAULT_EMAILS)
+        self.state_filename = getattr(self.options, "cloud_state_file", self.STATE_FILE)
+
+        self.state = {}
 
         adt_ppas = getattr(self.options, "adt_ppas", "")
         if not isinstance(adt_ppas, list):
@@ -88,6 +92,7 @@ class CloudPolicy(BasePolicy):
         super().initialise(britney)
 
         self.package_set = self._retrieve_cloud_package_set_for_series(self.options.series)
+        self._load_state()
 
     def apply_src_policy_impl(self, policy_info, item, source_data_tdist, source_data_srcdist, excuse):
         if item.package not in self.package_set:
@@ -103,7 +108,8 @@ class CloudPolicy(BasePolicy):
         self.failures = {}
         self.errors = {}
 
-        self._run_cloud_tests(item.package, self.options.series, self.sources, self.source_type)
+        self._run_cloud_tests(item.package, source_data_srcdist.version, self.options.series,
+                              self.sources, self.source_type)
 
         if len(self.failures) > 0 or len(self.errors) > 0:
             self._send_emails_if_needed(item.package, source_data_srcdist.version, self.options.series)
@@ -116,6 +122,54 @@ class CloudPolicy(BasePolicy):
         else:
             self._cleanup_work_directory()
             return PolicyVerdict.PASS
+
+    def _mark_tests_run(self, package, version, series, source_type, cloud):
+        """Mark the selected package version as already tested.
+        This takes which cloud we're testing into consideration.
+
+        :param package The name of the package to test
+        :param version Version of the package
+        :param series The Ubuntu codename for the series (e.g. jammy)
+        :param source_type Either 'archive' or 'ppa'
+        :param cloud The name of the cloud being tested (e.g. azure)
+        """
+        if cloud not in self.state:
+            self.state[cloud] = {}
+        if source_type not in self.state[cloud]:
+            self.state[cloud][source_type] = {}
+        if series not in self.state[cloud][source_type]:
+            self.state[cloud][source_type][series] = {}
+        self.state[cloud][source_type][series][package] = version
+
+        self._save_state()
+
+    def _check_if_tests_run(self, package, version, series, source_type, cloud):
+        """Check if tests were already run for the given package version.
+        This takes which cloud we're testing into consideration.
+
+        :param package The name of the package to test
+        :param version Version of the package
+        :param series The Ubuntu codename for the series (e.g. jammy)
+        :param source_type Either 'archive' or 'ppa'
+        :param cloud The name of the cloud being tested (e.g. azure)
+        """
+        try:
+            return self.state[cloud][source_type][series][package] == version
+        except KeyError:
+            return False
+
+    def _load_state(self):
+        """Load the save state of which packages have already been tested."""
+        if os.path.exists(self.state_filename):
+            with open(self.state_filename, encoding="utf-8") as data:
+                self.state = json.load(data)
+            self.logger.info("Loaded cloud policy state file %s" % self.state_filename)
+
+    def _save_state(self):
+        """Save which packages have already been tested."""
+        with open(self.state_filename, "w", encoding="utf-8") as data:
+            json.dump(self.state, data)
+        self.logger.info("Saved cloud policy state file %s" % self.state_filename)
 
     def _retrieve_cloud_package_set_for_series(self, series):
         """Retrieves a set of packages for the given series in which cloud
@@ -134,16 +188,17 @@ class CloudPolicy(BasePolicy):
 
         return package_set
 
-    def _run_cloud_tests(self, package, series, sources, source_type):
+    def _run_cloud_tests(self, package, version, series, sources, source_type):
         """Runs any cloud tests for the given package.
         Nothing is returned but test failures and errors are stored in instance variables.
 
         :param package The name of the package to test
+        :param version Version of the package
         :param series The Ubuntu codename for the series (e.g. jammy)
         :param sources List of sources where the package should be installed from (e.g. [proposed] or PPAs)
         :param source_type Either 'archive' or 'ppa'
         """
-        self._run_azure_tests(package, series, sources, source_type)
+        self._run_azure_tests(package, version, series, sources, source_type)
 
     def _send_emails_if_needed(self, package, version, series):
         """Sends email(s) if there are test failures and/or errors
@@ -168,14 +223,18 @@ class CloudPolicy(BasePolicy):
             self.logger.info("Cloud Policy: Sending error email for {}, to {}".format(package, emails))
             self._send_email(emails, message)
 
-    def _run_azure_tests(self, package, series, sources, source_type):
+    def _run_azure_tests(self, package, version, series, sources, source_type):
         """Runs Azure's required package tests.
 
         :param package The name of the package to test
+        :param version Version of the package
         :param series The Ubuntu codename for the series (e.g. jammy)
         :param sources List of sources where the package should be installed from (e.g. [proposed] or PPAs)
         :param source_type Either 'archive' or 'ppa'
         """
+        if self._check_if_tests_run(package, version, series, source_type, "azure"):
+            return
+
         urn = self._retrieve_urn(series)
 
         self.logger.info("Cloud Policy: Running Azure tests for: {} in {}".format(package, series))
@@ -204,6 +263,7 @@ class CloudPolicy(BasePolicy):
         results_file_paths = self._find_results_files(r"TEST-NetworkTests-[0-9]*.xml")
         self._parse_xunit_test_results("Azure", results_file_paths)
         self._store_extra_test_result_info(self, package)
+        self._mark_tests_run(package, version, series, source_type, "azure")
 
     def _retrieve_urn(self, series):
         """Retrieves an URN from the configuration options based on series.
