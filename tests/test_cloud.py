@@ -57,8 +57,8 @@ class T(unittest.TestCase):
                     "zazzy": {
                         "chromium-browser": {
                             "version": "55.0",
-                            "failures": 0,
-                            "errors": 0,
+                            "failures": 1,
+                            "errors": 1,
                         }
                     }
                 }
@@ -69,9 +69,13 @@ class T(unittest.TestCase):
         self.policy._load_state()
 
         # Package already tested, no tests should run
+        self.policy.failures = {}
+        self.policy.errors = {}
         self.policy._run_cloud_tests("chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         mock_run.assert_not_called()
+        self.assertEqual(len(self.policy.failures), 1)
+        self.assertEqual(len(self.policy.errors), 1)
 
         # A new package appears, tests should run
         expected_state["azure"]["archive"]["zazzy"]["hello"] = {
@@ -79,19 +83,58 @@ class T(unittest.TestCase):
             "failures": 0,
             "errors": 0,
         }
+        self.policy.failures = {}
+        self.policy.errors = {}
         self.policy._run_cloud_tests("hello", "2.10", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         mock_run.assert_called()
+        self.assertEqual(len(self.policy.failures), 0)
+        self.assertEqual(len(self.policy.errors), 0)
 
         # A new version of existing package, tests should run
-        expected_state["azure"]["archive"]["zazzy"]["chromium-browser"]["version"] = "55.1"
+        expected_state["azure"]["archive"]["zazzy"]["chromium-browser"] = {
+            "version": "55.1",
+            "failures": 0,
+            "errors": 0,
+        }
+        self.policy.failures = {}
+        self.policy.errors = {}
         self.policy._run_cloud_tests("chromium-browser", "55.1", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         self.assertEqual(mock_run.call_count, 2)
+        self.assertEqual(len(self.policy.failures), 0)
+        self.assertEqual(len(self.policy.errors), 0)
 
         # Make sure the state was saved properly
         with open(self.policy.options.cloud_state_file, "r") as file:
             self.assertDictEqual(expected_state, json.load(file))
+
+    @patch("britney2.policies.cloud.CloudPolicy._store_extra_test_result_info")
+    @patch("britney2.policies.cloud.CloudPolicy._parse_xunit_test_results")
+    @patch("subprocess.run")
+    def test_run_cloud_tests_state_handling_only_errors(self, mock_run, mock_xunit, mock_extra):
+        """Cloud tests should save state and not re-run tests for packages
+           already tested."""
+        start_state = {
+            "azure": {
+                "archive": {
+                    "zazzy": {
+                        "chromium-browser": {
+                            "version": "55.0",
+                            "failures": 0,
+                            "errors": 2,
+                        }
+                    }
+                }
+            }
+        }
+        with open(self.policy.options.cloud_state_file, "w") as file:
+            json.dump(start_state, file)
+        self.policy._load_state()
+
+        # Package already tested, but only had errors - rerun
+        self.policy._run_cloud_tests("chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
+        mock_run.assert_called()
 
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_run_cloud_tests_called_for_package_in_manifest(self, mock_run):
