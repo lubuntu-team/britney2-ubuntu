@@ -8,7 +8,6 @@
 
 import os
 import json
-import pathlib
 import sys
 from types import SimpleNamespace
 import unittest
@@ -138,8 +137,8 @@ class T(unittest.TestCase):
 
     def test_finding_results_file(self):
         """Ensure result file output from Cloud Test Framework can be found"""
-        path = pathlib.PurePath(self.policy.work_dir, "TEST-FakeTests-20230101010101.xml")
-        path2 = pathlib.PurePath(self.policy.work_dir, "Test-OtherTests-20230101010101.xml")
+        path = os.path.join(self.policy.work_dir, "TEST-FakeTests-20230101010101.xml")
+        path2 = os.path.join(self.policy.work_dir, "Test-OtherTests-20230101010101.xml")
         with open(path, "a"): pass
         with open(path2, "a"): pass
 
@@ -286,14 +285,14 @@ class T(unittest.TestCase):
         """
         package = "tmux"
 
-        with open(pathlib.PurePath(self.policy.work_dir, self.policy.TEST_LOG_FILE), "w") as file:
+        with open(os.path.join(self.policy.work_dir, self.policy.TEST_LOG_FILE), "w") as file:
             file.write("Get: something \n".format(package))
             file.write("Get: lib-{} \n".format(package))
 
         install_source = self.policy._retrieve_package_install_source_from_test_output(package)
         self.assertIsNone(install_source)
 
-        with open(pathlib.PurePath(self.policy.work_dir, self.policy.TEST_LOG_FILE), "a") as file:
+        with open(os.path.join(self.policy.work_dir, self.policy.TEST_LOG_FILE), "a") as file:
             file.write("Get: {} \n".format(package))
 
         install_source = self.policy._retrieve_package_install_source_from_test_output(package)
@@ -325,7 +324,7 @@ class T(unittest.TestCase):
         Returns the path to the created file.
         """
         os.makedirs(self.policy.work_dir, exist_ok=True)
-        path = pathlib.PurePath(self.policy.work_dir, "TEST-FakeTests-20230101010101.xml")
+        path = os.path.join(self.policy.work_dir, "TEST-FakeTests-20230101010101.xml")
 
         root = ET.Element("testsuite", attrib={"name": "FakeTests-1234567890"})
 
