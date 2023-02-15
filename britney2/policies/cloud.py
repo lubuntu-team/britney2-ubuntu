@@ -155,6 +155,9 @@ class CloudPolicy(BasePolicy):
         """Check if tests were already run for the given package version.
         This takes which cloud we're testing into consideration.
 
+        If failures=0 and errors>0 then tests are considered to have not ran because
+        of previous test errors.
+
         :param package The name of the package to test
         :param version Version of the package
         :param series The Ubuntu codename for the series (e.g. jammy)
@@ -162,7 +165,11 @@ class CloudPolicy(BasePolicy):
         :param cloud The name of the cloud being tested (e.g. azure)
         """
         try:
-            return self.state[cloud][source_type][series][package]["version"] == version
+            package_state = self.state[cloud][source_type][series][package]
+            same_version = package_state["version"] == version
+            only_errors = package_state["failures"] == 0 and package_state["errors"] > 0
+
+            return same_version and not only_errors
         except KeyError:
             return False
 
@@ -258,6 +265,7 @@ class CloudPolicy(BasePolicy):
         """
         if self._check_if_tests_run(package, version, series, source_type, "azure"):
             self._set_previous_failure_and_error(package, version, series, source_type, "azure")
+            self.logger.info("Cloud Policy: already tested {}".format(package))
             return
 
         urn = self._retrieve_urn(series)
@@ -278,17 +286,26 @@ class CloudPolicy(BasePolicy):
             ]
         )
 
-        with open(PurePath(self.work_dir, self.TEST_LOG_FILE), "w") as file:
-            subprocess.run(
-                params,
-                cwd=self.work_dir,
-                stdout=file
+        result = None
+        try:
+            with open(PurePath(self.work_dir, self.TEST_LOG_FILE), "w") as file:
+                result = subprocess.run(
+                    params,
+                    cwd=self.work_dir,
+                    stdout=file,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                result.check_returncode()
+        except subprocess.CalledProcessError:
+            self._store_test_result(
+                self.errors, "azure", "testing_error", result.stderr
             )
-
-        results_file_paths = self._find_results_files(r"TEST-NetworkTests-[0-9]*.xml")
-        self._parse_xunit_test_results("Azure", results_file_paths)
-        self._store_extra_test_result_info(self, package)
-        self._mark_tests_run(package, version, series, source_type, "azure")
+        finally:
+            results_file_paths = self._find_results_files(r"TEST-NetworkTests-[0-9]*.xml")
+            self._parse_xunit_test_results("Azure", results_file_paths)
+            self._store_extra_test_result_info(self, package)
+            self._mark_tests_run(package, version, series, source_type, "azure")
 
     def _retrieve_urn(self, series):
         """Retrieves an URN from the configuration options based on series.
