@@ -95,6 +95,7 @@ class CloudPolicy(BasePolicy):
         self._load_state()
 
     def apply_src_policy_impl(self, policy_info, item, source_data_tdist, source_data_srcdist, excuse):
+        self.logger.info("Cloud Policy: Looking at {}".format(item.package))
         if item.package not in self.package_set:
             return PolicyVerdict.PASS
 
@@ -293,7 +294,7 @@ class CloudPolicy(BasePolicy):
                     cwd=self.work_dir,
                     stdout=file,
                     stderr=subprocess.PIPE,
-                    text=True
+                    universal_newlines=True
                 )
                 result.check_returncode()
         except subprocess.CalledProcessError:
