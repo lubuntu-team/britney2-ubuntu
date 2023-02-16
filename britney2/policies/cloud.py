@@ -1,6 +1,5 @@
 import json
 import os
-from pathlib import PurePath
 import re
 import shutil
 import smtplib
@@ -288,7 +287,7 @@ class CloudPolicy(BasePolicy):
 
         result = None
         try:
-            with open(PurePath(self.work_dir, self.TEST_LOG_FILE), "w") as file:
+            with open(os.path.join(self.work_dir, self.TEST_LOG_FILE), "w") as file:
                 result = subprocess.run(
                     params,
                     cwd=self.work_dir,
@@ -328,7 +327,7 @@ class CloudPolicy(BasePolicy):
         file_paths = []
         for file in os.listdir(self.work_dir):
             if re.fullmatch(file_regex, file):
-                file_paths.append(PurePath(self.work_dir, file))
+                file_paths.append(os.path.join(self.work_dir, file))
 
         return file_paths
 
@@ -428,7 +427,7 @@ class CloudPolicy(BasePolicy):
         :param package The name of the package to test
         """
         possible_locations = []
-        with open(PurePath(self.work_dir, self.TEST_LOG_FILE), "r") as file:
+        with open(os.path.join(self.work_dir, self.TEST_LOG_FILE), "r") as file:
             for line in file:
                 if package not in line:
                     continue
