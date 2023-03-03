@@ -87,6 +87,7 @@ class CloudPolicy(BasePolicy):
         self.failures = {}
         self.errors = {}
         self.email_needed = False
+        self.package_set = {}
 
     def initialise(self, britney):
         super().initialise(britney)
@@ -96,7 +97,7 @@ class CloudPolicy(BasePolicy):
 
     def apply_src_policy_impl(self, policy_info, item, source_data_tdist, source_data_srcdist, excuse):
         self.logger.info("Cloud Policy: Looking at {}".format(item.package))
-        if item.package not in self.package_set:
+        if item.package not in self.package_set or not self.package_set[item.package]:
             return PolicyVerdict.PASS
 
         if self.dry_run:
@@ -215,7 +216,9 @@ class CloudPolicy(BasePolicy):
 
         with open(self.PACKAGE_SET_FILE) as file:
             for line in file:
-                package_set.add(line.strip())
+                source, binaries = line.strip().lsplit(': ')
+                binaries = binaries.split(' ')
+                package_set[source] = binaries
 
         return package_set
 
@@ -275,7 +278,10 @@ class CloudPolicy(BasePolicy):
             "/snap/bin/cloud-test-framework",
             "--instance-prefix", "britney-{}-{}".format(package, series)
         ]
-        params.extend(self._format_install_flags(package, sources, source_type))
+        # Britney operates on source packages, but we actually want to test all the relevant binaries
+        self.logger.info("Cloud Policy: The following binary packages will be tested: {}".format(self.package_set[package]))
+        for binary in self.package_set[package]:
+            params.extend(self._format_install_flags(binary, sources, source_type))
         params.extend(
             [
                 "azure_gen2",

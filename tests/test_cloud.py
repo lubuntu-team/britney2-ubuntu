@@ -44,6 +44,19 @@ class T(unittest.TestCase):
     def tearDown(self):
         self.policy._cleanup_work_directory()
 
+    @patch("britney2.policies.cloud.CloudPolicy._format_install_flags")
+    @patch("britney2.policies.cloud.CloudPolicy._store_extra_test_result_info")
+    @patch("britney2.policies.cloud.CloudPolicy._parse_xunit_test_results")
+    @patch("subprocess.run")
+    def test_run_cloud_test_multiple_binaries(self, mock_run, mock_xunit, mock_extra, mock_flags):
+        """Cloud tests should run for multiple binaries in a package."""
+        self.policy.failures = {}
+        self.policy.errors = {}
+        self.policy.state = {}
+        self.policy.package_set = {"hello": ["hello", "world"]}
+        self.policy._run_cloud_tests("hello", "2.10", "zazzy", ["proposed"], "archive")
+        self.assertEqual(mock_flags.call_count, 2)
+
     @patch("britney2.policies.cloud.CloudPolicy._store_extra_test_result_info")
     @patch("britney2.policies.cloud.CloudPolicy._parse_xunit_test_results")
     @patch("subprocess.run")
@@ -70,6 +83,7 @@ class T(unittest.TestCase):
         # Package already tested, no tests should run
         self.policy.failures = {}
         self.policy.errors = {}
+        self.policy.package_set = {"hello": ["hello"], "chromium-browser": ["chromium-browser"]}
         self.policy._run_cloud_tests("chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         mock_run.assert_not_called()
@@ -130,6 +144,7 @@ class T(unittest.TestCase):
         with open(self.policy.options.cloud_state_file, "w") as file:
             json.dump(start_state, file)
         self.policy._load_state()
+        self.policy.package_set = {"hello": ["hello"], "chromium-browser": ["chromium-browser"]}
 
         # Package already tested, but only had errors - rerun
         self.policy._run_cloud_tests("chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
@@ -139,7 +154,7 @@ class T(unittest.TestCase):
     def test_run_cloud_tests_called_for_package_in_manifest(self, mock_run):
         """Cloud tests should run for a package in the cloud package set.
         """
-        self.policy.package_set = set(["chromium-browser"])
+        self.policy.package_set = {"chromium-browser": ["chromium-browser"]}
         self.policy.options.series = "jammy"
 
         self.policy.apply_src_policy_impl(
@@ -154,7 +169,7 @@ class T(unittest.TestCase):
     def test_run_cloud_tests_not_called_for_package_not_in_manifest(self, mock_run):
         """Cloud tests should not run for packages not in the cloud package set"""
 
-        self.policy.package_set = set(["vim"])
+        self.policy.package_set = {"vim": ["vim"]}
         self.policy.options.series = "jammy"
 
         self.policy.apply_src_policy_impl(
@@ -167,7 +182,7 @@ class T(unittest.TestCase):
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_no_tests_run_during_dry_run(self, mock_run, smtp):
         self.policy = CloudPolicy(self.fake_options, {}, dry_run=True)
-        self.policy.package_set = set(["chromium-browser"])
+        self.policy.package_set = {"chromium-browser": ["chromium-browser"]}
         self.policy.options.series = "jammy"
         self.policy.source = "jammy-proposed"
 
