@@ -521,8 +521,9 @@ class Britney(object):
         self._policy_engine.add_policy(RCBugPolicy(self.options, self.suite_info))
         if getattr(self.options, 'piuparts_enable', 'yes') == 'yes':
             self._policy_engine.add_policy(PiupartsPolicy(self.options, self.suite_info))
-        if getattr(self.options, 'adt_enable') == 'yes':
-            self._policy_engine.add_policy(AutopkgtestPolicy(self.options, self.suite_info))
+        add_autopkgtest_policy = getattr(self.options, 'adt_enable', 'no')
+        if add_autopkgtest_policy in ('yes', 'dry-run'):
+            self._policy_engine.add_policy(AutopkgtestPolicy(self.options, self.suite_info, dry_run=add_autopkgtest_policy))
         self._policy_engine.add_policy(AgePolicy(self.options, self.suite_info, MINDAYS))
         # XXX this policy results in asymmetric enforcement of
         # build-dependencies in the release pocket (nothing blocks

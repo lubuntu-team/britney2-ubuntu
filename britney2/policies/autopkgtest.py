@@ -117,7 +117,8 @@ class AutopkgtestPolicy(BasePolicy):
     reject the upload if any of those regress.
     """
 
-    def __init__(self, options, suite_info):
+    def __init__(self, options, suite_info, dry_run=False):
+
         super().__init__('autopkgtest', options, suite_info, {SuiteClass.PRIMARY_SOURCE_SUITE})
         # tests requested in this and previous runs
         # trigger -> src -> [arch]
@@ -126,6 +127,7 @@ class AutopkgtestPolicy(BasePolicy):
         self.testsuite_triggers = {}
         self.result_in_baseline_cache = collections.defaultdict(dict)
         self.database_path = os.path.join(self.state_dir, 'autopkgtest.db')
+        self.dry_run = dry_run
 
         # results map: trigger -> src -> arch -> [passed, version, run_id, seen]
         # - trigger is "source/version" of an unstable package that triggered
@@ -292,7 +294,7 @@ class AutopkgtestPolicy(BasePolicy):
         # Initialize AMQP connection
         self.amqp_channel = None
         self.amqp_file = None
-        if self.options.dry_run:
+        if self.options.dry_run or self.dry_run:
             return
 
         amqp_url = self.options.adt_amqp
@@ -1117,7 +1119,7 @@ class AutopkgtestPolicy(BasePolicy):
         If huge is true, then the request will be put into the -huge instead of
         normal queue.
         '''
-        if self.options.dry_run:
+        if self.options.dry_run or self.dry_run:
             return
 
         params = {'triggers': triggers}
