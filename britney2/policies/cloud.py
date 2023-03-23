@@ -97,7 +97,12 @@ class CloudPolicy(BasePolicy):
     def apply_src_policy_impl(self, policy_info, item, source_data_tdist, source_data_srcdist, excuse):
         self.logger.info("Cloud Policy: Looking at {}".format(item.package))
         if item.package not in self.package_set:
-            return PolicyVerdict.PASS
+            verdict = PolicyVerdict.PASS
+            excuse.add_verdict_info(
+                verdict,
+                "Cloud tests not required because package is not in the cloud package set."
+            )
+            return verdict
 
         if self.dry_run:
             self.logger.info(
@@ -123,7 +128,9 @@ class CloudPolicy(BasePolicy):
             return verdict
         else:
             self._cleanup_work_directory()
-            return PolicyVerdict.PASS
+            verdict = PolicyVerdict.PASS
+            excuse.add_verdict_info(verdict, "Cloud tests passed.")
+            return verdict
 
     def _mark_tests_run(self, package, version, series, source_type, cloud):
         """Mark the selected package version as already tested.

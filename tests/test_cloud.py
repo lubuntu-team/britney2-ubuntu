@@ -11,12 +11,13 @@ import json
 import sys
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import xml.etree.ElementTree as ET
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_DIR)
 
+from britney2.policies import PolicyVerdict
 from britney2.policies.cloud import CloudPolicy, ERR_MESSAGE, MissingURNException
 
 class FakeItem:
@@ -143,7 +144,7 @@ class T(unittest.TestCase):
         self.policy.options.series = "jammy"
 
         self.policy.apply_src_policy_impl(
-            None, FakeItem, None, FakeSourceData, None
+            None, FakeItem, None, FakeSourceData, MagicMock()
         )
 
         mock_run.assert_called_once_with(
@@ -157,11 +158,12 @@ class T(unittest.TestCase):
         self.policy.package_set = set(["vim"])
         self.policy.options.series = "jammy"
 
-        self.policy.apply_src_policy_impl(
-            None, FakeItem, None, FakeSourceData, None
+        verdict = self.policy.apply_src_policy_impl(
+            None, FakeItem, None, FakeSourceData, MagicMock()
         )
 
         mock_run.assert_not_called()
+        self.assertEqual(verdict, PolicyVerdict.PASS)
 
     @patch("britney2.policies.cloud.smtplib")
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
