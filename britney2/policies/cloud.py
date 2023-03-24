@@ -70,6 +70,8 @@ class CloudPolicy(BasePolicy):
         self.error_emails = getattr(self.options, "cloud_error_emails", self.DEFAULT_EMAILS)
         self.state_filename = getattr(self.options, "cloud_state_file", self.STATE_FILE)
 
+        self.reporting_enabled = getattr(self.options, "cloud_enable_reporting", "no")
+
         self.state = {}
 
         adt_ppas = getattr(self.options, "adt_ppas", "")
@@ -114,10 +116,19 @@ class CloudPolicy(BasePolicy):
         self.failures = {}
         self.errors = {}
 
+        if self.reporting_enabled == "yes":
+            self._report_test_start(item.package, source_data_srcdist.version, self.options.series)
+
         self._run_cloud_tests(item.package, source_data_srcdist.version, self.options.series,
                               self.sources, self.source_type)
 
         if len(self.failures) > 0 or len(self.errors) > 0:
+            if self.reporting_enabled == "yes":
+                if len(self.failures) > 0:
+                    self._report_test_result(item.package, source_data_srcdist.version, self.options.series, "fail")
+                else:
+                    self._report_test_result(item.package, source_data_srcdist.version, self.options.series, "error")
+
             if self.email_needed:
                 self._send_emails_if_needed(item.package, source_data_srcdist.version, self.options.series)
 
@@ -127,6 +138,9 @@ class CloudPolicy(BasePolicy):
             excuse.add_verdict_info(verdict, info)
             return verdict
         else:
+            if self.reporting_enabled == "yes":
+                self._report_test_result(item.package, source_data_srcdist.version, self.options.series, "pass")
+
             self._cleanup_work_directory()
             verdict = PolicyVerdict.PASS
             excuse.add_verdict_info(verdict, "Cloud tests passed.")
@@ -550,6 +564,37 @@ class CloudPolicy(BasePolicy):
                 cloud_ppas.append(formatted_ppa)
 
         return cloud_ppas
+
+    def _report_test_start(self, package, version, series):
+        """
+        Add an entry to the report to show that the package has started tests for this series and version.
+
+        :param package The name of the package to test
+        :param version Version of the package
+        :param series The Ubuntu codename for the series (e.g. jammy)
+        """
+        params = [
+            "/snap/bin/ctf-britney-tools", "table-commands", "write-data",
+            series, package, version
+        ]
+
+        subprocess.run(params)
+
+    def _report_test_result(self, package, version, series, result):
+        """
+        Provides a simple summary of the test result to the report; whether it was a pass, fail or error.
+
+        :param package The name of the package to test
+        :param version Version of the package
+        :param series The Ubuntu codename for the series (e.g. jammy)
+        :param result A string describing the result (pass, fail, error)
+        """
+        params = [
+            "/snap/bin/ctf-britney-tools", "table-commands", "write-test-result",
+            series, package, version, result
+        ]
+
+        subprocess.run(params)
 
     def _setup_work_directory(self):
         """Create a directory for tests to be run in."""

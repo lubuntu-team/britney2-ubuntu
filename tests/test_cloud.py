@@ -180,6 +180,39 @@ class T(unittest.TestCase):
         mock_run.assert_not_called()
         self.assertEqual(smtp.mock_calls, [])
 
+    @patch("britney2.policies.cloud.CloudPolicy._report_test_result")
+    @patch("britney2.policies.cloud.CloudPolicy._report_test_start")
+    @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
+    def test_reporting_of_cloud_tests(self, mock_run, mock_report, mock_report_result):
+        self.fake_options.cloud_enable_reporting = "yes"
+        policy = CloudPolicy(self.fake_options, {}, dry_run=False)
+
+        policy.package_set = set(["chromium-browser"])
+        policy.options.series = "jammy"
+
+        policy.apply_src_policy_impl(
+            None, FakeItem, None, FakeSourceData, MagicMock()
+        )
+
+        mock_report.assert_called_once_with(
+            "chromium-browser", "55.0", "jammy"
+        )
+
+    @patch("britney2.policies.cloud.CloudPolicy._report_test_start")
+    @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
+    def test_reporting_of_cloud_tests_is_disabled(self, mock_run, mock_report):
+        self.fake_options.cloud_reporting_enabled = "no"
+        policy = CloudPolicy(self.fake_options, {}, dry_run=False)
+
+        policy.package_set = set(["chromium-browser"])
+        policy.options.series = "jammy"
+
+        policy.apply_src_policy_impl(
+            None, FakeItem, None, FakeSourceData, MagicMock()
+        )
+
+        mock_report.assert_not_called()
+
     def test_finding_results_file(self):
         """Ensure result file output from Cloud Test Framework can be found"""
         path = os.path.join(self.policy.work_dir, "TEST-FakeTests-20230101010101.xml")
