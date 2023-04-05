@@ -48,7 +48,7 @@ If you have any questions about this email, please ask them in #ubuntu-release c
 Regards, Ubuntu Release Team.
 """
 class CloudPolicy(BasePolicy):
-    PACKAGE_SET_FILE = "cloud_package_set"
+    PACKAGE_SET_FILE = "cloud_package_set.json"
     STATE_FILE = "cloud_state"
     DEFAULT_EMAILS = ["cpc@canonical.com"]
     TEST_LOG_FILE = "CTF.log"
@@ -89,16 +89,21 @@ class CloudPolicy(BasePolicy):
         self.failures = {}
         self.errors = {}
         self.email_needed = False
+        self.package_set = {}
 
     def initialise(self, britney):
         super().initialise(britney)
 
-        self.package_set = self._retrieve_cloud_package_set_for_series(self.options.series)
+        self.package_set = self._retrieve_cloud_package_set_for_series(
+            self.PACKAGE_SET_FILE,
+            self.options.series
+        )
         self._load_state()
 
     def apply_src_policy_impl(self, policy_info, item, source_data_tdist, source_data_srcdist, excuse):
         self.logger.info("Cloud Policy: Looking at {}".format(item.package))
-        if item.package not in self.package_set:
+        clouds_to_test = self._check_if_tests_required(self.package_set, item.package)
+        if len(clouds_to_test) == 0:
             verdict = PolicyVerdict.PASS
             excuse.add_verdict_info(
                 verdict,
@@ -119,7 +124,7 @@ class CloudPolicy(BasePolicy):
         if self.reporting_enabled == "yes":
             self._report_test_start(item.package, source_data_srcdist.version, self.options.series)
 
-        self._run_cloud_tests(item.package, source_data_srcdist.version, self.options.series,
+        self._run_cloud_tests(clouds_to_test, item.package, source_data_srcdist.version, self.options.series,
                               self.sources, self.source_type)
 
         if len(self.failures) > 0 or len(self.errors) > 0:
@@ -223,34 +228,55 @@ class CloudPolicy(BasePolicy):
             json.dump(self.state, data)
         self.logger.info("Saved cloud policy state file %s" % self.state_filename)
 
-    def _retrieve_cloud_package_set_for_series(self, series):
+    def _retrieve_cloud_package_set_for_series(self, file_path, series):
         """Retrieves a set of packages for the given series in which cloud
         tests should be run.
 
-        Temporarily a static list retrieved from file. Will be updated to
-        retrieve from a database at a later date.
-
+        :param file_path The path to the package set file.
         :param series The Ubuntu codename for the series (e.g. jammy)
         """
-        package_set = set()
+        package_set = {}
 
-        with open(self.PACKAGE_SET_FILE) as file:
-            for line in file:
-                package_set.add(line.strip())
+        with open(file_path) as file:
+            full_package_set = json.load(file)
+            for cloud, cloud_set in full_package_set.items():
+                for cloud_series, series_set in cloud_set.items():
+                    if cloud_series == series:
+                        package_set[cloud] = series_set
 
         return package_set
 
-    def _run_cloud_tests(self, package, version, series, sources, source_type):
+    def _check_if_tests_required(self, package_set, package):
+        """Checks the package set to see if the package is present and therefore tests are required.
+        Returns a list of the clouds which contain the package.
+
+        :param package_set The cloud package set as a dictionary.
+        :param package The name of the source package.
+        :returns A list of clouds which require tests for this package.
+        """
+        clouds_to_test = []
+        for cloud, packages in package_set.items():
+            if package in packages:
+                clouds_to_test.append(cloud)
+
+        return clouds_to_test
+
+    def _run_cloud_tests(self, clouds, package, version, series, sources, source_type):
         """Runs any cloud tests for the given package.
         Nothing is returned but test failures and errors are stored in instance variables.
 
+        :param clouds A list of clouds which need tests run
         :param package The name of the package to test
         :param version Version of the package
         :param series The Ubuntu codename for the series (e.g. jammy)
         :param sources List of sources where the package should be installed from (e.g. [proposed] or PPAs)
         :param source_type Either 'archive' or 'ppa'
         """
-        self._run_azure_tests(package, version, series, sources, source_type)
+        for cloud in clouds:
+            if cloud == "azure":
+                self._run_azure_tests(package, version, series, sources, source_type)
+            else:
+                raise RuntimeError("Cloud Policy: Unexpected cloud to test: {}".format(cloud))
 
     def _send_emails_if_needed(self, package, version, series):
         """Sends email(s) if there are test failures and/or errors
@@ -290,13 +316,14 @@ class CloudPolicy(BasePolicy):
             return
 
         urn = self._retrieve_urn(series)
+        binaries = self._retrieve_binaries("azure", package)
 
         self.logger.info("Cloud Policy: Running Azure tests for: {} in {}".format(package, series))
         params = [
             "/snap/bin/cloud-test-framework",
             "--instance-prefix", "britney-{}-{}".format(package, series)
         ]
-        params.extend(self._format_install_flags(package, sources, source_type))
+        params.extend(self._format_install_flags(binaries, sources, source_type))
         params.extend(
             [
                 "azure_gen2",
@@ -340,6 +367,14 @@ class CloudPolicy(BasePolicy):
             raise MissingURNException("No URN configured for {}".format(series))
 
         return urn
+
+    def _retrieve_binaries(self, cloud, source_package):
+        """Given a source package name and cloud, retrieves the associated binary package names from the package set.
+
+        :param source_package The name of a source package.
+        :returns The list of binary package names.
+        """
+        return self.package_set[cloud][source_package]
 
     def _find_results_files(self, file_regex):
         """Find any test results files that match the given regex pattern.
@@ -503,24 +538,27 @@ class CloudPolicy(BasePolicy):
 
         return info
 
-    def _format_install_flags(self, package, sources, source_type):
+    def _format_install_flags(self, binaries, sources, source_type):
         """Determine the flags required to install the package from the given sources
 
-        :param package The name of the package to test
+        :param binaries A list of binary package names
         :param sources List of sources where the package should be installed from (e.g. [proposed] or PPAs)
         :param source_type Either 'archive' or 'ppa'
         """
         install_flags = []
 
         for source in sources:
+            flag = ""
             if source_type == "archive":
-                install_flags.append("--install-archive-package")
-                install_flags.append("{}/{}".format(package, source))
+                flag = "--install-archive-package"
             elif source_type == "ppa":
-                install_flags.append("--install-ppa-package")
-                install_flags.append("{}/{}".format(package, source))
+                flag = "--install-ppa-package"
             else:
                 raise RuntimeError("Cloud Policy: Unexpected source type, {}".format(source_type))
+
+            for binary in binaries:
+                install_flags.append(flag)
+                install_flags.append("{}/{}".format(binary, source))
 
         return install_flags
 

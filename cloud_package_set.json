@@ -1,0 +1,5686 @@
+{
+    "azure": {
+        "bionic": {
+            "grub-gfxpayload-lists": [
+                "grub-gfxpayload-lists"
+            ],
+            "run-one": [
+                "run-one"
+            ],
+            "crda": [
+                "crda"
+            ],
+            "libestr": [
+                "libestr0"
+            ],
+            "libfastjson": [
+                "libfastjson4"
+            ],
+            "gpm": [
+                "libgpm2"
+            ],
+            "libmnl": [
+                "libmnl0"
+            ],
+            "time": [
+                "time"
+            ],
+            "acl": [
+                "acl",
+                "libacl1"
+            ],
+            "acpid": [
+                "acpid"
+            ],
+            "apport-symptoms": [
+                "apport-symptoms"
+            ],
+            "diffutils": [
+                "diffutils"
+            ],
+            "dosfstools": [
+                "dosfstools"
+            ],
+            "ed": [
+                "ed"
+            ],
+            "eject": [
+                "eject"
+            ],
+            "netkit-ftp": [
+                "ftp"
+            ],
+            "fuse": [
+                "fuse",
+                "libfuse2"
+            ],
+            "attr": [
+                "libattr1"
+            ],
+            "cdebconf": [
+                "libdebconfclient0"
+            ],
+            "libdumbnet": [
+                "libdumbnet1"
+            ],
+            "libedit": [
+                "libedit2"
+            ],
+            "liblocale-gettext-perl": [
+                "liblocale-gettext-perl"
+            ],
+            "lzo2": [
+                "liblzo2-2"
+            ],
+            "libnetfilter-conntrack": [
+                "libnetfilter-conntrack3"
+            ],
+            "libnfnetlink": [
+                "libnfnetlink0"
+            ],
+            "readline5": [
+                "libreadline5"
+            ],
+            "rtmpdump": [
+                "librtmp1"
+            ],
+            "libtext-charwidth-perl": [
+                "libtext-charwidth-perl"
+            ],
+            "libtext-iconv-perl": [
+                "libtext-iconv-perl"
+            ],
+            "libtext-wrapi18n-perl": [
+                "libtext-wrapi18n-perl"
+            ],
+            "libusb-1.0": [
+                "libusb-1.0-0"
+            ],
+            "libutempter": [
+                "libutempter0"
+            ],
+            "libxdmcp": [
+                "libxdmcp6"
+            ],
+            "libxext": [
+                "libxext6"
+            ],
+            "libxmu": [
+                "libxmuu1"
+            ],
+            "libyaml": [
+                "libyaml-0-2"
+            ],
+            "logrotate": [
+                "logrotate"
+            ],
+            "lsof": [
+                "lsof"
+            ],
+            "ltrace": [
+                "ltrace"
+            ],
+            "mime-support": [
+                "mime-support"
+            ],
+            "net-tools": [
+                "net-tools"
+            ],
+            "netbase": [
+                "netbase"
+            ],
+            "os-prober": [
+                "os-prober"
+            ],
+            "chardet": [
+                "python3-chardet"
+            ],
+            "configobj": [
+                "python3-configobj"
+            ],
+            "python-json-pointer": [
+                "python3-json-pointer"
+            ],
+            "markupsafe": [
+                "python3-markupsafe"
+            ],
+            "python-systemd": [
+                "python3-systemd"
+            ],
+            "pyyaml": [
+                "python3-yaml"
+            ],
+            "netkit-telnet": [
+                "telnet"
+            ],
+            "usbutils": [
+                "usbutils"
+            ],
+            "xdelta3": [
+                "xdelta3"
+            ],
+            "zerofree": [
+                "zerofree"
+            ],
+            "efibootmgr": [
+                "efibootmgr"
+            ],
+            "accountsservice": [
+                "accountsservice",
+                "libaccountsservice0"
+            ],
+            "adduser": [
+                "adduser"
+            ],
+            "apparmor": [
+                "apparmor",
+                "libapparmor1"
+            ],
+            "apt": [
+                "apt",
+                "apt-utils",
+                "libapt-inst2.0",
+                "libapt-pkg5.0"
+            ],
+            "at": [
+                "at"
+            ],
+            "base-passwd": [
+                "base-passwd"
+            ],
+            "bash-completion": [
+                "bash-completion"
+            ],
+            "bc": [
+                "bc"
+            ],
+            "bcache-tools": [
+                "bcache-tools"
+            ],
+            "bsdmainutils": [
+                "bsdmainutils"
+            ],
+            "util-linux": [
+                "bsdutils",
+                "fdisk",
+                "libblkid1",
+                "libfdisk1",
+                "libmount1",
+                "libsmartcols1",
+                "libuuid1",
+                "mount",
+                "util-linux",
+                "uuid-runtime"
+            ],
+            "btrfs-progs": [
+                "btrfs-progs",
+                "btrfs-tools"
+            ],
+            "byobu": [
+                "byobu"
+            ],
+            "bzip2": [
+                "bzip2",
+                "libbz2-1.0"
+            ],
+            "cloud-utils": [
+                "cloud-guest-utils"
+            ],
+            "cloud-initramfs-tools": [
+                "cloud-initramfs-copymods",
+                "cloud-initramfs-dyn-netconf",
+                "overlayroot"
+            ],
+            "console-setup": [
+                "console-setup",
+                "console-setup-linux",
+                "keyboard-configuration"
+            ],
+            "coreutils": [
+                "coreutils"
+            ],
+            "cryptsetup": [
+                "cryptsetup",
+                "cryptsetup-bin",
+                "libcryptsetup12"
+            ],
+            "dash": [
+                "dash"
+            ],
+            "debconf": [
+                "debconf",
+                "debconf-i18n",
+                "python3-debconf"
+            ],
+            "debianutils": [
+                "debianutils"
+            ],
+            "distro-info": [
+                "distro-info",
+                "python3-distro-info"
+            ],
+            "lvm2": [
+                "dmeventd",
+                "dmsetup",
+                "libdevmapper-event1.02.1",
+                "libdevmapper1.02.1",
+                "liblvm2app2.2",
+                "liblvm2cmd2.02",
+                "lvm2"
+            ],
+            "dmidecode": [
+                "dmidecode"
+            ],
+            "dns-root-data": [
+                "dns-root-data"
+            ],
+            "libeatmydata": [
+                "eatmydata",
+                "libeatmydata1"
+            ],
+            "ebtables": [
+                "ebtables"
+            ],
+            "ethtool": [
+                "ethtool"
+            ],
+            "file": [
+                "file",
+                "libmagic-mgc",
+                "libmagic1"
+            ],
+            "findutils": [
+                "findutils"
+            ],
+            "fonts-ubuntu": [
+                "fonts-ubuntu-console"
+            ],
+            "friendly-recovery": [
+                "friendly-recovery"
+            ],
+            "gawk": [
+                "gawk"
+            ],
+            "gcc-8": [
+                "gcc-8-base",
+                "libgcc1",
+                "libstdc++6"
+            ],
+            "gdisk": [
+                "gdisk"
+            ],
+            "geoip-database": [
+                "geoip-database"
+            ],
+            "gettext": [
+                "gettext-base"
+            ],
+            "gobject-introspection": [
+                "gir1.2-glib-2.0",
+                "libgirepository-1.0-1"
+            ],
+            "grep": [
+                "grep"
+            ],
+            "groff": [
+                "groff-base"
+            ],
+            "hdparm": [
+                "hdparm"
+            ],
+            "hostname": [
+                "hostname"
+            ],
+            "htop": [
+                "htop"
+            ],
+            "texinfo": [
+                "info",
+                "install-info"
+            ],
+            "init-system-helpers": [
+                "init",
+                "init-system-helpers"
+            ],
+            "iproute2": [
+                "iproute2"
+            ],
+            "iptables": [
+                "iptables",
+                "libip4tc0",
+                "libip6tc0",
+                "libiptc0",
+                "libxtables12"
+            ],
+            "iputils": [
+                "iputils-ping",
+                "iputils-tracepath"
+            ],
+            "irqbalance": [
+                "irqbalance"
+            ],
+            "iso-codes": [
+                "iso-codes"
+            ],
+            "iw": [
+                "iw"
+            ],
+            "kbd": [
+                "kbd"
+            ],
+            "kmod": [
+                "kmod",
+                "libkmod2"
+            ],
+            "language-selector": [
+                "language-selector-common"
+            ],
+            "less": [
+                "less"
+            ],
+            "argon2": [
+                "libargon2-0"
+            ],
+            "libassuan": [
+                "libassuan0"
+            ],
+            "linux-atm": [
+                "libatm1"
+            ],
+            "audit": [
+                "libaudit-common",
+                "libaudit1"
+            ],
+            "libbsd": [
+                "libbsd0"
+            ],
+            "libcap-ng": [
+                "libcap-ng0"
+            ],
+            "libcap2": [
+                "libcap2",
+                "libcap2-bin",
+                "libpam-cap"
+            ],
+            "db5.3": [
+                "libdb5.3"
+            ],
+            "libdrm": [
+                "libdrm-common",
+                "libdrm2"
+            ],
+            "elfutils": [
+                "libdw1",
+                "libelf1"
+            ],
+            "efivar": [
+                "libefiboot1",
+                "libefivar1"
+            ],
+            "liberror-perl": [
+                "liberror-perl"
+            ],
+            "libevent": [
+                "libevent-2.1-6"
+            ],
+            "libffi": [
+                "libffi6"
+            ],
+            "gdbm": [
+                "libgdbm-compat4",
+                "libgdbm5"
+            ],
+            "geoip": [
+                "libgeoip1"
+            ],
+            "libgpg-error": [
+                "libgpg-error0"
+            ],
+            "nettle": [
+                "libhogweed4",
+                "libnettle6"
+            ],
+            "libidn": [
+                "libidn11"
+            ],
+            "libidn2": [
+                "libidn2-0"
+            ],
+            "open-isns": [
+                "libisns0"
+            ],
+            "jansson": [
+                "libjansson4"
+            ],
+            "json-c": [
+                "libjson-c3"
+            ],
+            "ldb": [
+                "libldb1",
+                "python-ldb"
+            ],
+            "lxc": [
+                "liblxc-common",
+                "liblxc1"
+            ],
+            "lz4": [
+                "liblz4-1"
+            ],
+            "mpdecimal": [
+                "libmpdec2"
+            ],
+            "mpfr4": [
+                "libmpfr6"
+            ],
+            "libmspack": [
+                "libmspack0"
+            ],
+            "ncurses": [
+                "libncurses5",
+                "libncursesw5",
+                "libtinfo5",
+                "ncurses-base",
+                "ncurses-bin",
+                "ncurses-term"
+            ],
+            "newt": [
+                "libnewt0.52",
+                "python3-newt",
+                "whiptail"
+            ],
+            "nghttp2": [
+                "libnghttp2-14"
+            ],
+            "libnih": [
+                "libnih1"
+            ],
+            "libnl3": [
+                "libnl-3-200",
+                "libnl-genl-3-200"
+            ],
+            "npth": [
+                "libnpth0"
+            ],
+            "numactl": [
+                "libnuma1"
+            ],
+            "p11-kit": [
+                "libp11-kit0"
+            ],
+            "parted": [
+                "libparted2",
+                "parted"
+            ],
+            "libpcap": [
+                "libpcap0.8"
+            ],
+            "pciutils": [
+                "libpci3",
+                "pciutils"
+            ],
+            "libpipeline": [
+                "libpipeline1"
+            ],
+            "plymouth": [
+                "libplymouth4",
+                "plymouth",
+                "plymouth-theme-ubuntu-text"
+            ],
+            "libpng1.6": [
+                "libpng16-16"
+            ],
+            "popt": [
+                "libpopt0"
+            ],
+            "procps": [
+                "libprocps6",
+                "procps"
+            ],
+            "libpsl": [
+                "libpsl5"
+            ],
+            "python-defaults": [
+                "libpython-stdlib",
+                "python",
+                "python-minimal"
+            ],
+            "python3-defaults": [
+                "libpython3-stdlib",
+                "python3",
+                "python3-minimal"
+            ],
+            "readline": [
+                "libreadline7",
+                "readline-common"
+            ],
+            "libselinux": [
+                "libselinux1"
+            ],
+            "libsemanage": [
+                "libsemanage-common",
+                "libsemanage1"
+            ],
+            "libsigsegv": [
+                "libsigsegv2"
+            ],
+            "slang2": [
+                "libslang2"
+            ],
+            "talloc": [
+                "libtalloc2",
+                "python-talloc"
+            ],
+            "libtasn1-6": [
+                "libtasn1-6"
+            ],
+            "tdb": [
+                "libtdb1",
+                "python-tdb"
+            ],
+            "tevent": [
+                "libtevent0"
+            ],
+            "libunistring": [
+                "libunistring2"
+            ],
+            "libuv1": [
+                "libuv1"
+            ],
+            "tcp-wrappers": [
+                "libwrap0"
+            ],
+            "libx11": [
+                "libx11-6",
+                "libx11-data"
+            ],
+            "libxau": [
+                "libxau6"
+            ],
+            "libxcb": [
+                "libxcb1"
+            ],
+            "xmlsec1": [
+                "libxmlsec1",
+                "libxmlsec1-openssl"
+            ],
+            "libzstd": [
+                "libzstd1"
+            ],
+            "lsb": [
+                "lsb-base",
+                "lsb-release"
+            ],
+            "lshw": [
+                "lshw"
+            ],
+            "lsscsi": [
+                "lsscsi"
+            ],
+            "man-db": [
+                "man-db"
+            ],
+            "manpages": [
+                "manpages"
+            ],
+            "mawk": [
+                "mawk"
+            ],
+            "mdadm": [
+                "mdadm"
+            ],
+            "mlocate": [
+                "mlocate"
+            ],
+            "mokutil": [
+                "mokutil"
+            ],
+            "mtr": [
+                "mtr-tiny"
+            ],
+            "nano": [
+                "nano"
+            ],
+            "netcat-openbsd": [
+                "netcat-openbsd"
+            ],
+            "pastebinit": [
+                "pastebinit"
+            ],
+            "patch": [
+                "patch"
+            ],
+            "pinentry": [
+                "pinentry-curses"
+            ],
+            "pollinate": [
+                "pollinate"
+            ],
+            "popularity-contest": [
+                "popularity-contest"
+            ],
+            "powermgmt-base": [
+                "powermgmt-base"
+            ],
+            "psmisc": [
+                "psmisc"
+            ],
+            "publicsuffix": [
+                "publicsuffix"
+            ],
+            "python-crypto": [
+                "python-crypto"
+            ],
+            "pyparted": [
+                "python-parted",
+                "python3-parted"
+            ],
+            "six": [
+                "python-six",
+                "python3-six"
+            ],
+            "asn1crypto": [
+                "python3-asn1crypto"
+            ],
+            "python-attrs": [
+                "python3-attr"
+            ],
+            "automat": [
+                "python3-automat"
+            ],
+            "blinker": [
+                "python3-blinker"
+            ],
+            "python-certifi": [
+                "python3-certifi"
+            ],
+            "python-cffi": [
+                "python3-cffi-backend"
+            ],
+            "python-click": [
+                "python3-click"
+            ],
+            "python-colorama": [
+                "python3-colorama"
+            ],
+            "constantly": [
+                "python3-constantly"
+            ],
+            "python-cryptography": [
+                "python3-cryptography"
+            ],
+            "dbus-python": [
+                "python3-dbus"
+            ],
+            "python-debian": [
+                "python3-debian"
+            ],
+            "python3-stdlib-extensions": [
+                "python3-gdbm"
+            ],
+            "pygobject": [
+                "python3-gi"
+            ],
+            "python-httplib2": [
+                "python3-httplib2"
+            ],
+            "hyperlink": [
+                "python3-hyperlink"
+            ],
+            "python-idna": [
+                "python3-idna"
+            ],
+            "incremental": [
+                "python3-incremental"
+            ],
+            "jinja2": [
+                "python3-jinja2"
+            ],
+            "python-json-patch": [
+                "python3-jsonpatch"
+            ],
+            "python-jsonschema": [
+                "python3-jsonschema"
+            ],
+            "netifaces": [
+                "python3-netifaces"
+            ],
+            "python-oauthlib": [
+                "python3-oauthlib"
+            ],
+            "pyopenssl": [
+                "python3-openssl"
+            ],
+            "python-pam": [
+                "python3-pam"
+            ],
+            "pexpect": [
+                "python3-pexpect"
+            ],
+            "ptyprocess": [
+                "python3-ptyprocess"
+            ],
+            "pyasn1": [
+                "python3-pyasn1"
+            ],
+            "python-pyasn1-modules": [
+                "python3-pyasn1-modules"
+            ],
+            "requests": [
+                "python3-requests"
+            ],
+            "python-requests-unixsocket": [
+                "python3-requests-unixsocket"
+            ],
+            "pyserial": [
+                "python3-serial"
+            ],
+            "python-service-identity": [
+                "python3-service-identity"
+            ],
+            "update-manager": [
+                "python3-update-manager",
+                "update-manager-core"
+            ],
+            "python-urllib3": [
+                "python3-urllib3"
+            ],
+            "zope.interface": [
+                "python3-zope.interface"
+            ],
+            "screen": [
+                "screen"
+            ],
+            "secureboot-db": [
+                "secureboot-db"
+            ],
+            "sed": [
+                "sed"
+            ],
+            "sensible-utils": [
+                "sensible-utils"
+            ],
+            "shared-mime-info": [
+                "shared-mime-info"
+            ],
+            "ssh-import-id": [
+                "ssh-import-id"
+            ],
+            "strace": [
+                "strace"
+            ],
+            "sysvinit": [
+                "sysvinit-utils"
+            ],
+            "ubuntu-keyring": [
+                "ubuntu-keyring"
+            ],
+            "ubuntu-meta": [
+                "ubuntu-minimal",
+                "ubuntu-server",
+                "ubuntu-standard"
+            ],
+            "ucf": [
+                "ucf"
+            ],
+            "unattended-upgrades": [
+                "unattended-upgrades"
+            ],
+            "ureadahead": [
+                "ureadahead"
+            ],
+            "wget": [
+                "wget"
+            ],
+            "xauth": [
+                "xauth"
+            ],
+            "xdg-user-dirs": [
+                "xdg-user-dirs"
+            ],
+            "xfsprogs": [
+                "xfsprogs"
+            ],
+            "xkeyboard-config": [
+                "xkb-data"
+            ],
+            "initramfs-tools": [
+                "initramfs-tools",
+                "initramfs-tools-bin",
+                "initramfs-tools-core"
+            ],
+            "avahi": [
+                "libavahi-client3",
+                "libavahi-common-data",
+                "libavahi-common3"
+            ],
+            "base-files": [
+                "base-files",
+                "motd-news-config"
+            ],
+            "cpio": [
+                "cpio"
+            ],
+            "ubuntu-release-upgrader": [
+                "python3-distupgrade",
+                "ubuntu-release-upgrader-core"
+            ],
+            "shim-signed": [
+                "shim-signed"
+            ],
+            "libgcrypt20": [
+                "libgcrypt20"
+            ],
+            "squashfs-tools": [
+                "squashfs-tools"
+            ],
+            "netplan.io": [
+                "libnetplan0",
+                "netplan.io",
+                "nplan"
+            ],
+            "icu": [
+                "libicu60"
+            ],
+            "linux-base": [
+                "linux-base",
+                "linux-base-sgx"
+            ],
+            "ufw": [
+                "ufw"
+            ],
+            "busybox": [
+                "busybox-initramfs",
+                "busybox-static"
+            ],
+            "glib2.0": [
+                "libglib2.0-0",
+                "libglib2.0-data"
+            ],
+            "libseccomp": [
+                "libseccomp2"
+            ],
+            "policykit-1": [
+                "libpolkit-agent-1-0",
+                "libpolkit-backend-1-0",
+                "libpolkit-gobject-1-0",
+                "policykit-1"
+            ],
+            "cyrus-sasl2": [
+                "libsasl2-2",
+                "libsasl2-modules",
+                "libsasl2-modules-db"
+            ],
+            "command-not-found": [
+                "command-not-found",
+                "command-not-found-data",
+                "python3-commandnotfound"
+            ],
+            "landscape-client": [
+                "landscape-common"
+            ],
+            "twisted": [
+                "python3-twisted",
+                "python3-twisted-bin"
+            ],
+            "keyutils": [
+                "keyutils",
+                "libkeyutils1"
+            ],
+            "fribidi": [
+                "libfribidi0"
+            ],
+            "gzip": [
+                "gzip"
+            ],
+            "xz-utils": [
+                "xz-utils",
+                "liblzma5"
+            ],
+            "bash": [
+                "bash"
+            ],
+            "libsepol": [
+                "libsepol1"
+            ],
+            "networkd-dispatcher": [
+                "networkd-dispatcher"
+            ],
+            "rsyslog": [
+                "rsyslog"
+            ],
+            "cron": [
+                "cron"
+            ],
+            "dnsmasq": [
+                "dnsmasq-base"
+            ],
+            "open-iscsi": [
+                "open-iscsi"
+            ],
+            "openssh": [
+                "openssh-client",
+                "openssh-server",
+                "openssh-sftp-server"
+            ],
+            "sbsigntool": [
+                "sbsigntool"
+            ],
+            "apport": [
+                "apport",
+                "python3-apport",
+                "python3-problem-report"
+            ],
+            "openldap": [
+                "libldap-2.4-2",
+                "libldap-common"
+            ],
+            "pcre3": [
+                "libpcre3"
+            ],
+            "lxd": [
+                "lxd",
+                "lxd-client"
+            ],
+            "glibc": [
+                "libc-bin",
+                "locales",
+                "multiarch-support",
+                "libc6"
+            ],
+            "dpkg": [
+                "dpkg"
+            ],
+            "walinuxagent": [
+                "walinuxagent"
+            ],
+            "cifs-utils": [
+                "cifs-utils"
+            ],
+            "cups": [
+                "libcups2"
+            ],
+            "e2fsprogs": [
+                "e2fsprogs",
+                "libcom-err2",
+                "libext2fs2",
+                "libss2"
+            ],
+            "klibc": [
+                "klibc-utils",
+                "libklibc"
+            ],
+            "perl": [
+                "libperl5.26",
+                "perl",
+                "perl-base",
+                "perl-modules-5.26"
+            ],
+            "sosreport": [
+                "sosreport"
+            ],
+            "python-apt": [
+                "python-apt-common",
+                "python3-apt"
+            ],
+            "dbus": [
+                "dbus",
+                "dbus-user-session",
+                "libdbus-1-3"
+            ],
+            "samba": [
+                "python-samba",
+                "samba-common",
+                "samba-common-bin",
+                "samba-libs",
+                "libwbclient0"
+            ],
+            "tzdata": [
+                "tzdata"
+            ],
+            "ntfs-3g": [
+                "libntfs-3g88",
+                "ntfs-3g"
+            ],
+            "ca-certificates": [
+                "ca-certificates"
+            ],
+            "libxml2": [
+                "libxml2"
+            ],
+            "shadow": [
+                "login",
+                "passwd",
+                "uidmap"
+            ],
+            "grub2": [
+                "grub-common",
+                "grub-pc",
+                "grub-pc-bin",
+                "grub2-common",
+                "grub-efi-amd64-bin",
+                "grub-efi-arm64",
+                "grub-efi-arm64-bin"
+            ],
+            "distro-info-data": [
+                "distro-info-data"
+            ],
+            "sqlite3": [
+                "libsqlite3-0"
+            ],
+            "freetype": [
+                "libfreetype6"
+            ],
+            "pyjwt": [
+                "python3-jwt"
+            ],
+            "gnupg2": [
+                "dirmngr",
+                "gnupg-l10n",
+                "gpg",
+                "gpg-agent",
+                "gpg-wks-client",
+                "gpg-wks-server",
+                "gpgconf",
+                "gpgsm",
+                "gnupg",
+                "gnupg-utils",
+                "gpgv"
+            ],
+            "expat": [
+                "libexpat1"
+            ],
+            "libksba": [
+                "libksba8"
+            ],
+            "wireless-regdb": [
+                "wireless-regdb"
+            ],
+            "gnutls28": [
+                "libgnutls30"
+            ],
+            "zlib": [
+                "zlib1g"
+            ],
+            "lxcfs": [
+                "lxcfs"
+            ],
+            "libxslt": [
+                "libxslt1.1"
+            ],
+            "bind9": [
+                "bind9-host",
+                "dnsutils",
+                "libbind9-160",
+                "libdns-export1100",
+                "libdns1100",
+                "libirs160",
+                "libisc-export169",
+                "libisc169",
+                "libisccc160",
+                "libisccfg160",
+                "liblwres160"
+            ],
+            "isc-dhcp": [
+                "isc-dhcp-client",
+                "isc-dhcp-common"
+            ],
+            "gmp": [
+                "libgmp10"
+            ],
+            "rsync": [
+                "rsync"
+            ],
+            "open-vm-tools": [
+                "open-vm-tools"
+            ],
+            "sudo": [
+                "sudo"
+            ],
+            "python-setuptools": [
+                "python3-pkg-resources"
+            ],
+            "software-properties": [
+                "python3-software-properties",
+                "software-properties-common"
+            ],
+            "snapd": [
+                "snapd"
+            ],
+            "pam": [
+                "libpam-modules",
+                "libpam-modules-bin",
+                "libpam-runtime",
+                "libpam0g"
+            ],
+            "tmux": [
+                "tmux"
+            ],
+            "openssl1.0": [
+                "libssl1.0.0"
+            ],
+            "openssl": [
+                "libssl1.1",
+                "openssl"
+            ],
+            "heimdal": [
+                "libasn1-8-heimdal",
+                "libgssapi3-heimdal",
+                "libhcrypto4-heimdal",
+                "libheimbase1-heimdal",
+                "libheimntlm0-heimdal",
+                "libhx509-5-heimdal",
+                "libkrb5-26-heimdal",
+                "libroken18-heimdal",
+                "libwind0-heimdal"
+            ],
+            "grub2-signed": [
+                "grub-efi-amd64-signed",
+                "grub-efi-arm64-signed"
+            ],
+            "tar": [
+                "tar"
+            ],
+            "git": [
+                "git",
+                "git-man"
+            ],
+            "systemd": [
+                "libnss-systemd",
+                "libpam-systemd",
+                "libudev1",
+                "systemd",
+                "systemd-sysv",
+                "libsystemd0",
+                "udev"
+            ],
+            "tcpdump": [
+                "tcpdump"
+            ],
+            "ubuntu-advantage-tools": [
+                "ubuntu-advantage-tools",
+                "ubuntu-advantage-pro"
+            ],
+            "krb5": [
+                "libgssapi-krb5-2",
+                "libk5crypto3",
+                "libkrb5-3",
+                "libkrb5support0",
+                "krb5-locales"
+            ],
+            "curl": [
+                "curl",
+                "libcurl3-gnutls",
+                "libcurl4"
+            ],
+            "python3.6": [
+                "libpython3.6",
+                "libpython3.6-minimal",
+                "libpython3.6-stdlib",
+                "python3.6",
+                "python3.6-minimal"
+            ],
+            "python2.7": [
+                "libpython2.7",
+                "libpython2.7-minimal",
+                "libpython2.7-stdlib",
+                "python2.7",
+                "python2.7-minimal"
+            ],
+            "cloud-init": [
+                "cloud-init"
+            ],
+            "libunwind": [
+                "libunwind8"
+            ],
+            "update-notifier": [
+                "update-notifier-common"
+            ],
+            "vim": [
+                "vim",
+                "vim-common",
+                "vim-tiny",
+                "xxd",
+                "vim-runtime"
+            ],
+            "linux-meta-azure": [
+                "linux-azure",
+                "linux-cloud-tools-azure",
+                "linux-headers-azure",
+                "linux-image-azure",
+                "linux-tools-azure"
+            ],
+            "linux-azure-5.4": [
+                "linux-azure-5.4-cloud-tools-5.4.0-1105",
+                "linux-azure-5.4-headers-5.4.0-1105",
+                "linux-azure-5.4-tools-5.4.0-1105",
+                "linux-cloud-tools-5.4.0-1105-azure",
+                "linux-headers-5.4.0-1105-azure",
+                "linux-modules-5.4.0-1105-azure",
+                "linux-modules-extra-5.4.0-1105-azure",
+                "linux-tools-5.4.0-1105-azure"
+            ],
+            "linux": [
+                "linux-cloud-tools-common",
+                "linux-tools-common"
+            ],
+            "linux-signed-azure-5.4": [
+                "linux-image-5.4.0-1105-azure"
+            ],
+            "devio": [
+                "devio"
+            ],
+            "device-tree-compiler": [
+                "device-tree-compiler"
+            ],
+            "flash-kernel": [
+                "flash-kernel"
+            ],
+            "mtd-utils": [
+                "mtd-utils"
+            ],
+            "u-boot": [
+                "u-boot-tools"
+            ],
+            "linux-meta-azure-5.4": [
+                "linux-azure",
+                "linux-cloud-tools-azure",
+                "linux-headers-azure",
+                "linux-image-azure",
+                "linux-tools-azure"
+            ],
+            "libkcapi": [
+                "kcapi-tools",
+                "libkcapi1"
+            ],
+            "strongswan": [
+                "libcharon-standard-plugins",
+                "libstrongswan",
+                "libstrongswan-standard-plugins",
+                "strongswan",
+                "strongswan-charon",
+                "strongswan-libcharon",
+                "strongswan-starter"
+            ]
+        },
+        "kinetic": {
+            "adduser": [
+                "adduser"
+            ],
+            "bc": [
+                "bc"
+            ],
+            "bcache-tools": [
+                "bcache-tools"
+            ],
+            "util-linux": [
+                "bsdutils",
+                "eject",
+                "fdisk",
+                "libblkid1",
+                "libfdisk1",
+                "libmount1",
+                "libsmartcols1",
+                "libuuid1",
+                "mount",
+                "util-linux",
+                "util-linux-extra",
+                "bsdextrautils",
+                "uuid-runtime"
+            ],
+            "cloud-utils": [
+                "cloud-guest-utils"
+            ],
+            "coreutils": [
+                "coreutils"
+            ],
+            "debconf": [
+                "debconf",
+                "python3-debconf",
+                "debconf-i18n"
+            ],
+            "dosfstools": [
+                "dosfstools"
+            ],
+            "libeatmydata": [
+                "eatmydata",
+                "libeatmydata1"
+            ],
+            "finalrd": [
+                "finalrd"
+            ],
+            "fonts-ubuntu": [
+                "fonts-ubuntu-console"
+            ],
+            "fuse3": [
+                "fuse3",
+                "libfuse3-3"
+            ],
+            "gawk": [
+                "gawk"
+            ],
+            "gdisk": [
+                "gdisk"
+            ],
+            "packagekit": [
+                "gir1.2-packagekitglib-1.0",
+                "libpackagekit-glib2-18",
+                "packagekit",
+                "packagekit-tools"
+            ],
+            "grep": [
+                "grep"
+            ],
+            "groff": [
+                "groff-base"
+            ],
+            "hostname": [
+                "hostname"
+            ],
+            "htop": [
+                "htop"
+            ],
+            "iproute2": [
+                "iproute2"
+            ],
+            "acl": [
+                "libacl1"
+            ],
+            "libaio": [
+                "libaio1"
+            ],
+            "argon2": [
+                "libargon2-1"
+            ],
+            "libatasmart": [
+                "libatasmart4"
+            ],
+            "linux-atm": [
+                "libatm1"
+            ],
+            "attr": [
+                "libattr1"
+            ],
+            "brotli": [
+                "libbrotli1"
+            ],
+            "libbsd": [
+                "libbsd0"
+            ],
+            "bzip2": [
+                "libbz2-1.0"
+            ],
+            "libcap2": [
+                "libcap2",
+                "libcap2-bin",
+                "libpam-cap"
+            ],
+            "libcbor": [
+                "libcbor0.8"
+            ],
+            "libedit": [
+                "libedit2"
+            ],
+            "efivar": [
+                "libefiboot1",
+                "libefivar1"
+            ],
+            "libffi": [
+                "libffi8"
+            ],
+            "libfido2": [
+                "libfido2-1"
+            ],
+            "libgcrypt20": [
+                "libgcrypt20"
+            ],
+            "gdbm": [
+                "libgdbm-compat4",
+                "libgdbm6"
+            ],
+            "libgpg-error": [
+                "libgpg-error0"
+            ],
+            "gpm": [
+                "libgpm2"
+            ],
+            "libgudev": [
+                "libgudev-1.0-0"
+            ],
+            "iptables": [
+                "libip4tc2",
+                "libxtables12",
+                "iptables",
+                "libip6tc2"
+            ],
+            "open-isns": [
+                "libisns0"
+            ],
+            "json-c": [
+                "libjson-c5"
+            ],
+            "liblocale-gettext-perl": [
+                "liblocale-gettext-perl"
+            ],
+            "lz4": [
+                "liblz4-1"
+            ],
+            "xz-utils": [
+                "liblzma5",
+                "xz-utils"
+            ],
+            "lzo2": [
+                "liblzo2-2"
+            ],
+            "libmodule-scandeps-perl": [
+                "libmodule-scandeps-perl"
+            ],
+            "mpdecimal": [
+                "libmpdec3"
+            ],
+            "mpfr4": [
+                "libmpfr6"
+            ],
+            "ncurses": [
+                "libncurses6",
+                "libncursesw6",
+                "libtinfo6",
+                "ncurses-base",
+                "ncurses-bin",
+                "ncurses-term"
+            ],
+            "npth": [
+                "libnpth0"
+            ],
+            "libnsl": [
+                "libnsl2"
+            ],
+            "pcre3": [
+                "libpcre3"
+            ],
+            "policykit-1": [
+                "libpolkit-agent-1-0",
+                "libpolkit-gobject-1-0",
+                "pkexec",
+                "polkitd",
+                "policykit-1"
+            ],
+            "popt": [
+                "libpopt0"
+            ],
+            "libproc-processtable-perl": [
+                "libproc-processtable-perl"
+            ],
+            "libpsl": [
+                "libpsl5"
+            ],
+            "rtmpdump": [
+                "librtmp1"
+            ],
+            "libseccomp": [
+                "libseccomp2"
+            ],
+            "libselinux": [
+                "libselinux1"
+            ],
+            "libsemanage": [
+                "libsemanage-common",
+                "libsemanage2"
+            ],
+            "sg3-utils": [
+                "libsgutils2-2",
+                "sg3-utils",
+                "sg3-utils-udev"
+            ],
+            "libssh": [
+                "libssh-4"
+            ],
+            "libtasn1-6": [
+                "libtasn1-6"
+            ],
+            "tcl8.6": [
+                "libtcl8.6",
+                "tcl8.6"
+            ],
+            "uchardet": [
+                "libuchardet0"
+            ],
+            "libunistring": [
+                "libunistring2"
+            ],
+            "libusb-1.0": [
+                "libusb-1.0-0"
+            ],
+            "tcp-wrappers": [
+                "libwrap0"
+            ],
+            "xxhash": [
+                "libxxhash0"
+            ],
+            "libzstd": [
+                "libzstd1",
+                "zstd"
+            ],
+            "linux-base": [
+                "linux-base",
+                "linux-base-sgx"
+            ],
+            "lxd-agent-loader": [
+                "lxd-agent-loader"
+            ],
+            "mdadm": [
+                "mdadm"
+            ],
+            "media-types": [
+                "media-types"
+            ],
+            "needrestart": [
+                "needrestart"
+            ],
+            "netbase": [
+                "netbase"
+            ],
+            "patch": [
+                "patch"
+            ],
+            "pollinate": [
+                "pollinate"
+            ],
+            "python-babel": [
+                "python-babel-localedata",
+                "python3-babel"
+            ],
+            "blinker": [
+                "python3-blinker"
+            ],
+            "chardet": [
+                "python3-chardet"
+            ],
+            "python-click": [
+                "python3-click"
+            ],
+            "configobj": [
+                "python3-configobj"
+            ],
+            "python-cryptography": [
+                "python3-cryptography"
+            ],
+            "dbus-python": [
+                "python3-dbus"
+            ],
+            "python-distro": [
+                "python3-distro"
+            ],
+            "python-idna": [
+                "python3-idna"
+            ],
+            "python-importlib-metadata": [
+                "python3-importlib-metadata"
+            ],
+            "jeepney": [
+                "python3-jeepney"
+            ],
+            "jinja2": [
+                "python3-jinja2"
+            ],
+            "python-json-pointer": [
+                "python3-json-pointer"
+            ],
+            "python-json-patch": [
+                "python3-jsonpatch"
+            ],
+            "python-launchpadlib": [
+                "python3-launchpadlib"
+            ],
+            "lazr.restfulclient": [
+                "python3-lazr.restfulclient"
+            ],
+            "lazr.uri": [
+                "python3-lazr.uri"
+            ],
+            "markupsafe": [
+                "python3-markupsafe"
+            ],
+            "more-itertools": [
+                "python3-more-itertools"
+            ],
+            "netifaces": [
+                "python3-netifaces"
+            ],
+            "pyopenssl": [
+                "python3-openssl"
+            ],
+            "ptyprocess": [
+                "python3-ptyprocess"
+            ],
+            "pyparsing": [
+                "python3-pyparsing"
+            ],
+            "pyrsistent": [
+                "python3-pyrsistent"
+            ],
+            "requests": [
+                "python3-requests"
+            ],
+            "pyserial": [
+                "python3-serial"
+            ],
+            "python-urllib3": [
+                "python3-urllib3"
+            ],
+            "python-wadllib": [
+                "python3-wadllib"
+            ],
+            "pyyaml": [
+                "python3-yaml"
+            ],
+            "python-zipp": [
+                "python3-zipp"
+            ],
+            "secureboot-db": [
+                "secureboot-db"
+            ],
+            "sed": [
+                "sed"
+            ],
+            "sensible-utils": [
+                "sensible-utils"
+            ],
+            "squashfs-tools": [
+                "squashfs-tools"
+            ],
+            "ssh-import-id": [
+                "ssh-import-id"
+            ],
+            "tcltk-defaults": [
+                "tcl"
+            ],
+            "thin-provisioning-tools": [
+                "thin-provisioning-tools"
+            ],
+            "tpm-udev": [
+                "tpm-udev"
+            ],
+            "ubuntu-keyring": [
+                "ubuntu-keyring"
+            ],
+            "ucf": [
+                "ucf"
+            ],
+            "unattended-upgrades": [
+                "unattended-upgrades"
+            ],
+            "usb-modeswitch": [
+                "usb-modeswitch"
+            ],
+            "usb-modeswitch-data": [
+                "usb-modeswitch-data"
+            ],
+            "usbutils": [
+                "usbutils"
+            ],
+            "wget": [
+                "wget"
+            ],
+            "xfsprogs": [
+                "xfsprogs"
+            ],
+            "zerofree": [
+                "zerofree"
+            ],
+            "chrony": [
+                "chrony"
+            ],
+            "efibootmgr": [
+                "efibootmgr"
+            ],
+            "grub-gfxpayload-lists": [
+                "grub-gfxpayload-lists"
+            ],
+            "apport-symptoms": [
+                "apport-symptoms"
+            ],
+            "bash-completion": [
+                "bash-completion"
+            ],
+            "byobu": [
+                "byobu"
+            ],
+            "cloud-initramfs-tools": [
+                "cloud-initramfs-copymods",
+                "cloud-initramfs-dyn-netconf",
+                "overlayroot"
+            ],
+            "command-not-found": [
+                "command-not-found",
+                "python3-commandnotfound"
+            ],
+            "cron": [
+                "cron"
+            ],
+            "ed": [
+                "ed"
+            ],
+            "file": [
+                "file",
+                "libmagic-mgc",
+                "libmagic1"
+            ],
+            "friendly-recovery": [
+                "friendly-recovery"
+            ],
+            "tnftp": [
+                "ftp",
+                "tnftp"
+            ],
+            "hdparm": [
+                "hdparm"
+            ],
+            "iputils": [
+                "iputils-ping",
+                "iputils-tracepath"
+            ],
+            "landscape-client": [
+                "landscape-common"
+            ],
+            "liberror-perl": [
+                "liberror-perl"
+            ],
+            "json-glib": [
+                "libjson-glib-1.0-common",
+                "libjson-glib-1.0-0"
+            ],
+            "libtext-charwidth-perl": [
+                "libtext-charwidth-perl"
+            ],
+            "libtext-iconv-perl": [
+                "libtext-iconv-perl"
+            ],
+            "libtext-wrapi18n-perl": [
+                "libtext-wrapi18n-perl"
+            ],
+            "logrotate": [
+                "logrotate"
+            ],
+            "lshw": [
+                "lshw"
+            ],
+            "lsof": [
+                "lsof"
+            ],
+            "manpages": [
+                "manpages"
+            ],
+            "mtr": [
+                "mtr-tiny"
+            ],
+            "netcat-openbsd": [
+                "netcat-openbsd"
+            ],
+            "pastebinit": [
+                "pastebinit"
+            ],
+            "automat": [
+                "python3-automat"
+            ],
+            "python-bcrypt": [
+                "python3-bcrypt"
+            ],
+            "constantly": [
+                "python3-constantly"
+            ],
+            "pyhamcrest": [
+                "python3-hamcrest"
+            ],
+            "incremental": [
+                "python3-incremental"
+            ],
+            "pyasn1": [
+                "python3-pyasn1"
+            ],
+            "python-pyasn1-modules": [
+                "python3-pyasn1-modules"
+            ],
+            "zope.interface": [
+                "python3-zope.interface"
+            ],
+            "shared-mime-info": [
+                "shared-mime-info"
+            ],
+            "time": [
+                "time"
+            ],
+            "ufw": [
+                "ufw"
+            ],
+            "newt": [
+                "whiptail",
+                "libnewt0.52",
+                "python3-newt"
+            ],
+            "xauth": [
+                "xauth"
+            ],
+            "xdg-user-dirs": [
+                "xdg-user-dirs"
+            ],
+            "xkeyboard-config": [
+                "xkb-data"
+            ],
+            "libarchive": [
+                "libarchive13"
+            ],
+            "flashrom": [
+                "libflashrom1"
+            ],
+            "libgusb": [
+                "libgusb2"
+            ],
+            "jansson": [
+                "libjansson4"
+            ],
+            "libjcat": [
+                "libjcat1"
+            ],
+            "lmdb": [
+                "liblmdb0"
+            ],
+            "libmaxminddb": [
+                "libmaxminddb0"
+            ],
+            "libmspack": [
+                "libmspack0"
+            ],
+            "libnetfilter-conntrack": [
+                "libnetfilter-conntrack3"
+            ],
+            "libnfnetlink": [
+                "libnfnetlink0"
+            ],
+            "numactl": [
+                "libnuma1"
+            ],
+            "libpcap": [
+                "libpcap0.8"
+            ],
+            "libsmbios": [
+                "libsmbios-c2"
+            ],
+            "libsodium": [
+                "libsodium23"
+            ],
+            "snowball": [
+                "libstemmer0d"
+            ],
+            "tpm2-tss": [
+                "libtss2-esys-3.0.2-0",
+                "libtss2-mu0",
+                "libtss2-sys1",
+                "libtss2-tcti-cmd0",
+                "libtss2-tcti-device0",
+                "libtss2-tcti-mssim0",
+                "libtss2-tcti-swtpm0"
+            ],
+            "libutempter": [
+                "libutempter0"
+            ],
+            "libxau": [
+                "libxau6"
+            ],
+            "libxdmcp": [
+                "libxdmcp6"
+            ],
+            "libxext": [
+                "libxext6"
+            ],
+            "libxmlb": [
+                "libxmlb2"
+            ],
+            "libxmu": [
+                "libxmuu1"
+            ],
+            "cifs-utils": [
+                "cifs-utils"
+            ],
+            "talloc": [
+                "libtalloc2"
+            ],
+            "lsscsi": [
+                "lsscsi"
+            ],
+            "pyparted": [
+                "python3-parted"
+            ],
+            "walinuxagent": [
+                "walinuxagent"
+            ],
+            "e2fsprogs": [
+                "e2fsprogs",
+                "libcom-err2",
+                "libext2fs2",
+                "libss2",
+                "logsave"
+            ],
+            "libintl-perl": [
+                "libintl-perl",
+                "libintl-xs-perl"
+            ],
+            "usb.ids": [
+                "usb.ids"
+            ],
+            "xmlsec1": [
+                "libxmlsec1",
+                "libxmlsec1-openssl"
+            ],
+            "libsepol": [
+                "libsepol2"
+            ],
+            "libestr": [
+                "libestr0"
+            ],
+            "hyperlink": [
+                "python3-hyperlink"
+            ],
+            "mawk": [
+                "mawk"
+            ],
+            "libsort-naturally-perl": [
+                "libsort-naturally-perl"
+            ],
+            "python-service-identity": [
+                "python3-service-identity"
+            ],
+            "gstreamer1.0": [
+                "libgstreamer1.0-0"
+            ],
+            "freetype": [
+                "libfreetype6"
+            ],
+            "dash": [
+                "dash"
+            ],
+            "libcap-ng": [
+                "libcap-ng0"
+            ],
+            "texinfo": [
+                "info",
+                "install-info"
+            ],
+            "pinentry": [
+                "pinentry-curses"
+            ],
+            "dbus": [
+                "dbus",
+                "dbus-bin",
+                "dbus-daemon",
+                "dbus-session-bus-common",
+                "dbus-system-bus-common",
+                "dbus-user-session",
+                "libdbus-1-3"
+            ],
+            "shadow": [
+                "login",
+                "passwd"
+            ],
+            "multipath-tools": [
+                "kpartx",
+                "multipath-tools"
+            ],
+            "perl": [
+                "perl",
+                "perl-base",
+                "perl-modules-5.34",
+                "libperl5.34"
+            ],
+            "ntfs-3g": [
+                "libntfs-3g89",
+                "ntfs-3g"
+            ],
+            "sbsigntool": [
+                "sbsigntool"
+            ],
+            "distro-info-data": [
+                "distro-info-data"
+            ],
+            "libksba": [
+                "libksba8"
+            ],
+            "libidn2": [
+                "libidn2-0"
+            ],
+            "openssh": [
+                "openssh-client",
+                "openssh-server",
+                "openssh-sftp-server"
+            ],
+            "libyaml": [
+                "libyaml-0-2"
+            ],
+            "dmidecode": [
+                "dmidecode"
+            ],
+            "libassuan": [
+                "libassuan0"
+            ],
+            "sosreport": [
+                "sosreport"
+            ],
+            "sgml-base": [
+                "sgml-base"
+            ],
+            "expat": [
+                "libexpat1"
+            ],
+            "python-httplib2": [
+                "python3-httplib2"
+            ],
+            "jq": [
+                "jq",
+                "libjq1"
+            ],
+            "irqbalance": [
+                "irqbalance"
+            ],
+            "init-system-helpers": [
+                "init",
+                "init-system-helpers"
+            ],
+            "networkd-dispatcher": [
+                "networkd-dispatcher"
+            ],
+            "strace": [
+                "strace"
+            ],
+            "libmd": [
+                "libmd0"
+            ],
+            "python-debian": [
+                "python3-debian"
+            ],
+            "pyjwt": [
+                "python3-jwt"
+            ],
+            "tzdata": [
+                "tzdata"
+            ],
+            "pciutils": [
+                "libpci3",
+                "pciutils"
+            ],
+            "systemd-hwe": [
+                "systemd-hwe-hwdb"
+            ],
+            "dpkg": [
+                "dpkg"
+            ],
+            "db5.3": [
+                "libdb5.3"
+            ],
+            "protobuf-c": [
+                "libprotobuf-c1"
+            ],
+            "libxslt": [
+                "libxslt1.1"
+            ],
+            "rsync": [
+                "rsync"
+            ],
+            "grub2": [
+                "grub-common",
+                "grub-pc",
+                "grub-pc-bin",
+                "grub2-common"
+            ],
+            "libxcrypt": [
+                "libcrypt1"
+            ],
+            "libx11": [
+                "libx11-data",
+                "libx11-6"
+            ],
+            "python-cffi": [
+                "python3-cffi-backend"
+            ],
+            "iso-codes": [
+                "iso-codes"
+            ],
+            "run-one": [
+                "run-one"
+            ],
+            "nano": [
+                "nano"
+            ],
+            "libmnl": [
+                "libmnl0"
+            ],
+            "libmodule-find-perl": [
+                "libmodule-find-perl"
+            ],
+            "debianutils": [
+                "debianutils"
+            ],
+            "libxcb": [
+                "libxcb1"
+            ],
+            "gcab": [
+                "libgcab-1.0-0"
+            ],
+            "libnftnl": [
+                "libnftnl11"
+            ],
+            "slang2": [
+                "libslang2"
+            ],
+            "psmisc": [
+                "psmisc"
+            ],
+            "libnl3": [
+                "libnl-3-200",
+                "libnl-genl-3-200"
+            ],
+            "python-attrs": [
+                "python3-attr"
+            ],
+            "python-keyring": [
+                "python3-keyring"
+            ],
+            "gnupg2": [
+                "dirmngr",
+                "gnupg",
+                "gnupg-l10n",
+                "gnupg-utils",
+                "gpg",
+                "gpg-agent",
+                "gpg-wks-client",
+                "gpg-wks-server",
+                "gpgconf",
+                "gpgsm",
+                "gpgv"
+            ],
+            "gzip": [
+                "gzip"
+            ],
+            "rsyslog": [
+                "rsyslog"
+            ],
+            "nettle": [
+                "libhogweed6",
+                "libnettle8"
+            ],
+            "open-iscsi": [
+                "libopeniscsiusr",
+                "open-iscsi"
+            ],
+            "btrfs-progs": [
+                "btrfs-progs"
+            ],
+            "gettext": [
+                "gettext-base"
+            ],
+            "python-systemd": [
+                "python3-systemd"
+            ],
+            "fribidi": [
+                "libfribidi0"
+            ],
+            "base-passwd": [
+                "base-passwd"
+            ],
+            "pci.ids": [
+                "pci.ids"
+            ],
+            "findutils": [
+                "findutils"
+            ],
+            "libterm-readkey-perl": [
+                "libterm-readkey-perl"
+            ],
+            "python-colorama": [
+                "python3-colorama"
+            ],
+            "man-db": [
+                "man-db"
+            ],
+            "libpipeline": [
+                "libpipeline1"
+            ],
+            "python-tz": [
+                "python3-tz"
+            ],
+            "liburcu": [
+                "liburcu8"
+            ],
+            "powermgmt-base": [
+                "powermgmt-base"
+            ],
+            "cyrus-sasl2": [
+                "libsasl2-2",
+                "libsasl2-modules",
+                "libsasl2-modules-db"
+            ],
+            "libtirpc": [
+                "libtirpc-common",
+                "libtirpc3"
+            ],
+            "python3-defaults": [
+                "python3",
+                "python3-minimal",
+                "libpython3-stdlib"
+            ],
+            "keyutils": [
+                "libkeyutils1",
+                "keyutils"
+            ],
+            "mokutil": [
+                "mokutil"
+            ],
+            "appstream": [
+                "libappstream4"
+            ],
+            "libsigsegv": [
+                "libsigsegv2"
+            ],
+            "busybox": [
+                "busybox-initramfs",
+                "busybox-static"
+            ],
+            "sysvinit": [
+                "sysvinit-utils"
+            ],
+            "zlib": [
+                "zlib1g"
+            ],
+            "nftables": [
+                "nftables",
+                "libnftables1"
+            ],
+            "publicsuffix": [
+                "publicsuffix"
+            ],
+            "bolt": [
+                "bolt"
+            ],
+            "console-setup": [
+                "console-setup",
+                "console-setup-linux",
+                "keyboard-configuration"
+            ],
+            "diffutils": [
+                "diffutils"
+            ],
+            "ethtool": [
+                "ethtool"
+            ],
+            "libmbim": [
+                "libmbim-proxy",
+                "libmbim-glib4"
+            ],
+            "netkit-telnet": [
+                "netkit-telnet"
+            ],
+            "libinih": [
+                "libinih1"
+            ],
+            "nghttp2": [
+                "libnghttp2-14"
+            ],
+            "open-vm-tools": [
+                "open-vm-tools"
+            ],
+            "os-prober": [
+                "os-prober"
+            ],
+            "lvm2": [
+                "dmsetup",
+                "libdevmapper1.02.1",
+                "dmeventd",
+                "lvm2",
+                "libdevmapper-event1.02.1",
+                "liblvm2cmd2.03"
+            ],
+            "cryptsetup": [
+                "libcryptsetup12",
+                "cryptsetup",
+                "cryptsetup-bin",
+                "cryptsetup-initramfs"
+            ],
+            "gmp": [
+                "libgmp10"
+            ],
+            "python-certifi": [
+                "python3-certifi"
+            ],
+            "lsb": [
+                "lsb-base",
+                "lsb-release"
+            ],
+            "pexpect": [
+                "python3-pexpect"
+            ],
+            "pcre2": [
+                "libpcre2-8-0"
+            ],
+            "cdebconf": [
+                "libdebconfclient0"
+            ],
+            "procps": [
+                "libprocps8",
+                "procps"
+            ],
+            "screen": [
+                "screen"
+            ],
+            "python-jsonschema": [
+                "python3-jsonschema"
+            ],
+            "libuv1": [
+                "libuv1"
+            ],
+            "plymouth": [
+                "plymouth",
+                "plymouth-theme-ubuntu-text",
+                "libplymouth5"
+            ],
+            "initramfs-tools": [
+                "initramfs-tools",
+                "initramfs-tools-bin",
+                "initramfs-tools-core"
+            ],
+            "kmod": [
+                "kmod",
+                "libkmod2"
+            ],
+            "fwupd": [
+                "libfwupd2",
+                "libfwupdplugin7"
+            ],
+            "libonig": [
+                "libonig5"
+            ],
+            "libfastjson": [
+                "libfastjson4"
+            ],
+            "twisted": [
+                "python3-twisted"
+            ],
+            "udisks2": [
+                "libudisks2-0"
+            ],
+            "six": [
+                "python3-six"
+            ],
+            "pygobject": [
+                "python3-gi"
+            ],
+            "python-magic": [
+                "python3-magic"
+            ],
+            "usrmerge": [
+                "usrmerge"
+            ],
+            "modemmanager": [
+                "libmm-glib0"
+            ],
+            "nspr": [
+                "libnspr4"
+            ],
+            "libqmi": [
+                "libqmi-glib5",
+                "libqmi-proxy"
+            ],
+            "volume-key": [
+                "libvolume-key1"
+            ],
+            "python-secretstorage": [
+                "python3-secretstorage"
+            ],
+            "gpgme1.0": [
+                "libgpgme11"
+            ],
+            "python3-stdlib-extensions": [
+                "python3-distutils",
+                "python3-lib2to3",
+                "python3-gdbm"
+            ],
+            "libblockdev": [
+                "libblockdev-crypto2",
+                "libblockdev-fs2",
+                "libblockdev-loop2",
+                "libblockdev-part-err2",
+                "libblockdev-part2",
+                "libblockdev-swap2",
+                "libblockdev-utils2",
+                "libblockdev2"
+            ],
+            "libftdi1": [
+                "libftdi1-2"
+            ],
+            "cpio": [
+                "cpio"
+            ],
+            "audit": [
+                "libaudit-common",
+                "libaudit1"
+            ],
+            "python-oauthlib": [
+                "python3-oauthlib"
+            ],
+            "gobject-introspection": [
+                "gir1.2-glib-2.0",
+                "libgirepository-1.0-1"
+            ],
+            "libpng1.6": [
+                "libpng16-16"
+            ],
+            "gcc-12": [
+                "gcc-12-base",
+                "libgcc-s1",
+                "libstdc++6"
+            ],
+            "elfutils": [
+                "libelf1",
+                "libdw1"
+            ],
+            "parted": [
+                "libparted-fs-resize0",
+                "libparted2",
+                "parted"
+            ],
+            "sqlite3": [
+                "libsqlite3-0"
+            ],
+            "apt": [
+                "apt",
+                "libapt-pkg6.0",
+                "apt-utils"
+            ],
+            "readline": [
+                "readline-common",
+                "libreadline8"
+            ],
+            "p11-kit": [
+                "libp11-kit0"
+            ],
+            "klibc": [
+                "klibc-utils",
+                "libklibc"
+            ],
+            "icu": [
+                "libicu71"
+            ],
+            "isc-dhcp": [
+                "isc-dhcp-client",
+                "isc-dhcp-common"
+            ],
+            "ubuntu-release-upgrader": [
+                "python3-distupgrade",
+                "ubuntu-release-upgrader-core"
+            ],
+            "libdrm": [
+                "libdrm-common",
+                "libdrm2"
+            ],
+            "software-properties": [
+                "python3-software-properties",
+                "software-properties-common"
+            ],
+            "apparmor": [
+                "libapparmor1",
+                "apparmor"
+            ],
+            "apport": [
+                "apport",
+                "python3-apport",
+                "python3-problem-report"
+            ],
+            "bash": [
+                "bash"
+            ],
+            "glibc": [
+                "libc-bin",
+                "libc6",
+                "locales"
+            ],
+            "distro-info": [
+                "distro-info",
+                "python3-distro-info"
+            ],
+            "libevent": [
+                "libevent-core-2.1-7a"
+            ],
+            "ubuntu-meta": [
+                "ubuntu-minimal",
+                "ubuntu-server",
+                "ubuntu-standard"
+            ],
+            "base-files": [
+                "base-files",
+                "motd-news-config"
+            ],
+            "update-manager": [
+                "python3-update-manager",
+                "update-manager-core"
+            ],
+            "ca-certificates": [
+                "ca-certificates"
+            ],
+            "libbpf": [
+                "libbpf0"
+            ],
+            "libxml2": [
+                "libxml2"
+            ],
+            "binutils": [
+                "binutils",
+                "binutils-common",
+                "binutils-x86-64-linux-gnu",
+                "libbinutils",
+                "libctf-nobfd0",
+                "libctf0",
+                "libgprofng0",
+                "binutils-aarch64-linux-gnu"
+            ],
+            "python-apt": [
+                "python-apt-common",
+                "python3-apt"
+            ],
+            "glib2.0": [
+                "libglib2.0-0",
+                "libglib2.0-bin",
+                "libglib2.0-data"
+            ],
+            "setuptools": [
+                "python3-pkg-resources",
+                "python3-setuptools"
+            ],
+            "krb5": [
+                "libgssapi-krb5-2",
+                "libk5crypto3",
+                "libkrb5-3",
+                "libkrb5support0",
+                "krb5-locales"
+            ],
+            "kbd": [
+                "kbd"
+            ],
+            "snapd": [
+                "snapd"
+            ],
+            "update-notifier": [
+                "update-notifier-common"
+            ],
+            "pam": [
+                "libpam-modules",
+                "libpam-modules-bin",
+                "libpam-runtime",
+                "libpam0g"
+            ],
+            "tmux": [
+                "tmux"
+            ],
+            "openssl": [
+                "openssl",
+                "libssl3"
+            ],
+            "less": [
+                "less"
+            ],
+            "git": [
+                "git",
+                "git-man"
+            ],
+            "fwupd-signed": [
+                "fwupd-signed"
+            ],
+            "grub2-unsigned": [
+                "grub-efi-amd64-bin",
+                "grub-efi-arm64",
+                "grub-efi-arm64-bin"
+            ],
+            "grub2-signed": [
+                "grub-efi-amd64-signed",
+                "grub-efi-arm64-signed"
+            ],
+            "shim-signed": [
+                "shim-signed"
+            ],
+            "nss": [
+                "libnss3"
+            ],
+            "gnutls28": [
+                "libgnutls30"
+            ],
+            "tar": [
+                "tar"
+            ],
+            "systemd": [
+                "libnss-systemd",
+                "libpam-systemd",
+                "libsystemd-shared",
+                "libsystemd0",
+                "libudev1",
+                "systemd",
+                "systemd-resolved",
+                "systemd-sysv",
+                "systemd-timesyncd",
+                "udev"
+            ],
+            "sudo": [
+                "sudo"
+            ],
+            "ubuntu-advantage-tools": [
+                "ubuntu-advantage-tools"
+            ],
+            "tcpdump": [
+                "tcpdump"
+            ],
+            "openldap": [
+                "libldap-2.5-0",
+                "libldap-common"
+            ],
+            "netplan.io": [
+                "libnetplan0",
+                "netplan.io"
+            ],
+            "curl": [
+                "curl",
+                "libcurl3-gnutls",
+                "libcurl4"
+            ],
+            "python3.10": [
+                "libpython3.10",
+                "libpython3.10-minimal",
+                "libpython3.10-stdlib",
+                "python3.10",
+                "python3.10-minimal"
+            ],
+            "cloud-init": [
+                "cloud-init"
+            ],
+            "linux-meta-azure": [
+                "linux-azure",
+                "linux-cloud-tools-azure",
+                "linux-headers-azure",
+                "linux-image-azure",
+                "linux-tools-azure"
+            ],
+            "linux-azure": [
+                "linux-azure-cloud-tools-5.19.0-1022",
+                "linux-azure-headers-5.19.0-1022",
+                "linux-azure-tools-5.19.0-1022",
+                "linux-cloud-tools-5.19.0-1022-azure",
+                "linux-headers-5.19.0-1022-azure",
+                "linux-modules-5.19.0-1022-azure",
+                "linux-tools-5.19.0-1022-azure"
+            ],
+            "linux": [
+                "linux-cloud-tools-common",
+                "linux-tools-common"
+            ],
+            "linux-signed-azure": [
+                "linux-image-5.19.0-1022-azure"
+            ],
+            "libunwind": [
+                "libunwind8"
+            ],
+            "bind9": [
+                "bind9-dnsutils",
+                "bind9-host",
+                "bind9-libs"
+            ],
+            "samba": [
+                "libwbclient0"
+            ],
+            "vim": [
+                "vim",
+                "vim-common",
+                "vim-runtime",
+                "vim-tiny",
+                "xxd"
+            ],
+            "devio": [
+                "devio"
+            ],
+            "libubootenv": [
+                "libubootenv-tool",
+                "libubootenv0.1"
+            ],
+            "mtd-utils": [
+                "mtd-utils"
+            ],
+            "iniparser": [
+                "libiniparser1"
+            ],
+            "device-tree-compiler": [
+                "device-tree-compiler",
+                "libfdt1"
+            ],
+            "u-boot": [
+                "u-boot-tools"
+            ],
+            "flash-kernel": [
+                "flash-kernel"
+            ]
+        },
+        "jammy": {
+            "base-passwd": [
+                "base-passwd"
+            ],
+            "bash": [
+                "bash"
+            ],
+            "bc": [
+                "bc"
+            ],
+            "bcache-tools": [
+                "bcache-tools"
+            ],
+            "bolt": [
+                "bolt"
+            ],
+            "coreutils": [
+                "coreutils"
+            ],
+            "dash": [
+                "dash"
+            ],
+            "debconf": [
+                "debconf",
+                "python3-debconf",
+                "debconf-i18n"
+            ],
+            "diffutils": [
+                "diffutils"
+            ],
+            "distro-info": [
+                "distro-info",
+                "python3-distro-info"
+            ],
+            "lvm2": [
+                "dmeventd",
+                "dmsetup",
+                "libdevmapper-event1.02.1",
+                "libdevmapper1.02.1",
+                "liblvm2cmd2.03",
+                "lvm2"
+            ],
+            "dosfstools": [
+                "dosfstools"
+            ],
+            "libeatmydata": [
+                "eatmydata",
+                "libeatmydata1"
+            ],
+            "finalrd": [
+                "finalrd"
+            ],
+            "findutils": [
+                "findutils"
+            ],
+            "fonts-ubuntu": [
+                "fonts-ubuntu-console"
+            ],
+            "gawk": [
+                "gawk"
+            ],
+            "gobject-introspection": [
+                "gir1.2-glib-2.0",
+                "libgirepository-1.0-1"
+            ],
+            "packagekit": [
+                "gir1.2-packagekitglib-1.0",
+                "libpackagekit-glib2-18",
+                "packagekit",
+                "packagekit-tools"
+            ],
+            "grep": [
+                "grep"
+            ],
+            "groff": [
+                "groff-base"
+            ],
+            "hostname": [
+                "hostname"
+            ],
+            "iproute2": [
+                "iproute2"
+            ],
+            "klibc": [
+                "klibc-utils",
+                "libklibc"
+            ],
+            "kmod": [
+                "kmod",
+                "libkmod2"
+            ],
+            "acl": [
+                "libacl1"
+            ],
+            "argon2": [
+                "libargon2-1"
+            ],
+            "libatasmart": [
+                "libatasmart4"
+            ],
+            "linux-atm": [
+                "libatm1"
+            ],
+            "attr": [
+                "libattr1"
+            ],
+            "audit": [
+                "libaudit-common",
+                "libaudit1"
+            ],
+            "brotli": [
+                "libbrotli1"
+            ],
+            "bzip2": [
+                "libbz2-1.0"
+            ],
+            "libcap-ng": [
+                "libcap-ng0"
+            ],
+            "libcap2": [
+                "libcap2",
+                "libcap2-bin",
+                "libpam-cap"
+            ],
+            "libcbor": [
+                "libcbor0.8"
+            ],
+            "libxcrypt": [
+                "libcrypt1"
+            ],
+            "cdebconf": [
+                "libdebconfclient0"
+            ],
+            "bind9-libs": [
+                "libdns-export1110",
+                "libisc-export1105"
+            ],
+            "libedit": [
+                "libedit2"
+            ],
+            "efivar": [
+                "libefiboot1",
+                "libefivar1"
+            ],
+            "libffi": [
+                "libffi8"
+            ],
+            "gdbm": [
+                "libgdbm-compat4",
+                "libgdbm6"
+            ],
+            "gmp": [
+                "libgmp10"
+            ],
+            "gpgme1.0": [
+                "libgpgme11"
+            ],
+            "gpm": [
+                "libgpm2"
+            ],
+            "libgudev": [
+                "libgudev-1.0-0"
+            ],
+            "nettle": [
+                "libhogweed6",
+                "libnettle8"
+            ],
+            "libidn2": [
+                "libidn2-0"
+            ],
+            "libinih": [
+                "libinih1"
+            ],
+            "libintl-perl": [
+                "libintl-perl",
+                "libintl-xs-perl"
+            ],
+            "keyutils": [
+                "libkeyutils1",
+                "keyutils"
+            ],
+            "liblocale-gettext-perl": [
+                "liblocale-gettext-perl"
+            ],
+            "lz4": [
+                "liblz4-1"
+            ],
+            "lzo2": [
+                "liblzo2-2"
+            ],
+            "libmd": [
+                "libmd0"
+            ],
+            "libmnl": [
+                "libmnl0"
+            ],
+            "libmodule-find-perl": [
+                "libmodule-find-perl"
+            ],
+            "libmodule-scandeps-perl": [
+                "libmodule-scandeps-perl"
+            ],
+            "mpdecimal": [
+                "libmpdec3"
+            ],
+            "mpfr4": [
+                "libmpfr6"
+            ],
+            "nghttp2": [
+                "libnghttp2-14"
+            ],
+            "libnl3": [
+                "libnl-3-200",
+                "libnl-genl-3-200"
+            ],
+            "npth": [
+                "libnpth0"
+            ],
+            "libnsl": [
+                "libnsl2"
+            ],
+            "open-iscsi": [
+                "libopeniscsiusr",
+                "open-iscsi"
+            ],
+            "pciutils": [
+                "libpci3",
+                "pciutils"
+            ],
+            "policykit-1": [
+                "libpolkit-agent-1-0",
+                "libpolkit-gobject-1-0",
+                "pkexec",
+                "polkitd",
+                "policykit-1"
+            ],
+            "popt": [
+                "libpopt0"
+            ],
+            "libproc-processtable-perl": [
+                "libproc-processtable-perl"
+            ],
+            "procps": [
+                "libprocps8",
+                "procps"
+            ],
+            "libpsl": [
+                "libpsl5"
+            ],
+            "rtmpdump": [
+                "librtmp1"
+            ],
+            "sg3-utils": [
+                "libsgutils2-2",
+                "sg3-utils",
+                "sg3-utils-udev"
+            ],
+            "libsigsegv": [
+                "libsigsegv2"
+            ],
+            "libsort-naturally-perl": [
+                "libsort-naturally-perl"
+            ],
+            "libssh": [
+                "libssh-4"
+            ],
+            "libtasn1-6": [
+                "libtasn1-6"
+            ],
+            "tcl8.6": [
+                "libtcl8.6",
+                "tcl8.6"
+            ],
+            "libterm-readkey-perl": [
+                "libterm-readkey-perl"
+            ],
+            "uchardet": [
+                "libuchardet0"
+            ],
+            "udisks2": [
+                "libudisks2-0"
+            ],
+            "libunistring": [
+                "libunistring2"
+            ],
+            "liburcu": [
+                "liburcu8"
+            ],
+            "volume-key": [
+                "libvolume-key1"
+            ],
+            "tcp-wrappers": [
+                "libwrap0"
+            ],
+            "xxhash": [
+                "libxxhash0"
+            ],
+            "libyaml": [
+                "libyaml-0-2"
+            ],
+            "linux-base": [
+                "linux-base",
+                "linux-base-sgx"
+            ],
+            "lsb": [
+                "lsb-base",
+                "lsb-release"
+            ],
+            "lxd-agent-loader": [
+                "lxd-agent-loader"
+            ],
+            "mawk": [
+                "mawk"
+            ],
+            "netbase": [
+                "netbase"
+            ],
+            "networkd-dispatcher": [
+                "networkd-dispatcher"
+            ],
+            "patch": [
+                "patch"
+            ],
+            "pollinate": [
+                "pollinate"
+            ],
+            "python-babel": [
+                "python-babel-localedata",
+                "python3-babel"
+            ],
+            "python-attrs": [
+                "python3-attr"
+            ],
+            "python-certifi": [
+                "python3-certifi"
+            ],
+            "python-cffi": [
+                "python3-cffi-backend"
+            ],
+            "python-click": [
+                "python3-click"
+            ],
+            "python-colorama": [
+                "python3-colorama"
+            ],
+            "configobj": [
+                "python3-configobj"
+            ],
+            "dbus-python": [
+                "python3-dbus"
+            ],
+            "python-distro": [
+                "python3-distro"
+            ],
+            "python-httplib2": [
+                "python3-httplib2"
+            ],
+            "python-idna": [
+                "python3-idna"
+            ],
+            "python-importlib-metadata": [
+                "python3-importlib-metadata"
+            ],
+            "jinja2": [
+                "python3-jinja2"
+            ],
+            "python-json-pointer": [
+                "python3-json-pointer"
+            ],
+            "python-json-patch": [
+                "python3-jsonpatch"
+            ],
+            "python-jsonschema": [
+                "python3-jsonschema"
+            ],
+            "python-launchpadlib": [
+                "python3-launchpadlib"
+            ],
+            "lazr.restfulclient": [
+                "python3-lazr.restfulclient"
+            ],
+            "lazr.uri": [
+                "python3-lazr.uri"
+            ],
+            "markupsafe": [
+                "python3-markupsafe"
+            ],
+            "more-itertools": [
+                "python3-more-itertools"
+            ],
+            "netifaces": [
+                "python3-netifaces"
+            ],
+            "pyopenssl": [
+                "python3-openssl"
+            ],
+            "pexpect": [
+                "python3-pexpect"
+            ],
+            "ptyprocess": [
+                "python3-ptyprocess"
+            ],
+            "pyrsistent": [
+                "python3-pyrsistent"
+            ],
+            "pyserial": [
+                "python3-serial"
+            ],
+            "six": [
+                "python3-six"
+            ],
+            "python-wadllib": [
+                "python3-wadllib"
+            ],
+            "pyyaml": [
+                "python3-yaml"
+            ],
+            "sbsigntool": [
+                "sbsigntool"
+            ],
+            "secureboot-db": [
+                "secureboot-db"
+            ],
+            "sed": [
+                "sed"
+            ],
+            "sensible-utils": [
+                "sensible-utils"
+            ],
+            "ssh-import-id": [
+                "ssh-import-id"
+            ],
+            "sysvinit": [
+                "sysvinit-utils"
+            ],
+            "tcltk-defaults": [
+                "tcl"
+            ],
+            "thin-provisioning-tools": [
+                "thin-provisioning-tools"
+            ],
+            "tpm-udev": [
+                "tpm-udev"
+            ],
+            "ubuntu-keyring": [
+                "ubuntu-keyring"
+            ],
+            "ucf": [
+                "ucf"
+            ],
+            "unattended-upgrades": [
+                "unattended-upgrades"
+            ],
+            "usb-modeswitch": [
+                "usb-modeswitch"
+            ],
+            "usbutils": [
+                "usbutils"
+            ],
+            "usrmerge": [
+                "usrmerge"
+            ],
+            "zerofree": [
+                "zerofree"
+            ],
+            "busybox": [
+                "busybox-initramfs",
+                "busybox-static"
+            ],
+            "chrony": [
+                "chrony"
+            ],
+            "cpio": [
+                "cpio"
+            ],
+            "efibootmgr": [
+                "efibootmgr"
+            ],
+            "grub-gfxpayload-lists": [
+                "grub-gfxpayload-lists"
+            ],
+            "mokutil": [
+                "mokutil"
+            ],
+            "os-prober": [
+                "os-prober"
+            ],
+            "apport-symptoms": [
+                "apport-symptoms"
+            ],
+            "byobu": [
+                "byobu"
+            ],
+            "cloud-initramfs-tools": [
+                "cloud-initramfs-copymods",
+                "cloud-initramfs-dyn-netconf",
+                "overlayroot"
+            ],
+            "command-not-found": [
+                "command-not-found",
+                "python3-commandnotfound"
+            ],
+            "console-setup": [
+                "console-setup",
+                "console-setup-linux",
+                "keyboard-configuration"
+            ],
+            "cron": [
+                "cron"
+            ],
+            "ed": [
+                "ed"
+            ],
+            "friendly-recovery": [
+                "friendly-recovery"
+            ],
+            "tnftp": [
+                "ftp",
+                "tnftp"
+            ],
+            "hdparm": [
+                "hdparm"
+            ],
+            "texinfo": [
+                "info",
+                "install-info"
+            ],
+            "iputils": [
+                "iputils-ping",
+                "iputils-tracepath"
+            ],
+            "irqbalance": [
+                "irqbalance"
+            ],
+            "iso-codes": [
+                "iso-codes"
+            ],
+            "landscape-client": [
+                "landscape-common"
+            ],
+            "liberror-perl": [
+                "liberror-perl"
+            ],
+            "json-glib": [
+                "libjson-glib-1.0-common",
+                "libjson-glib-1.0-0"
+            ],
+            "libtext-charwidth-perl": [
+                "libtext-charwidth-perl"
+            ],
+            "libtext-iconv-perl": [
+                "libtext-iconv-perl"
+            ],
+            "libtext-wrapi18n-perl": [
+                "libtext-wrapi18n-perl"
+            ],
+            "libx11": [
+                "libx11-data",
+                "libx11-6"
+            ],
+            "lshw": [
+                "lshw"
+            ],
+            "man-db": [
+                "man-db"
+            ],
+            "mtr": [
+                "mtr-tiny"
+            ],
+            "pastebinit": [
+                "pastebinit"
+            ],
+            "plymouth": [
+                "plymouth",
+                "plymouth-theme-ubuntu-text",
+                "libplymouth5"
+            ],
+            "powermgmt-base": [
+                "powermgmt-base"
+            ],
+            "publicsuffix": [
+                "publicsuffix"
+            ],
+            "python-bcrypt": [
+                "python3-bcrypt"
+            ],
+            "pyhamcrest": [
+                "python3-hamcrest"
+            ],
+            "incremental": [
+                "python3-incremental"
+            ],
+            "python-service-identity": [
+                "python3-service-identity"
+            ],
+            "run-one": [
+                "run-one"
+            ],
+            "screen": [
+                "screen"
+            ],
+            "strace": [
+                "strace"
+            ],
+            "netkit-telnet": [
+                "telnet"
+            ],
+            "time": [
+                "time"
+            ],
+            "ufw": [
+                "ufw"
+            ],
+            "newt": [
+                "whiptail",
+                "libnewt0.52",
+                "python3-newt"
+            ],
+            "xdg-user-dirs": [
+                "xdg-user-dirs"
+            ],
+            "libarchive": [
+                "libarchive13"
+            ],
+            "libestr": [
+                "libestr0"
+            ],
+            "libfastjson": [
+                "libfastjson4"
+            ],
+            "flashrom": [
+                "libflashrom1"
+            ],
+            "fribidi": [
+                "libfribidi0"
+            ],
+            "libftdi1": [
+                "libftdi1-2"
+            ],
+            "gcab": [
+                "libgcab-1.0-0"
+            ],
+            "libgusb": [
+                "libgusb2"
+            ],
+            "icu": [
+                "libicu70"
+            ],
+            "libjcat": [
+                "libjcat1"
+            ],
+            "lmdb": [
+                "liblmdb0"
+            ],
+            "libmaxminddb": [
+                "libmaxminddb0"
+            ],
+            "libmspack": [
+                "libmspack0"
+            ],
+            "numactl": [
+                "libnuma1"
+            ],
+            "libpcap": [
+                "libpcap0.8"
+            ],
+            "slang2": [
+                "libslang2"
+            ],
+            "libsmbios": [
+                "libsmbios-c2"
+            ],
+            "libsodium": [
+                "libsodium23"
+            ],
+            "snowball": [
+                "libstemmer0d"
+            ],
+            "tpm2-tss": [
+                "libtss2-esys-3.0.2-0",
+                "libtss2-mu0",
+                "libtss2-sys1",
+                "libtss2-tcti-cmd0",
+                "libtss2-tcti-device0",
+                "libtss2-tcti-mssim0",
+                "libtss2-tcti-swtpm0",
+                "libtss2-rc0"
+            ],
+            "libutempter": [
+                "libutempter0"
+            ],
+            "libxau": [
+                "libxau6"
+            ],
+            "libxcb": [
+                "libxcb1"
+            ],
+            "libxdmcp": [
+                "libxdmcp6"
+            ],
+            "libxext": [
+                "libxext6"
+            ],
+            "libxmu": [
+                "libxmuu1"
+            ],
+            "lsscsi": [
+                "lsscsi"
+            ],
+            "adduser": [
+                "adduser"
+            ],
+            "bash-completion": [
+                "bash-completion"
+            ],
+            "util-linux": [
+                "bsdextrautils",
+                "bsdutils",
+                "eject",
+                "fdisk",
+                "libblkid1",
+                "libfdisk1",
+                "libmount1",
+                "libsmartcols1",
+                "libuuid1",
+                "mount",
+                "util-linux",
+                "uuid-runtime"
+            ],
+            "btrfs-progs": [
+                "btrfs-progs"
+            ],
+            "cloud-utils": [
+                "cloud-guest-utils"
+            ],
+            "debianutils": [
+                "debianutils"
+            ],
+            "ethtool": [
+                "ethtool"
+            ],
+            "htop": [
+                "htop"
+            ],
+            "init-system-helpers": [
+                "init",
+                "init-system-helpers"
+            ],
+            "libaio": [
+                "libaio1"
+            ],
+            "appstream": [
+                "libappstream4"
+            ],
+            "libblockdev": [
+                "libblockdev-crypto2",
+                "libblockdev-fs2",
+                "libblockdev-loop2",
+                "libblockdev-part-err2",
+                "libblockdev-part2",
+                "libblockdev-swap2",
+                "libblockdev-utils2",
+                "libblockdev2"
+            ],
+            "libbsd": [
+                "libbsd0"
+            ],
+            "db5.3": [
+                "libdb5.3"
+            ],
+            "libfido2": [
+                "libfido2-1"
+            ],
+            "libgpg-error": [
+                "libgpg-error0"
+            ],
+            "ncurses": [
+                "libncurses6",
+                "libncursesw6",
+                "libtinfo6",
+                "ncurses-base",
+                "ncurses-bin",
+                "ncurses-term"
+            ],
+            "libnetfilter-conntrack": [
+                "libnetfilter-conntrack3"
+            ],
+            "libnfnetlink": [
+                "libnfnetlink0"
+            ],
+            "libnftnl": [
+                "libnftnl11"
+            ],
+            "libpipeline": [
+                "libpipeline1"
+            ],
+            "readline": [
+                "libreadline8",
+                "readline-common"
+            ],
+            "libseccomp": [
+                "libseccomp2"
+            ],
+            "libsemanage": [
+                "libsemanage-common",
+                "libsemanage2"
+            ],
+            "talloc": [
+                "libtalloc2"
+            ],
+            "libuv1": [
+                "libuv1"
+            ],
+            "manpages": [
+                "manpages"
+            ],
+            "mdadm": [
+                "mdadm"
+            ],
+            "media-types": [
+                "media-types"
+            ],
+            "nano": [
+                "nano"
+            ],
+            "netcat-openbsd": [
+                "netcat-openbsd"
+            ],
+            "pci.ids": [
+                "pci.ids"
+            ],
+            "automat": [
+                "python3-automat"
+            ],
+            "blinker": [
+                "python3-blinker"
+            ],
+            "chardet": [
+                "python3-chardet"
+            ],
+            "constantly": [
+                "python3-constantly"
+            ],
+            "python-debian": [
+                "python3-debian"
+            ],
+            "hyperlink": [
+                "python3-hyperlink"
+            ],
+            "jeepney": [
+                "python3-jeepney"
+            ],
+            "python-keyring": [
+                "python3-keyring"
+            ],
+            "pyparted": [
+                "python3-parted"
+            ],
+            "pyasn1": [
+                "python3-pyasn1"
+            ],
+            "python-pyasn1-modules": [
+                "python3-pyasn1-modules"
+            ],
+            "pyparsing": [
+                "python3-pyparsing"
+            ],
+            "requests": [
+                "python3-requests"
+            ],
+            "python-secretstorage": [
+                "python3-secretstorage"
+            ],
+            "python-systemd": [
+                "python3-systemd"
+            ],
+            "python-urllib3": [
+                "python3-urllib3"
+            ],
+            "python-zipp": [
+                "python3-zipp"
+            ],
+            "zope.interface": [
+                "python3-zope.interface"
+            ],
+            "shared-mime-info": [
+                "shared-mime-info"
+            ],
+            "usb-modeswitch-data": [
+                "usb-modeswitch-data"
+            ],
+            "wget": [
+                "wget"
+            ],
+            "xfsprogs": [
+                "xfsprogs"
+            ],
+            "xkeyboard-config": [
+                "xkb-data"
+            ],
+            "libevent": [
+                "libevent-core-2.1-7"
+            ],
+            "jansson": [
+                "libjansson4"
+            ],
+            "libpng1.6": [
+                "libpng16-16"
+            ],
+            "libselinux": [
+                "libselinux1"
+            ],
+            "open-isns": [
+                "libisns0"
+            ],
+            "nspr": [
+                "libnspr4"
+            ],
+            "p11-kit": [
+                "libp11-kit0"
+            ],
+            "libsepol": [
+                "libsepol2"
+            ],
+            "libxmlb": [
+                "libxmlb2"
+            ],
+            "lsof": [
+                "lsof"
+            ],
+            "pinentry": [
+                "pinentry-curses"
+            ],
+            "file": [
+                "file",
+                "libmagic-mgc",
+                "libmagic1"
+            ],
+            "iptables": [
+                "iptables",
+                "libip4tc2",
+                "libip6tc2",
+                "libxtables12"
+            ],
+            "libassuan": [
+                "libassuan0"
+            ],
+            "libgcrypt20": [
+                "libgcrypt20"
+            ],
+            "tevent": [
+                "libtevent0"
+            ],
+            "libunwind": [
+                "libunwind8"
+            ],
+            "xmlsec1": [
+                "libxmlsec1",
+                "libxmlsec1-openssl"
+            ],
+            "python-cryptography": [
+                "python3-cryptography"
+            ],
+            "gdisk": [
+                "gdisk"
+            ],
+            "elfutils": [
+                "libdw1",
+                "libelf1"
+            ],
+            "parted": [
+                "libparted-fs-resize0",
+                "libparted2",
+                "parted"
+            ],
+            "psmisc": [
+                "psmisc"
+            ],
+            "fuse3": [
+                "fuse3",
+                "libfuse3-3"
+            ],
+            "gettext": [
+                "gettext-base"
+            ],
+            "xz-utils": [
+                "liblzma5",
+                "xz-utils"
+            ],
+            "libzstd": [
+                "libzstd1",
+                "zstd"
+            ],
+            "squashfs-tools": [
+                "squashfs-tools"
+            ],
+            "ubuntu-meta": [
+                "ubuntu-minimal",
+                "ubuntu-server",
+                "ubuntu-standard"
+            ],
+            "usb.ids": [
+                "usb.ids"
+            ],
+            "xauth": [
+                "xauth"
+            ],
+            "rsyslog": [
+                "rsyslog"
+            ],
+            "pcre3": [
+                "libpcre3"
+            ],
+            "needrestart": [
+                "needrestart"
+            ],
+            "json-c": [
+                "libjson-c5"
+            ],
+            "walinuxagent": [
+                "walinuxagent"
+            ],
+            "dpkg": [
+                "dpkg"
+            ],
+            "libusb-1.0": [
+                "libusb-1.0-0"
+            ],
+            "logrotate": [
+                "logrotate"
+            ],
+            "cifs-utils": [
+                "cifs-utils"
+            ],
+            "e2fsprogs": [
+                "e2fsprogs",
+                "libcom-err2",
+                "libext2fs2",
+                "libss2",
+                "logsave"
+            ],
+            "perl": [
+                "libperl5.34",
+                "perl",
+                "perl-base",
+                "perl-modules-5.34"
+            ],
+            "fwupd": [
+                "libfwupd2",
+                "libfwupdplugin5"
+            ],
+            "python-magic": [
+                "python3-magic"
+            ],
+            "sosreport": [
+                "sosreport"
+            ],
+            "dbus": [
+                "dbus",
+                "dbus-user-session",
+                "libdbus-1-3"
+            ],
+            "shadow": [
+                "login",
+                "passwd"
+            ],
+            "multipath-tools": [
+                "kpartx",
+                "multipath-tools"
+            ],
+            "ntfs-3g": [
+                "libntfs-3g89",
+                "ntfs-3g"
+            ],
+            "glib2.0": [
+                "libglib2.0-0",
+                "libglib2.0-bin",
+                "libglib2.0-data"
+            ],
+            "distro-info-data": [
+                "distro-info-data"
+            ],
+            "libksba": [
+                "libksba8"
+            ],
+            "sqlite3": [
+                "libsqlite3-0"
+            ],
+            "freetype": [
+                "libfreetype6"
+            ],
+            "expat": [
+                "libexpat1"
+            ],
+            "gnupg2": [
+                "dirmngr",
+                "gnupg",
+                "gnupg-l10n",
+                "gnupg-utils",
+                "gpg",
+                "gpg-agent",
+                "gpg-wks-client",
+                "gpg-wks-server",
+                "gpgconf",
+                "gpgsm",
+                "gpgv"
+            ],
+            "openssh": [
+                "openssh-client",
+                "openssh-server",
+                "openssh-sftp-server"
+            ],
+            "open-vm-tools": [
+                "open-vm-tools"
+            ],
+            "tzdata": [
+                "tzdata"
+            ],
+            "initramfs-tools": [
+                "initramfs-tools",
+                "initramfs-tools-bin",
+                "initramfs-tools-core"
+            ],
+            "python-tz": [
+                "python3-tz"
+            ],
+            "apport": [
+                "apport",
+                "python3-apport",
+                "python3-problem-report"
+            ],
+            "systemd-hwe": [
+                "systemd-hwe-hwdb"
+            ],
+            "grub2": [
+                "grub-common",
+                "grub-pc",
+                "grub-pc-bin",
+                "grub2-common"
+            ],
+            "update-manager": [
+                "python3-update-manager",
+                "update-manager-core"
+            ],
+            "glibc": [
+                "libc-bin",
+                "libc6",
+                "locales"
+            ],
+            "gstreamer1.0": [
+                "libgstreamer1.0-0"
+            ],
+            "pygobject": [
+                "python3-gi"
+            ],
+            "libtirpc": [
+                "libtirpc-common",
+                "libtirpc3"
+            ],
+            "cryptsetup": [
+                "cryptsetup",
+                "cryptsetup-bin",
+                "cryptsetup-initramfs",
+                "libcryptsetup12"
+            ],
+            "pyjwt": [
+                "python3-jwt"
+            ],
+            "libxslt": [
+                "libxslt1.1"
+            ],
+            "twisted": [
+                "python3-twisted"
+            ],
+            "nftables": [
+                "libnftables1",
+                "nftables"
+            ],
+            "dmidecode": [
+                "dmidecode"
+            ],
+            "gcc-12": [
+                "gcc-12-base",
+                "libgcc-s1",
+                "libstdc++6"
+            ],
+            "gzip": [
+                "gzip"
+            ],
+            "pcre2": [
+                "libpcre2-8-0"
+            ],
+            "python3-defaults": [
+                "libpython3-stdlib",
+                "python3",
+                "python3-minimal"
+            ],
+            "python3-stdlib-extensions": [
+                "python3-distutils",
+                "python3-lib2to3",
+                "python3-gdbm"
+            ],
+            "python-oauthlib": [
+                "python3-oauthlib"
+            ],
+            "apt": [
+                "apt",
+                "libapt-pkg6.0",
+                "apt-utils"
+            ],
+            "binutils": [
+                "binutils",
+                "binutils-common",
+                "binutils-x86-64-linux-gnu",
+                "libbinutils",
+                "libctf0",
+                "libctf-nobfd0",
+                "binutils-aarch64-linux-gnu"
+            ],
+            "ca-certificates": [
+                "ca-certificates"
+            ],
+            "libbpf": [
+                "libbpf0"
+            ],
+            "libxml2": [
+                "libxml2"
+            ],
+            "zlib": [
+                "zlib1g"
+            ],
+            "rsync": [
+                "rsync"
+            ],
+            "setuptools": [
+                "python3-pkg-resources",
+                "python3-setuptools"
+            ],
+            "krb5": [
+                "libgssapi-krb5-2",
+                "libk5crypto3",
+                "libkrb5-3",
+                "libkrb5support0"
+            ],
+            "kbd": [
+                "kbd"
+            ],
+            "snapd": [
+                "snapd"
+            ],
+            "libdrm": [
+                "libdrm-common",
+                "libdrm2"
+            ],
+            "pam": [
+                "libpam-modules",
+                "libpam-modules-bin",
+                "libpam-runtime",
+                "libpam0g"
+            ],
+            "tmux": [
+                "tmux"
+            ],
+            "openssl": [
+                "libssl3",
+                "openssl"
+            ],
+            "less": [
+                "less"
+            ],
+            "git": [
+                "git",
+                "git-man"
+            ],
+            "grub2-unsigned": [
+                "grub-efi-amd64-bin",
+                "grub-efi-arm64",
+                "grub-efi-arm64-bin"
+            ],
+            "fwupd-signed": [
+                "fwupd-signed"
+            ],
+            "grub2-signed": [
+                "grub-efi-amd64-signed",
+                "grub-efi-arm64-signed"
+            ],
+            "shim-signed": [
+                "shim-signed"
+            ],
+            "python-apt": [
+                "python-apt-common",
+                "python3-apt"
+            ],
+            "ubuntu-release-upgrader": [
+                "python3-distupgrade",
+                "ubuntu-release-upgrader-core"
+            ],
+            "base-files": [
+                "base-files",
+                "motd-news-config"
+            ],
+            "nss": [
+                "libnss3"
+            ],
+            "isc-dhcp": [
+                "isc-dhcp-client",
+                "isc-dhcp-common"
+            ],
+            "gnutls28": [
+                "libgnutls30"
+            ],
+            "tar": [
+                "tar"
+            ],
+            "software-properties": [
+                "python3-software-properties",
+                "software-properties-common"
+            ],
+            "libmbim": [
+                "libmbim-glib4",
+                "libmbim-proxy"
+            ],
+            "modemmanager": [
+                "libmm-glib0"
+            ],
+            "libqmi": [
+                "libqmi-glib5",
+                "libqmi-proxy"
+            ],
+            "cyrus-sasl2": [
+                "libsasl2-2",
+                "libsasl2-modules",
+                "libsasl2-modules-db"
+            ],
+            "systemd": [
+                "libnss-systemd",
+                "libpam-systemd",
+                "libsystemd0",
+                "libudev1",
+                "systemd",
+                "systemd-sysv",
+                "systemd-timesyncd",
+                "udev"
+            ],
+            "apparmor": [
+                "apparmor",
+                "libapparmor1"
+            ],
+            "sudo": [
+                "sudo"
+            ],
+            "ubuntu-advantage-tools": [
+                "ubuntu-advantage-tools",
+                "ubuntu-advantage-pro"
+            ],
+            "tcpdump": [
+                "tcpdump"
+            ],
+            "netplan.io": [
+                "libnetplan0",
+                "netplan.io"
+            ],
+            "openldap": [
+                "libldap-2.5-0",
+                "libldap-common"
+            ],
+            "python3.10": [
+                "libpython3.10-minimal",
+                "libpython3.10-stdlib",
+                "python3.10",
+                "python3.10-minimal",
+                "libpython3.10"
+            ],
+            "curl": [
+                "curl",
+                "libcurl4",
+                "libcurl3-gnutls"
+            ],
+            "vim": [
+                "vim",
+                "vim-common",
+                "vim-runtime",
+                "vim-tiny",
+                "xxd"
+            ],
+            "update-notifier": [
+                "update-notifier-common"
+            ],
+            "cloud-init": [
+                "cloud-init"
+            ],
+            "linux-meta-azure": [
+                "linux-azure",
+                "linux-cloud-tools-azure",
+                "linux-headers-azure",
+                "linux-image-azure",
+                "linux-tools-azure"
+            ],
+            "linux-azure": [
+                "linux-azure-cloud-tools-5.15.0-1035",
+                "linux-azure-headers-5.15.0-1035",
+                "linux-azure-tools-5.15.0-1035",
+                "linux-cloud-tools-5.15.0-1035-azure",
+                "linux-headers-5.15.0-1035-azure",
+                "linux-modules-5.15.0-1035-azure",
+                "linux-tools-5.15.0-1035-azure"
+            ],
+            "linux": [
+                "linux-cloud-tools-common",
+                "linux-tools-common"
+            ],
+            "linux-signed-azure": [
+                "linux-image-5.15.0-1035-azure"
+            ],
+            "bind9": [
+                "bind9-dnsutils",
+                "bind9-host",
+                "bind9-libs"
+            ],
+            "samba": [
+                "libwbclient0"
+            ],
+            "device-tree-compiler": [
+                "device-tree-compiler",
+                "libfdt1"
+            ],
+            "libubootenv": [
+                "libubootenv-tool",
+                "libubootenv0.1"
+            ],
+            "mtd-utils": [
+                "mtd-utils"
+            ],
+            "devio": [
+                "devio"
+            ],
+            "iniparser": [
+                "libiniparser1"
+            ],
+            "u-boot": [
+                "u-boot-tools"
+            ],
+            "flash-kernel": [
+                "flash-kernel"
+            ],
+            "lxd-installer": [
+                "lxd-installer"
+            ]
+        },
+        "focal": {
+            "python-json-pointer": [
+                "python3-json-pointer"
+            ],
+            "python-jsonschema": [
+                "python3-jsonschema"
+            ],
+            "grub-gfxpayload-lists": [
+                "grub-gfxpayload-lists"
+            ],
+            "liberror-perl": [
+                "liberror-perl"
+            ],
+            "libtext-wrapi18n-perl": [
+                "libtext-wrapi18n-perl"
+            ],
+            "powermgmt-base": [
+                "powermgmt-base"
+            ],
+            "run-one": [
+                "run-one"
+            ],
+            "adduser": [
+                "adduser"
+            ],
+            "alsa-topology-conf": [
+                "alsa-topology-conf"
+            ],
+            "apport-symptoms": [
+                "apport-symptoms"
+            ],
+            "at": [
+                "at"
+            ],
+            "base-passwd": [
+                "base-passwd"
+            ],
+            "bash-completion": [
+                "bash-completion"
+            ],
+            "bc": [
+                "bc"
+            ],
+            "bcache-tools": [
+                "bcache-tools"
+            ],
+            "bsdmainutils": [
+                "bsdmainutils"
+            ],
+            "btrfs-progs": [
+                "btrfs-progs"
+            ],
+            "byobu": [
+                "byobu"
+            ],
+            "bzip2": [
+                "bzip2",
+                "libbz2-1.0"
+            ],
+            "cloud-utils": [
+                "cloud-guest-utils"
+            ],
+            "console-setup": [
+                "console-setup",
+                "console-setup-linux",
+                "keyboard-configuration"
+            ],
+            "coreutils": [
+                "coreutils"
+            ],
+            "cron": [
+                "cron"
+            ],
+            "dash": [
+                "dash"
+            ],
+            "dconf": [
+                "dconf-gsettings-backend",
+                "dconf-service",
+                "libdconf1"
+            ],
+            "debconf": [
+                "debconf",
+                "debconf-i18n",
+                "python3-debconf"
+            ],
+            "debianutils": [
+                "debianutils"
+            ],
+            "diffutils": [
+                "diffutils"
+            ],
+            "lvm2": [
+                "dmeventd",
+                "dmsetup",
+                "libdevmapper-event1.02.1",
+                "libdevmapper1.02.1",
+                "liblvm2cmd2.03",
+                "lvm2"
+            ],
+            "dmidecode": [
+                "dmidecode"
+            ],
+            "dosfstools": [
+                "dosfstools"
+            ],
+            "libeatmydata": [
+                "eatmydata",
+                "libeatmydata1"
+            ],
+            "ed": [
+                "ed"
+            ],
+            "eject": [
+                "eject"
+            ],
+            "ethtool": [
+                "ethtool"
+            ],
+            "file": [
+                "file",
+                "libmagic-mgc",
+                "libmagic1"
+            ],
+            "finalrd": [
+                "finalrd"
+            ],
+            "findutils": [
+                "findutils"
+            ],
+            "fonts-ubuntu": [
+                "fonts-ubuntu-console"
+            ],
+            "friendly-recovery": [
+                "friendly-recovery"
+            ],
+            "netkit-ftp": [
+                "ftp"
+            ],
+            "fuse": [
+                "fuse",
+                "libfuse2"
+            ],
+            "gawk": [
+                "gawk"
+            ],
+            "gdisk": [
+                "gdisk"
+            ],
+            "gettext": [
+                "gettext-base"
+            ],
+            "gobject-introspection": [
+                "gir1.2-glib-2.0",
+                "libgirepository-1.0-1"
+            ],
+            "packagekit": [
+                "gir1.2-packagekitglib-1.0",
+                "libpackagekit-glib2-18",
+                "packagekit",
+                "packagekit-tools"
+            ],
+            "glib-networking": [
+                "glib-networking",
+                "glib-networking-common",
+                "glib-networking-services"
+            ],
+            "grep": [
+                "grep"
+            ],
+            "groff": [
+                "groff-base"
+            ],
+            "gsettings-desktop-schemas": [
+                "gsettings-desktop-schemas"
+            ],
+            "hdparm": [
+                "hdparm"
+            ],
+            "hostname": [
+                "hostname"
+            ],
+            "htop": [
+                "htop"
+            ],
+            "texinfo": [
+                "info",
+                "install-info"
+            ],
+            "init-system-helpers": [
+                "init",
+                "init-system-helpers"
+            ],
+            "iproute2": [
+                "iproute2"
+            ],
+            "iptables": [
+                "iptables",
+                "libip4tc2",
+                "libip6tc2",
+                "libxtables12"
+            ],
+            "iputils": [
+                "iputils-ping",
+                "iputils-tracepath"
+            ],
+            "irqbalance": [
+                "irqbalance"
+            ],
+            "iso-codes": [
+                "iso-codes"
+            ],
+            "kbd": [
+                "kbd"
+            ],
+            "language-selector": [
+                "language-selector-common"
+            ],
+            "less": [
+                "less"
+            ],
+            "acl": [
+                "libacl1"
+            ],
+            "libaio": [
+                "libaio1"
+            ],
+            "appstream": [
+                "libappstream4"
+            ],
+            "argon2": [
+                "libargon2-1"
+            ],
+            "libassuan": [
+                "libassuan0"
+            ],
+            "linux-atm": [
+                "libatm1"
+            ],
+            "attr": [
+                "libattr1"
+            ],
+            "audit": [
+                "libaudit-common",
+                "libaudit1"
+            ],
+            "brotli": [
+                "libbrotli1"
+            ],
+            "libbsd": [
+                "libbsd0"
+            ],
+            "libcanberra": [
+                "libcanberra0"
+            ],
+            "libcap-ng": [
+                "libcap-ng0"
+            ],
+            "libcap2": [
+                "libcap2",
+                "libcap2-bin",
+                "libpam-cap"
+            ],
+            "libcbor": [
+                "libcbor0.6"
+            ],
+            "libxcrypt": [
+                "libcrypt1"
+            ],
+            "db5.3": [
+                "libdb5.3"
+            ],
+            "cdebconf": [
+                "libdebconfclient0"
+            ],
+            "bind9-libs": [
+                "libdns-export1109",
+                "libisc-export1105"
+            ],
+            "libedit": [
+                "libedit2"
+            ],
+            "efivar": [
+                "libefiboot1",
+                "libefivar1"
+            ],
+            "elfutils": [
+                "libelf1",
+                "libdw1"
+            ],
+            "libestr": [
+                "libestr0"
+            ],
+            "libevent": [
+                "libevent-2.1-7"
+            ],
+            "libfastjson": [
+                "libfastjson4"
+            ],
+            "libffi": [
+                "libffi7"
+            ],
+            "libfido2": [
+                "libfido2-1"
+            ],
+            "flex": [
+                "libfl2"
+            ],
+            "gcab": [
+                "libgcab-1.0-0"
+            ],
+            "gdbm": [
+                "libgdbm-compat4",
+                "libgdbm6"
+            ],
+            "libgpg-error": [
+                "libgpg-error0"
+            ],
+            "gpgme1.0": [
+                "libgpgme11"
+            ],
+            "gpm": [
+                "libgpm2"
+            ],
+            "libgudev": [
+                "libgudev-1.0-0"
+            ],
+            "libgusb": [
+                "libgusb2"
+            ],
+            "libidn2": [
+                "libidn2-0"
+            ],
+            "open-isns": [
+                "libisns0"
+            ],
+            "json-c": [
+                "libjson-c4"
+            ],
+            "json-glib": [
+                "libjson-glib-1.0-0",
+                "libjson-glib-1.0-common"
+            ],
+            "lmdb": [
+                "liblmdb0"
+            ],
+            "liblocale-gettext-perl": [
+                "liblocale-gettext-perl"
+            ],
+            "libtool": [
+                "libltdl7"
+            ],
+            "lzo2": [
+                "liblzo2-2"
+            ],
+            "libmaxminddb": [
+                "libmaxminddb0"
+            ],
+            "libmnl": [
+                "libmnl0"
+            ],
+            "mpdecimal": [
+                "libmpdec2"
+            ],
+            "mpfr4": [
+                "libmpfr6"
+            ],
+            "libmspack": [
+                "libmspack0"
+            ],
+            "ncurses": [
+                "libncurses6",
+                "libncursesw6",
+                "libtinfo6",
+                "ncurses-base",
+                "ncurses-bin",
+                "ncurses-term"
+            ],
+            "libnetfilter-conntrack": [
+                "libnetfilter-conntrack3"
+            ],
+            "newt": [
+                "libnewt0.52",
+                "python3-newt",
+                "whiptail"
+            ],
+            "libnfnetlink": [
+                "libnfnetlink0"
+            ],
+            "libnftnl": [
+                "libnftnl11"
+            ],
+            "nghttp2": [
+                "libnghttp2-14"
+            ],
+            "npth": [
+                "libnpth0"
+            ],
+            "numactl": [
+                "libnuma1"
+            ],
+            "libogg": [
+                "libogg0"
+            ],
+            "p11-kit": [
+                "libp11-kit0"
+            ],
+            "parted": [
+                "libparted2",
+                "parted",
+                "libparted-fs-resize0"
+            ],
+            "libpcap": [
+                "libpcap0.8"
+            ],
+            "libpipeline": [
+                "libpipeline1"
+            ],
+            "plymouth": [
+                "libplymouth5",
+                "plymouth",
+                "plymouth-theme-ubuntu-text"
+            ],
+            "libpng1.6": [
+                "libpng16-16"
+            ],
+            "popt": [
+                "libpopt0"
+            ],
+            "libproxy": [
+                "libproxy1v5"
+            ],
+            "libpsl": [
+                "libpsl5"
+            ],
+            "python3-defaults": [
+                "libpython3-stdlib",
+                "python3",
+                "python3-minimal"
+            ],
+            "readline5": [
+                "libreadline5"
+            ],
+            "readline": [
+                "libreadline8",
+                "readline-common"
+            ],
+            "rtmpdump": [
+                "librtmp1"
+            ],
+            "libselinux": [
+                "libselinux1"
+            ],
+            "libsemanage": [
+                "libsemanage-common",
+                "libsemanage1"
+            ],
+            "sg3-utils": [
+                "libsgutils2-2",
+                "sg3-utils",
+                "sg3-utils-udev"
+            ],
+            "libsigsegv": [
+                "libsigsegv2"
+            ],
+            "slang2": [
+                "libslang2"
+            ],
+            "libsmbios": [
+                "libsmbios-c2"
+            ],
+            "libsodium": [
+                "libsodium23"
+            ],
+            "libsoup2.4": [
+                "libsoup2.4-1"
+            ],
+            "snowball": [
+                "libstemmer0d"
+            ],
+            "libtasn1-6": [
+                "libtasn1-6"
+            ],
+            "libtext-charwidth-perl": [
+                "libtext-charwidth-perl"
+            ],
+            "libtext-iconv-perl": [
+                "libtext-iconv-perl"
+            ],
+            "uchardet": [
+                "libuchardet0"
+            ],
+            "libunistring": [
+                "libunistring2"
+            ],
+            "liburcu": [
+                "liburcu6"
+            ],
+            "libusb-1.0": [
+                "libusb-1.0-0"
+            ],
+            "libutempter": [
+                "libutempter0"
+            ],
+            "libvorbis": [
+                "libvorbis0a",
+                "libvorbisfile3"
+            ],
+            "tcp-wrappers": [
+                "libwrap0"
+            ],
+            "libxau": [
+                "libxau6"
+            ],
+            "libxcb": [
+                "libxcb1"
+            ],
+            "libxdmcp": [
+                "libxdmcp6"
+            ],
+            "libxext": [
+                "libxext6"
+            ],
+            "xmlsec1": [
+                "libxmlsec1",
+                "libxmlsec1-openssl"
+            ],
+            "libxmu": [
+                "libxmuu1"
+            ],
+            "libyaml": [
+                "libyaml-0-2"
+            ],
+            "libzstd": [
+                "libzstd1"
+            ],
+            "logrotate": [
+                "logrotate"
+            ],
+            "lsb": [
+                "lsb-base",
+                "lsb-release"
+            ],
+            "lshw": [
+                "lshw"
+            ],
+            "lsof": [
+                "lsof"
+            ],
+            "ltrace": [
+                "ltrace"
+            ],
+            "lxd-agent-loader": [
+                "lxd-agent-loader"
+            ],
+            "man-db": [
+                "man-db"
+            ],
+            "manpages": [
+                "manpages"
+            ],
+            "mawk": [
+                "mawk"
+            ],
+            "mdadm": [
+                "mdadm"
+            ],
+            "mime-support": [
+                "mime-support"
+            ],
+            "mtr": [
+                "mtr-tiny"
+            ],
+            "nano": [
+                "nano"
+            ],
+            "netbase": [
+                "netbase"
+            ],
+            "netcat-openbsd": [
+                "netcat-openbsd"
+            ],
+            "os-prober": [
+                "os-prober"
+            ],
+            "pastebinit": [
+                "pastebinit"
+            ],
+            "patch": [
+                "patch"
+            ],
+            "pci.ids": [
+                "pci.ids"
+            ],
+            "pinentry": [
+                "pinentry-curses"
+            ],
+            "pollinate": [
+                "pollinate"
+            ],
+            "popularity-contest": [
+                "popularity-contest"
+            ],
+            "psmisc": [
+                "psmisc"
+            ],
+            "publicsuffix": [
+                "publicsuffix"
+            ],
+            "python-attrs": [
+                "python3-attr"
+            ],
+            "automat": [
+                "python3-automat"
+            ],
+            "blinker": [
+                "python3-blinker"
+            ],
+            "python-certifi": [
+                "python3-certifi"
+            ],
+            "python-cffi": [
+                "python3-cffi-backend"
+            ],
+            "chardet": [
+                "python3-chardet"
+            ],
+            "python-click": [
+                "python3-click"
+            ],
+            "python-colorama": [
+                "python3-colorama"
+            ],
+            "configobj": [
+                "python3-configobj"
+            ],
+            "constantly": [
+                "python3-constantly"
+            ],
+            "python-cryptography": [
+                "python3-cryptography"
+            ],
+            "dbus-python": [
+                "python3-dbus"
+            ],
+            "python-debian": [
+                "python3-debian"
+            ],
+            "python-distro": [
+                "python3-distro"
+            ],
+            "distro-info": [
+                "python3-distro-info",
+                "distro-info"
+            ],
+            "entrypoints": [
+                "python3-entrypoints"
+            ],
+            "pygobject": [
+                "python3-gi"
+            ],
+            "pyhamcrest": [
+                "python3-hamcrest"
+            ],
+            "python-httplib2": [
+                "python3-httplib2"
+            ],
+            "hyperlink": [
+                "python3-hyperlink"
+            ],
+            "python-idna": [
+                "python3-idna"
+            ],
+            "python-importlib-metadata": [
+                "python3-importlib-metadata"
+            ],
+            "incremental": [
+                "python3-incremental"
+            ],
+            "jinja2": [
+                "python3-jinja2"
+            ],
+            "python-json-patch": [
+                "python3-jsonpatch"
+            ],
+            "python-keyring": [
+                "python3-keyring"
+            ],
+            "python-launchpadlib": [
+                "python3-launchpadlib"
+            ],
+            "lazr.restfulclient": [
+                "python3-lazr.restfulclient"
+            ],
+            "lazr.uri": [
+                "python3-lazr.uri"
+            ],
+            "markupsafe": [
+                "python3-markupsafe"
+            ],
+            "more-itertools": [
+                "python3-more-itertools"
+            ],
+            "python-nacl": [
+                "python3-nacl"
+            ],
+            "netifaces": [
+                "python3-netifaces"
+            ],
+            "python-oauthlib": [
+                "python3-oauthlib"
+            ],
+            "pyopenssl": [
+                "python3-openssl"
+            ],
+            "pexpect": [
+                "python3-pexpect"
+            ],
+            "ptyprocess": [
+                "python3-ptyprocess"
+            ],
+            "pyasn1": [
+                "python3-pyasn1"
+            ],
+            "python-pyasn1-modules": [
+                "python3-pyasn1-modules"
+            ],
+            "pymacaroons": [
+                "python3-pymacaroons"
+            ],
+            "pyrsistent": [
+                "python3-pyrsistent"
+            ],
+            "requests": [
+                "python3-requests"
+            ],
+            "python-requests-unixsocket": [
+                "python3-requests-unixsocket"
+            ],
+            "python-secretstorage": [
+                "python3-secretstorage"
+            ],
+            "pyserial": [
+                "python3-serial"
+            ],
+            "python-service-identity": [
+                "python3-service-identity"
+            ],
+            "simplejson": [
+                "python3-simplejson"
+            ],
+            "six": [
+                "python3-six"
+            ],
+            "python-systemd": [
+                "python3-systemd"
+            ],
+            "python-wadllib": [
+                "python3-wadllib"
+            ],
+            "python-zipp": [
+                "python3-zipp"
+            ],
+            "zope.interface": [
+                "python3-zope.interface"
+            ],
+            "screen": [
+                "screen"
+            ],
+            "secureboot-db": [
+                "secureboot-db"
+            ],
+            "sed": [
+                "sed"
+            ],
+            "sensible-utils": [
+                "sensible-utils"
+            ],
+            "shared-mime-info": [
+                "shared-mime-info"
+            ],
+            "sound-theme-freedesktop": [
+                "sound-theme-freedesktop"
+            ],
+            "ssh-import-id": [
+                "ssh-import-id"
+            ],
+            "strace": [
+                "strace"
+            ],
+            "sysvinit": [
+                "sysvinit-utils"
+            ],
+            "netkit-telnet": [
+                "telnet"
+            ],
+            "thin-provisioning-tools": [
+                "thin-provisioning-tools"
+            ],
+            "time": [
+                "time"
+            ],
+            "tpm-udev": [
+                "tpm-udev"
+            ],
+            "ubuntu-keyring": [
+                "ubuntu-keyring"
+            ],
+            "ubuntu-meta": [
+                "ubuntu-minimal",
+                "ubuntu-server",
+                "ubuntu-standard"
+            ],
+            "ucf": [
+                "ucf"
+            ],
+            "usb.ids": [
+                "usb.ids"
+            ],
+            "usbutils": [
+                "usbutils"
+            ],
+            "xauth": [
+                "xauth"
+            ],
+            "xdg-user-dirs": [
+                "xdg-user-dirs"
+            ],
+            "xfsprogs": [
+                "xfsprogs"
+            ],
+            "xkeyboard-config": [
+                "xkb-data"
+            ],
+            "zerofree": [
+                "zerofree"
+            ],
+            "pciutils": [
+                "libpci3",
+                "pciutils"
+            ],
+            "libxmlb": [
+                "libxmlb1",
+                "libxmlb2"
+            ],
+            "open-iscsi": [
+                "open-iscsi"
+            ],
+            "pyyaml": [
+                "python3-yaml"
+            ],
+            "lz4": [
+                "liblz4-1",
+                "lz4"
+            ],
+            "libx11": [
+                "libx11-6",
+                "libx11-data"
+            ],
+            "python3-stdlib-extensions": [
+                "python3-distutils",
+                "python3-gdbm",
+                "python3-lib2to3"
+            ],
+            "gcc-10": [
+                "gcc-10-base",
+                "libgcc-s1",
+                "libstdc++6"
+            ],
+            "nettle": [
+                "libhogweed5",
+                "libnettle7"
+            ],
+            "libuv1": [
+                "libuv1"
+            ],
+            "libatasmart": [
+                "libatasmart4"
+            ],
+            "libblockdev": [
+                "libblockdev-crypto2",
+                "libblockdev-fs2",
+                "libblockdev-loop2",
+                "libblockdev-part-err2",
+                "libblockdev-part2",
+                "libblockdev-swap2",
+                "libblockdev-utils2",
+                "libblockdev2"
+            ],
+            "fwupd": [
+                "libfwupdplugin1",
+                "fwupd",
+                "libfwupd2",
+                "libfwupdplugin5"
+            ],
+            "glib2.0": [
+                "libglib2.0-0",
+                "libglib2.0-bin",
+                "libglib2.0-data"
+            ],
+            "nspr": [
+                "libnspr4"
+            ],
+            "volume-key": [
+                "libvolume-key1"
+            ],
+            "libssh": [
+                "libssh-4"
+            ],
+            "cpio": [
+                "cpio"
+            ],
+            "libgcrypt20": [
+                "libgcrypt20"
+            ],
+            "udisks2": [
+                "libudisks2-0",
+                "udisks2"
+            ],
+            "procps": [
+                "libprocps8",
+                "procps"
+            ],
+            "squashfs-tools": [
+                "squashfs-tools"
+            ],
+            "cloud-initramfs-tools": [
+                "cloud-initramfs-copymods",
+                "cloud-initramfs-dyn-netconf",
+                "overlayroot"
+            ],
+            "linux-base": [
+                "linux-base",
+                "linux-base-sgx"
+            ],
+            "alsa-lib": [
+                "libasound2",
+                "libasound2-data"
+            ],
+            "ufw": [
+                "ufw"
+            ],
+            "accountsservice": [
+                "accountsservice",
+                "libaccountsservice0"
+            ],
+            "icu": [
+                "libicu66"
+            ],
+            "wget": [
+                "wget"
+            ],
+            "busybox": [
+                "busybox-initramfs",
+                "busybox-static"
+            ],
+            "libseccomp": [
+                "libseccomp2"
+            ],
+            "util-linux": [
+                "bsdutils",
+                "fdisk",
+                "libblkid1",
+                "libfdisk1",
+                "libmount1",
+                "libsmartcols1",
+                "libuuid1",
+                "mount",
+                "util-linux",
+                "uuid-runtime"
+            ],
+            "command-not-found": [
+                "command-not-found",
+                "python3-commandnotfound"
+            ],
+            "cryptsetup": [
+                "cryptsetup",
+                "cryptsetup-bin",
+                "cryptsetup-initramfs",
+                "cryptsetup-run",
+                "libcryptsetup12"
+            ],
+            "initramfs-tools": [
+                "initramfs-tools",
+                "initramfs-tools-bin",
+                "initramfs-tools-core"
+            ],
+            "libdrm": [
+                "libdrm-common",
+                "libdrm2"
+            ],
+            "libjcat": [
+                "libjcat1"
+            ],
+            "policykit-1": [
+                "libpolkit-agent-1-0",
+                "libpolkit-gobject-1-0",
+                "policykit-1"
+            ],
+            "cyrus-sasl2": [
+                "libsasl2-2",
+                "libsasl2-modules",
+                "libsasl2-modules-db"
+            ],
+            "usb-modeswitch": [
+                "usb-modeswitch"
+            ],
+            "usb-modeswitch-data": [
+                "usb-modeswitch-data"
+            ],
+            "landscape-client": [
+                "landscape-common"
+            ],
+            "twisted": [
+                "python3-twisted",
+                "python3-twisted-bin"
+            ],
+            "alsa-ucm-conf": [
+                "alsa-ucm-conf"
+            ],
+            "fribidi": [
+                "libfribidi0"
+            ],
+            "gzip": [
+                "gzip"
+            ],
+            "klibc": [
+                "klibc-utils",
+                "libklibc"
+            ],
+            "libarchive": [
+                "libarchive13"
+            ],
+            "xz-utils": [
+                "liblzma5",
+                "xz-utils"
+            ],
+            "bash": [
+                "bash"
+            ],
+            "libsepol": [
+                "libsepol1"
+            ],
+            "networkd-dispatcher": [
+                "networkd-dispatcher"
+            ],
+            "rsyslog": [
+                "rsyslog"
+            ],
+            "sbsigntool": [
+                "sbsigntool"
+            ],
+            "glibc": [
+                "libc-bin",
+                "libc6",
+                "locales"
+            ],
+            "openssh": [
+                "openssh-client",
+                "openssh-server",
+                "openssh-sftp-server"
+            ],
+            "openldap": [
+                "libldap-2.4-2",
+                "libldap-common"
+            ],
+            "pcre3": [
+                "libpcre3"
+            ],
+            "dpkg": [
+                "dpkg"
+            ],
+            "efibootmgr": [
+                "efibootmgr"
+            ],
+            "mokutil": [
+                "mokutil"
+            ],
+            "kmod": [
+                "kmod",
+                "libkmod2"
+            ],
+            "keyutils": [
+                "libkeyutils1",
+                "keyutils"
+            ],
+            "e2fsprogs": [
+                "e2fsprogs",
+                "libcom-err2",
+                "libext2fs2",
+                "libss2",
+                "logsave"
+            ],
+            "apt": [
+                "apt",
+                "apt-utils",
+                "libapt-pkg6.0"
+            ],
+            "perl": [
+                "libperl5.30",
+                "perl",
+                "perl-base",
+                "perl-modules-5.30"
+            ],
+            "sosreport": [
+                "sosreport"
+            ],
+            "chrony": [
+                "chrony"
+            ],
+            "cifs-utils": [
+                "cifs-utils"
+            ],
+            "libmbim": [
+                "libmbim-glib4",
+                "libmbim-proxy"
+            ],
+            "modemmanager": [
+                "libmm-glib0",
+                "modemmanager"
+            ],
+            "libqmi": [
+                "libqmi-glib5",
+                "libqmi-proxy"
+            ],
+            "dbus": [
+                "dbus",
+                "dbus-user-session",
+                "libdbus-1-3"
+            ],
+            "pyparted": [
+                "python3-parted"
+            ],
+            "lsscsi": [
+                "lsscsi"
+            ],
+            "open-vm-tools": [
+                "open-vm-tools"
+            ],
+            "walinuxagent": [
+                "walinuxagent"
+            ],
+            "ntfs-3g": [
+                "libntfs-3g883",
+                "ntfs-3g"
+            ],
+            "multipath-tools": [
+                "kpartx",
+                "multipath-tools"
+            ],
+            "libksba": [
+                "libksba8"
+            ],
+            "distro-info-data": [
+                "distro-info-data"
+            ],
+            "shadow": [
+                "login",
+                "passwd"
+            ],
+            "ca-certificates": [
+                "ca-certificates"
+            ],
+            "sqlite3": [
+                "libsqlite3-0"
+            ],
+            "freetype": [
+                "libfreetype6"
+            ],
+            "pyjwt": [
+                "python3-jwt"
+            ],
+            "gnupg2": [
+                "dirmngr",
+                "gnupg",
+                "gnupg-l10n",
+                "gpgconf",
+                "gpgsm",
+                "gpgv",
+                "gpg-wks-server",
+                "gnupg-utils",
+                "gpg",
+                "gpg-agent",
+                "gpg-wks-client"
+            ],
+            "unattended-upgrades": [
+                "unattended-upgrades"
+            ],
+            "apport": [
+                "apport",
+                "python3-apport",
+                "python3-problem-report"
+            ],
+            "expat": [
+                "libexpat1"
+            ],
+            "grub2": [
+                "grub-common",
+                "grub-pc",
+                "grub-pc-bin",
+                "grub2-common",
+                "grub-efi-amd64-bin",
+                "grub-efi-arm64",
+                "grub-efi-arm64-bin"
+            ],
+            "tzdata": [
+                "tzdata"
+            ],
+            "libxml2": [
+                "libxml2"
+            ],
+            "update-manager": [
+                "python3-update-manager",
+                "update-manager-core"
+            ],
+            "netplan.io": [
+                "libnetplan0",
+                "netplan.io"
+            ],
+            "gstreamer1.0": [
+                "libgstreamer1.0-0"
+            ],
+            "libxslt": [
+                "libxslt1.1"
+            ],
+            "tpm2-tss": [
+                "libtss2-esys0"
+            ],
+            "pcre2": [
+                "libpcre2-8-0"
+            ],
+            "gmp": [
+                "libgmp10"
+            ],
+            "zlib": [
+                "zlib1g"
+            ],
+            "sudo": [
+                "sudo"
+            ],
+            "python-urllib3": [
+                "python3-urllib3"
+            ],
+            "setuptools": [
+                "python3-pkg-resources",
+                "python3-setuptools"
+            ],
+            "snapd": [
+                "snapd"
+            ],
+            "talloc": [
+                "libtalloc2"
+            ],
+            "tevent": [
+                "libtevent0"
+            ],
+            "pam": [
+                "libpam-modules",
+                "libpam-modules-bin",
+                "libpam-runtime",
+                "libpam0g"
+            ],
+            "tmux": [
+                "tmux"
+            ],
+            "openssl": [
+                "libssl1.1",
+                "openssl"
+            ],
+            "heimdal": [
+                "libasn1-8-heimdal",
+                "libgssapi3-heimdal",
+                "libhcrypto4-heimdal",
+                "libheimbase1-heimdal",
+                "libheimntlm0-heimdal",
+                "libhx509-5-heimdal",
+                "libkrb5-26-heimdal",
+                "libroken18-heimdal",
+                "libwind0-heimdal"
+            ],
+            "rsync": [
+                "rsync"
+            ],
+            "tdb": [
+                "libtdb1"
+            ],
+            "git": [
+                "git",
+                "git-man"
+            ],
+            "grub2-signed": [
+                "grub-efi-amd64-signed",
+                "grub-efi-arm64-signed"
+            ],
+            "fwupd-signed": [
+                "fwupd-signed"
+            ],
+            "systemd": [
+                "libnss-systemd",
+                "libpam-systemd",
+                "libsystemd0",
+                "libudev1",
+                "systemd",
+                "systemd-sysv",
+                "systemd-timesyncd",
+                "udev"
+            ],
+            "nss": [
+                "libnss3"
+            ],
+            "isc-dhcp": [
+                "isc-dhcp-client",
+                "isc-dhcp-common"
+            ],
+            "gnutls28": [
+                "libgnutls30"
+            ],
+            "tar": [
+                "tar"
+            ],
+            "software-properties": [
+                "python3-software-properties",
+                "software-properties-common"
+            ],
+            "python-apt": [
+                "python-apt-common",
+                "python3-apt"
+            ],
+            "ubuntu-release-upgrader": [
+                "python3-distupgrade",
+                "ubuntu-release-upgrader-core"
+            ],
+            "base-files": [
+                "base-files",
+                "motd-news-config"
+            ],
+            "shim-signed": [
+                "shim-signed"
+            ],
+            "ubuntu-advantage-tools": [
+                "ubuntu-advantage-tools",
+                "ubuntu-advantage-pro"
+            ],
+            "tcpdump": [
+                "tcpdump"
+            ],
+            "krb5": [
+                "krb5-locales",
+                "libgssapi-krb5-2",
+                "libk5crypto3",
+                "libkrb5-3",
+                "libkrb5support0"
+            ],
+            "python3.8": [
+                "libpython3.8-minimal",
+                "libpython3.8-stdlib",
+                "python3.8",
+                "python3.8-minimal",
+                "libpython3.8"
+            ],
+            "curl": [
+                "libcurl3-gnutls",
+                "libcurl4",
+                "curl"
+            ],
+            "vim": [
+                "vim-common",
+                "vim-tiny",
+                "xxd",
+                "vim",
+                "vim-runtime"
+            ],
+            "cloud-init": [
+                "cloud-init"
+            ],
+            "libunwind": [
+                "libunwind8"
+            ],
+            "update-notifier": [
+                "update-notifier-common"
+            ],
+            "bind9": [
+                "bind9-dnsutils",
+                "bind9-host",
+                "bind9-libs"
+            ],
+            "linux": [
+                "linux-cloud-tools-common",
+                "linux-tools-common"
+            ],
+            "linux-meta-azure": [
+                "linux-azure",
+                "linux-cloud-tools-azure",
+                "linux-headers-azure",
+                "linux-image-azure",
+                "linux-tools-azure"
+            ],
+            "linux-azure-5.15": [
+                "linux-azure-5.15-cloud-tools-5.15.0-1035",
+                "linux-azure-5.15-headers-5.15.0-1035",
+                "linux-azure-5.15-tools-5.15.0-1035",
+                "linux-cloud-tools-5.15.0-1035-azure",
+                "linux-headers-5.15.0-1035-azure",
+                "linux-modules-5.15.0-1035-azure",
+                "linux-tools-5.15.0-1035-azure"
+            ],
+            "linux-signed-azure-5.15": [
+                "linux-image-5.15.0-1035-azure"
+            ],
+            "apparmor": [
+                "apparmor",
+                "libapparmor1"
+            ],
+            "bolt": [
+                "bolt"
+            ],
+            "samba": [
+                "libwbclient0"
+            ],
+            "device-tree-compiler": [
+                "device-tree-compiler",
+                "libfdt1"
+            ],
+            "devio": [
+                "devio"
+            ],
+            "mtd-utils": [
+                "mtd-utils"
+            ],
+            "flash-kernel": [
+                "flash-kernel"
+            ],
+            "u-boot": [
+                "u-boot-tools"
+            ],
+            "linux-meta-azure-5.15": [
+                "linux-azure",
+                "linux-cloud-tools-azure",
+                "linux-headers-azure",
+                "linux-image-azure",
+                "linux-tools-azure"
+            ],
+            "lxd-installer": [
+                "lxd-installer"
+            ],
+            "nullboot": [
+                "nullboot"
+            ],
+            "linux-meta-azure-fde-5.15": [
+                "linux-azure-fde",
+                "linux-cloud-tools-azure-fde",
+                "linux-headers-azure-fde",
+                "linux-image-azure-fde",
+                "linux-tools-azure-fde"
+            ],
+            "linux-signed-azure-fde-5.15": [
+                "linux-image-5.15.0-1035-azure-fde"
+            ],
+            "libkcapi": [
+                "kcapi-tools",
+                "libkcapi1"
+            ],
+            "strongswan": [
+                "libcharon-extauth-plugins",
+                "libstrongswan",
+                "libstrongswan-standard-plugins",
+                "strongswan",
+                "strongswan-charon",
+                "strongswan-libcharon",
+                "strongswan-starter"
+            ]
+        }
+    }
+}

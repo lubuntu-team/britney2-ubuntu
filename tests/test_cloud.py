@@ -12,6 +12,7 @@ import sys
 from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
+import tempfile
 import xml.etree.ElementTree as ET
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +52,7 @@ class T(unittest.TestCase):
     def test_run_cloud_tests_state_handling(self, mock_run, mock_xunit, mock_extra):
         """Cloud tests should save state and not re-run tests for packages
            already tested."""
+        self.policy.package_set = {"azure": {"chromium-browser": ["binary1"], "hello": ["binary2"]}}
         expected_state = {
             "azure": {
                 "archive": {
@@ -71,7 +73,7 @@ class T(unittest.TestCase):
         # Package already tested, no tests should run
         self.policy.failures = {}
         self.policy.errors = {}
-        self.policy._run_cloud_tests("chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
+        self.policy._run_cloud_tests(["azure"], "chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         mock_run.assert_not_called()
         self.assertEqual(len(self.policy.failures), 1)
@@ -85,7 +87,7 @@ class T(unittest.TestCase):
         }
         self.policy.failures = {}
         self.policy.errors = {}
-        self.policy._run_cloud_tests("hello", "2.10", "zazzy", ["proposed"], "archive")
+        self.policy._run_cloud_tests(["azure"], "hello", "2.10", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         mock_run.assert_called()
         self.assertEqual(len(self.policy.failures), 0)
@@ -99,7 +101,7 @@ class T(unittest.TestCase):
         }
         self.policy.failures = {}
         self.policy.errors = {}
-        self.policy._run_cloud_tests("chromium-browser", "55.1", "zazzy", ["proposed"], "archive")
+        self.policy._run_cloud_tests(["azure"], "chromium-browser", "55.1", "zazzy", ["proposed"], "archive")
         self.assertDictEqual(expected_state, self.policy.state)
         self.assertEqual(mock_run.call_count, 2)
         self.assertEqual(len(self.policy.failures), 0)
@@ -115,6 +117,7 @@ class T(unittest.TestCase):
     def test_run_cloud_tests_state_handling_only_errors(self, mock_run, mock_xunit, mock_extra):
         """Cloud tests should save state and not re-run tests for packages
            already tested."""
+        self.policy.package_set = {"azure": {"chromium-browser": ["binary1"]}}
         start_state = {
             "azure": {
                 "archive": {
@@ -133,14 +136,16 @@ class T(unittest.TestCase):
         self.policy._load_state()
 
         # Package already tested, but only had errors - rerun
-        self.policy._run_cloud_tests("chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
+        self.policy._run_cloud_tests(["azure"], "chromium-browser", "55.0", "zazzy", ["proposed"], "archive")
         mock_run.assert_called()
 
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_run_cloud_tests_called_for_package_in_manifest(self, mock_run):
         """Cloud tests should run for a package in the cloud package set.
         """
-        self.policy.package_set = set(["chromium-browser"])
+        self.policy.package_set = {
+            "acloud": {"chromium-browser": []}
+        }
         self.policy.options.series = "jammy"
 
         self.policy.apply_src_policy_impl(
@@ -148,15 +153,16 @@ class T(unittest.TestCase):
         )
 
         mock_run.assert_called_once_with(
-            "chromium-browser", "55.0", "jammy", ["proposed"], "archive"
+            ["acloud"], "chromium-browser", "55.0", "jammy", ["proposed"], "archive"
         )
 
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_run_cloud_tests_not_called_for_package_not_in_manifest(self, mock_run):
         """Cloud tests should not run for packages not in the cloud package set"""
 
-        self.policy.package_set = set(["vim"])
-        self.policy.options.series = "jammy"
+        self.policy.package_set = {
+            "acloud": {"vim": []}
+        }
 
         verdict = self.policy.apply_src_policy_impl(
             None, FakeItem, None, FakeSourceData, MagicMock()
@@ -169,7 +175,9 @@ class T(unittest.TestCase):
     @patch("britney2.policies.cloud.CloudPolicy._run_cloud_tests")
     def test_no_tests_run_during_dry_run(self, mock_run, smtp):
         self.policy = CloudPolicy(self.fake_options, {}, dry_run=True)
-        self.policy.package_set = set(["chromium-browser"])
+        self.policy.package_set = {
+            "acloud": {"chromium-browser": []}
+        }
         self.policy.options.series = "jammy"
         self.policy.source = "jammy-proposed"
 
@@ -187,7 +195,9 @@ class T(unittest.TestCase):
         self.fake_options.cloud_enable_reporting = "yes"
         policy = CloudPolicy(self.fake_options, {}, dry_run=False)
 
-        policy.package_set = set(["chromium-browser"])
+        policy.package_set = {
+            "acloud": {"chromium-browser": []}
+        }
         policy.options.series = "jammy"
 
         policy.apply_src_policy_impl(
@@ -204,7 +214,9 @@ class T(unittest.TestCase):
         self.fake_options.cloud_reporting_enabled = "no"
         policy = CloudPolicy(self.fake_options, {}, dry_run=False)
 
-        policy.package_set = set(["chromium-browser"])
+        policy.package_set = {
+            "acloud": {"chromium-browser": []}
+        }
         policy.options.series = "jammy"
 
         policy.apply_src_policy_impl(
@@ -302,10 +314,12 @@ class T(unittest.TestCase):
         """Ensure the correct flags are returned with PPA sources"""
         expected_flags = [
             "--install-ppa-package", "tmux/ppa_url=fingerprint",
-            "--install-ppa-package", "tmux/ppa_url2=fingerprint"
+            "--install-ppa-package", "sed/ppa_url=fingerprint",
+            "--install-ppa-package", "tmux/ppa_url2=fingerprint",
+            "--install-ppa-package", "sed/ppa_url2=fingerprint",
         ]
         install_flags = self.policy._format_install_flags(
-            "tmux", ["ppa_url=fingerprint", "ppa_url2=fingerprint"], "ppa"
+            ["tmux", "sed"], ["ppa_url=fingerprint", "ppa_url2=fingerprint"], "ppa"
         )
 
         self.assertListEqual(install_flags, expected_flags)
@@ -313,14 +327,14 @@ class T(unittest.TestCase):
     def test_format_install_flags_with_archive(self):
         """Ensure the correct flags are returned with archive sources"""
         expected_flags = ["--install-archive-package", "tmux/proposed"]
-        install_flags = self.policy._format_install_flags("tmux", ["proposed"], "archive")
+        install_flags = self.policy._format_install_flags(["tmux"], ["proposed"], "archive")
 
         self.assertListEqual(install_flags, expected_flags)
 
     def test_format_install_flags_with_incorrect_type(self):
         """Ensure errors are raised for unknown source types"""
 
-        self.assertRaises(RuntimeError, self.policy._format_install_flags, "tmux", ["a_source"], "something")
+        self.assertRaises(RuntimeError, self.policy._format_install_flags, ["tmux"], ["a_source"], "something")
 
     def test_parse_ppas(self):
         """Ensure correct conversion from Britney format to cloud test format
@@ -391,6 +405,50 @@ class T(unittest.TestCase):
         self.assertEqual(
             self.policy.failures["FakeCloud"]["extra_info"]["install_source"], "source information"
         )
+
+    def test_retrieve_cloud_package_set_for_series(self):
+        """Tests that the package set is retrieved and only the given series is returned.
+        """
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+            raw_package_set = {
+                "acloud": {
+                    "focal": {"grep": [], "tmux": []},
+                    "jammy": {"grep": [],},
+                },
+                "bcloud": {
+                    "focal": {"grep": [], "tmux": [],},
+                    "jammy": {"grep": [], "tmux": [],},
+                    "kinetic": {},
+                }
+            }
+            json.dump(raw_package_set, f)
+
+            f.seek(0)
+            package_set = self.policy._retrieve_cloud_package_set_for_series(f.name, "focal")
+            expected_set = {
+                "acloud": {"grep": [], "tmux": []},
+                "bcloud": {"grep": [], "tmux": []},
+            }
+            self.assertDictEqual(package_set, expected_set)
+
+    def test_check_if_tests_required(self):
+        """Test that the package set is correctly parsed.
+        Ensure that a package is found and the cloud is returned correctly.
+        Ensure that only the correct series is checked.
+        """
+        package_set = {
+            "acloud": {"grep": []},
+            "bcloud": {"grep": [], "tmux": []},
+        }
+
+        clouds = self.policy._check_if_tests_required(package_set, "grep")
+        self.assertListEqual(clouds, ["acloud", "bcloud"])
+
+        clouds = self.policy._check_if_tests_required(package_set, "tmux")
+        self.assertListEqual(clouds, ["bcloud"])
+
+        clouds = self.policy._check_if_tests_required(package_set, "sed")
+        self.assertListEqual(clouds, [])
 
     def _create_fake_test_result_file(self, num_pass=1, num_err=0, num_fail=0):
         """Helper function to generate an xunit test result file.
