@@ -1004,7 +1004,7 @@ class AutopkgtestPolicy(BasePolicy):
                                               (url, f.getcode()))
             except IOError as e:
                 # 401 "Unauthorized" is swift's way of saying "container does not exist"
-                if hasattr(e, 'code') and e.code == 401:
+                if hasattr(e, 'code') and (e.code == 401 or e.code == 404):
                     self.logger.info('fetch_swift_results: %s does not exist yet or is inaccessible', url)
                     return
                 # same as above in the swift authenticated case
