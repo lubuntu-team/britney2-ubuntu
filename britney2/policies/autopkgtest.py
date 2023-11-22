@@ -271,7 +271,7 @@ class AutopkgtestPolicy(BasePolicy):
 
             import swiftclient
 
-            if '/v2.0' not in self.options.adt_swift_auth_url:
+            if '/v3' not in self.options.adt_swift_auth_url:
                 raise RuntimeError('Unsupported swift auth version')
 
             self.logger.info('Creating an authenticated swift connection for user %s', self.options.adt_swift_user)
@@ -279,10 +279,12 @@ class AutopkgtestPolicy(BasePolicy):
                 authurl=self.options.adt_swift_auth_url,
                 user=self.options.adt_swift_user,
                 key=self.options.adt_swift_pass,
-                tenant_name=self.options.adt_swift_tenant,
-                auth_version='2.0',
-                os_options={'region_name': self.options.adt_swift_region}
-                )
+                auth_version='3.0',
+                os_options={
+                    'region_name': self.options.adt_swift_region,
+                    'project_name': self.options.adt_swift_project,
+                    'object_storage_url': self.options.adt_swift_url,
+                })
         else:
             if any('@' in ppa for ppa in self.adt_ppas):
                 raise RuntimeError('Private PPA configured but no swift credentials given')
@@ -988,7 +990,8 @@ class AutopkgtestPolicy(BasePolicy):
             result_paths = [p['subdir'] for p in returned_paths]
         else:
             url = os.path.join(swift_url, self.swift_container)
-            url += '?' + urllib.parse.urlencode(query)
+            # XXX: Workaround for PS5 swift deployment - container name needs to be suffixed with /
+            url += '/?' + urllib.parse.urlencode(query)
             f = None
             try:
                 f = self.download_retry(url)
