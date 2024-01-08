@@ -236,6 +236,8 @@ from britney2.utils import (log_and_format_old_libraries,
 __author__ = 'Fabio Tranchitella and the Debian Release Team'
 __version__ = '2.0'
 
+# "temporarily" raise recursion limit for the auto hinter
+sys.setrecursionlimit(2000)
 
 class Britney(object):
     """Britney, the Debian testing updater script
