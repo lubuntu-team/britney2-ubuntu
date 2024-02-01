@@ -894,7 +894,8 @@ class AutopkgtestPolicy(BasePolicy):
 
         # request new results from swift
         url = os.path.join(swift_url, self.swift_container)
-        url += '?' + urllib.parse.urlencode(query)
+        # XXX: Workaround for PS5 swift deployment - container name needs to be suffixed with /
+        url += '/?' + urllib.parse.urlencode(query)
         f = None
         try:
             f = self.download_retry(url)
