@@ -538,7 +538,13 @@ class Britney(object):
         self._policy_engine.add_policy(BlockPolicy(self.options, self.suite_info))
         # XXX re-enable once https://bugs.launchpad.net/launchpad/+bug/1868558 is fixed
         # self._policy_engine.add_policy(BuiltUsingPolicy(self.options, self.suite_info))
-        self._policy_engine.add_policy(ImplicitDependencyPolicy(self.options, self.suite_info))
+        # This policy is objectively terrible, it reduces britney runtime
+        # at the cost of giving only partial information about blocking
+        # packages during large transitions instead of giving full detail in
+        # update_output that the team can work through in parallel, thus
+        # dragging out complicated transitions. vorlon 20240214
+        if getattr(self.options, 'implicit_deps', 'yes') == 'yes':
+            self._policy_engine.add_policy(ImplicitDependencyPolicy(self.options, self.suite_info))
         if getattr(self.options, 'check_buildd', 'no') == 'yes':
             self._policy_engine.add_policy(BuiltOnBuilddPolicy(self.options, self.suite_info))
         self._policy_engine.add_policy(LPBlockBugPolicy(self.options, self.suite_info))
