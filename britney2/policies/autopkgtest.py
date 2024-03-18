@@ -1131,6 +1131,10 @@ class AutopkgtestPolicy(BasePolicy):
             qname = 'debci-huge-%s-%s' % (self.options.series, arch)
         else:
             qname = 'debci-%s-%s' % (self.options.series, arch)
+        # FIXME: Remove after the time_t transition
+        if (arch == "armhf" and self.options.series == "noble" and
+            datetime.utcnow() < datetime.date(2024, 4, 4)):
+            params["all-proposed"] = "1"
         params['submit-time'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S%z')
 
         if self.amqp_channel:
