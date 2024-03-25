@@ -1071,13 +1071,10 @@ class AutopkgtestPolicy(BasePolicy):
                 'Fetched test result for %s/%s/%s %s (triggers: %s): %s',
                 src, ver, arch, run_id, result_triggers, result.name.lower())
 
-            # remove matching test requests
+            # add this result and remove pending test requests if valid
             for trigger in result_triggers:
-                self.remove_from_pending(trigger, src, arch)
-
-            # add this result
-            for trigger in result_triggers:
-                self.add_trigger_to_results(trigger, src, ver, arch, run_id, seen, result)
+                if self.add_trigger_to_results(trigger, src, ver, arch, run_id, seen, result):
+                    self.remove_from_pending(trigger, src, arch)
 
     def remove_from_pending(self, trigger, src, arch):
         try:
@@ -1097,10 +1094,10 @@ class AutopkgtestPolicy(BasePolicy):
             (trigsrc, trigver) = trigger.split('/', 1)
         except ValueError:
             self.logger.info('Ignoring invalid test trigger %s', trigger)
-            return
+            return False
         if trigsrc == src and apt_pkg.version_compare(ver, trigver) < 0:
             self.logger.debug('test trigger %s, but run for older version %s, ignoring', trigger, ver)
-            return
+            return False
 
         result = self.test_results.setdefault(trigger, {}).setdefault(
             src, {}).setdefault(arch, [Result.FAIL, None, '', 0])
@@ -1113,6 +1110,8 @@ class AutopkgtestPolicy(BasePolicy):
             result[1] = ver
             result[2] = run_id
             result[3] = seen
+
+        return True
 
     def send_test_request(self, src, arch, triggers, huge=False):
         '''Send out AMQP request for testing src/arch for triggers
