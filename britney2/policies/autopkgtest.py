@@ -1133,6 +1133,7 @@ class AutopkgtestPolicy(BasePolicy):
             qname = 'debci-%s-%s' % (self.options.series, arch)
         # FIXME: Remove after the time_t transition
         if (self.options.series == "noble" and
+                "migration-reference/0" not in triggers and
                 datetime.utcnow().date() < date(2024, 4, 4)):
             params["all-proposed"] = "1"
         params['submit-time'] = datetime.strftime(datetime.utcnow(), '%Y-%m-%d %H:%M:%S%z')
