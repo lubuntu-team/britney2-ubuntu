@@ -717,6 +717,11 @@ class AutopkgtestPolicy(BasePolicy):
                 # to trigger anything
                 return []
 
+        # The raspi kernel can't be tested with autopkgtest. It doesn't support EFI
+        # and won't boot in OpenStack.
+        if src.startswith('linux-meta-raspi'):
+            return []
+
         # Debian doesn't have linux-meta, but Ubuntu does
         # for linux themselves we don't want to trigger tests -- these should
         # all come from linux-meta*. A new kernel ABI without a corresponding
