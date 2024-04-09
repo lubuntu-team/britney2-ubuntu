@@ -1123,9 +1123,11 @@ class AutopkgtestPolicy(BasePolicy):
 
         If huge is true, then the request will be put into the -huge instead of
         normal queue.
+
+        Return True if successfully queued, False if not.
         '''
         if self.options.dry_run or self.dry_run:
-            return
+            return True
 
         params = {'triggers': triggers}
         if self.options.adt_ppas:
@@ -1140,9 +1142,12 @@ class AutopkgtestPolicy(BasePolicy):
         if self.amqp_channel:
             import amqplib.client_0_8 as amqp
             params = json.dumps(params)
-            self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params,
-                                                         delivery_mode=2),  # persistent
-                                            routing_key=qname)
+            try:
+                self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params,
+                                                             delivery_mode=2),  # persistent
+                                                routing_key=qname)
+            except ConnectionResetError:
+                return False
         else:
             # for file-based submission, triggers are space separated
             params['triggers'] = [' '.join(params['triggers'])]
@@ -1150,6 +1155,7 @@ class AutopkgtestPolicy(BasePolicy):
             assert self.amqp_file
             with open(self.amqp_file, 'a') as f:
                 f.write('%s:%s %s\n' % (qname, src, params))
+        return True
 
     def pkg_test_request(self, src, arch, full_triggers, huge=False):
         '''Request one package test for one particular trigger
@@ -1219,11 +1225,12 @@ class AutopkgtestPolicy(BasePolicy):
             self.logger.info('Test %s/%s for %s is already pending, not queueing', src, arch, trigger)
         else:
             self.logger.info('Requesting %s autopkgtest on %s to verify %s', src, arch, trigger)
-            arch_list.append(arch)
-            arch_list.sort()
-            self.send_test_request(src, arch, full_triggers, huge=huge)
-            # save pending.json right away, so that we don't re-request if britney crashes
-            self.save_pending_json()
+            if self.send_test_request(src, arch, full_triggers, huge=huge):
+                # save pending.json right away, so that we don't re-request
+                # if britney crashes
+                arch_list.append(arch)
+                arch_list.sort()
+                self.save_pending_json()
 
     def result_in_baseline(self, src, arch):
         '''Get the result for src on arch in the baseline
