@@ -182,7 +182,7 @@ class AutopkgtestPolicy(BasePolicy):
                             break
                         f_out.write(data)
                 content_length = f.getheader('content-length')
-                if http_code and content_length and os.path.getsize(new_file) != content_length):
+                if http_code and content_length and os.path.getsize(new_file) != content_length:
                     self.logger.info('Short read downloading autopkgtest results')
                     os.unlink(new_file)
                 else:
