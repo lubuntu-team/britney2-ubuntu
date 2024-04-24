@@ -30,6 +30,7 @@ import re
 import socket
 import sqlite3
 import sys
+import hashlib
 import time
 import urllib.parse
 from urllib.error import HTTPError
@@ -169,8 +170,10 @@ class AutopkgtestPolicy(BasePolicy):
 
     def fetch_db(self):
         f = None
+        local_db_sha = hashlib.sha256()
         try:
             f = self.download_retry(self.options.adt_db_url)
+            chksum = self.download_retry(self.options.adt_db_url + ".sha256").read().rstrip()
             http_code = f.getcode()
             # file:/// urls don't have the http niceties
             if not http_code or http_code == 200:
@@ -180,10 +183,10 @@ class AutopkgtestPolicy(BasePolicy):
                         data=f.read(2048*1024)
                         if not data:
                             break
+                        local_db_sha.update(data)
                         f_out.write(data)
-                content_length = f.getheader('content-length')
-                if http_code and content_length and os.path.getsize(new_file) != content_length:
-                    self.logger.info('Short read downloading autopkgtest results')
+                if http_code and local_db_sha.hexdigest() != chksum:
+                    self.logger.info("autopkgtest.db local checksum does not match downloaded checksum!")
                     os.unlink(new_file)
                 else:
                     os.rename(new_file, self.database_path)
