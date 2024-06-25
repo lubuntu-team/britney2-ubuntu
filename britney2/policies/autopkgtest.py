@@ -185,9 +185,9 @@ class AutopkgtestPolicy(BasePolicy):
                             break
                         local_db_sha.update(data)
                         f_out.write(data)
-                if http_code and local_db_sha.hexdigest() != str(chksum):
+                if http_code and local_db_sha.hexdigest() != chksum.decode():
                     self.logger.info("autopkgtest.db local chksum is %s" % local_db_sha.hexdigest())
-                    self.logger.info("autopkgtest.db downloaded chksum is %s" % str(chksum))
+                    self.logger.info("autopkgtest.db downloaded chksum is %s" % chksum.decode())
                     self.logger.info("autopkgtest.db local checksum does not match downloaded checksum!")
                     os.unlink(new_file)
                 else:
