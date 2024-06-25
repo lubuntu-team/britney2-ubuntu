@@ -172,8 +172,8 @@ class AutopkgtestPolicy(BasePolicy):
         f = None
         local_db_sha = hashlib.sha256()
         try:
-            f = self.download_retry(self.options.adt_db_url)
             chksum = self.download_retry(self.options.adt_db_url + ".sha256").read().rstrip()
+            f = self.download_retry(self.options.adt_db_url)
             http_code = f.getcode()
             # file:/// urls don't have the http niceties
             if not http_code or http_code == 200:
