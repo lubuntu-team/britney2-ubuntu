@@ -131,6 +131,8 @@ class EmailPolicy(BasePolicy, Rest):
         addresses = []
         try:
             gpg = self.query_lp_rest_api(person + "/gpg_keys", {})
+            if len(gpg["entries"]) == 0:
+                return None
             for key in gpg["entries"]:
                 details = self.query_rest_api(
                     "http://keyserver.ubuntu.com/pks/lookup",
