@@ -4,6 +4,7 @@ import json
 import math
 import socket
 import smtplib
+import urllib
 
 from urllib.error import HTTPError
 from urllib.parse import unquote
@@ -154,6 +155,8 @@ class EmailPolicy(BasePolicy, Rest):
                         if match:
                             addresses.append(match.group(1))
             address = self.addresses[person] = address_chooser(addresses)
+            if not address:
+                return None
             return address
         except HTTPError as e:
             if e.code != 410:  # suspended user
@@ -166,6 +169,8 @@ class EmailPolicy(BasePolicy, Rest):
     def scrape_gpg_emails(self, people):
         """Find email addresses from GPG keys."""
         emails = [self._scrape_gpg_emails(person) for person in (people or [])]
+        if not emails:
+            return
         return [email for email in emails if email is not None]
 
     def lp_get_emails(self, pkg, version):
