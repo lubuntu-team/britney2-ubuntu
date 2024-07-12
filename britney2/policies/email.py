@@ -4,7 +4,6 @@ import json
 import math
 import socket
 import smtplib
-import urllib
 
 from urllib.error import HTTPError
 from urllib.parse import unquote
