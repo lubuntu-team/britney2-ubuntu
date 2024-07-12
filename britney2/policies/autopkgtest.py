@@ -699,6 +699,22 @@ class AutopkgtestPolicy(BasePolicy):
         reported_pkgs = set()
 
         tests = []
+        # We don't want to run tests for src packages on i386 if all of the binary packages
+        # have Architecture: all. These are redundant for real world use cases as these deps
+        # are satisfied by amd64 binaries
+        try:
+            if arch == "i386":
+                all_binaries_arch_all = True
+                for pkg_id in source_suite.sources[src]:
+                    if pkg_id.architecture != "all":
+                        all_binaries_arch_all = False
+                if all_binaries_arch_all:
+                    self.logger.info('Source package %s has binaries which are all Architecture: all, and tests have been requested on %s, not running any tests for this src package',
+                                     src,
+                                     arch)
+                    return tests
+        except Exception as e:
+            self.logger.error('i386 useless autopkgtest check failed with: %s', e)
 
         # gcc-N triggers tons of tests via libgcc1, but this is mostly in vain:
         # gcc already tests itself during build, and it is being used from
