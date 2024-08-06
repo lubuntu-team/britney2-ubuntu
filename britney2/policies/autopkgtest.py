@@ -705,7 +705,8 @@ class AutopkgtestPolicy(BasePolicy):
         try:
             if arch == "i386":
                 all_binaries_arch_all = True
-                for pkg_id in source_suite.sources[src]:
+                srcinfo = source_suite.sources[src]
+                for pkg_id in srcinfo.binaries:
                     if pkg_id.architecture != "all":
                         all_binaries_arch_all = False
                 if all_binaries_arch_all:
