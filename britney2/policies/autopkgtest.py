@@ -712,7 +712,7 @@ class AutopkgtestPolicy(BasePolicy):
                     self.logger.info('Source package %s has binaries which are all Architecture: all, and tests have been requested on %s, not running any tests for this src package',
                                      src,
                                      arch)
-                    return tests
+                    return []
         except Exception as e:
             self.logger.error('i386 useless autopkgtest check failed with: %s', e)
 
