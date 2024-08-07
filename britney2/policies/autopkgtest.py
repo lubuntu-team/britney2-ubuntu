@@ -705,15 +705,19 @@ class AutopkgtestPolicy(BasePolicy):
         try:
             if arch == "i386":
                 all_binaries_arch_all = True
-                srcinfo = source_suite.sources[src]
-                for pkg_id in srcinfo.binaries:
-                    if pkg_id.architecture != "all":
+                for package_name in binaries_info.keys():
+                    if binaries_info[package_name].architecture != "all":
                         all_binaries_arch_all = False
+                        break
                 if all_binaries_arch_all:
                     self.logger.info('Source package %s has binaries which are all Architecture: all, and tests have been requested on %s, not running any tests for this src package',
                                      src,
                                      arch)
                     return []
+                else:
+                    self.logger.info('Source package %s has binaries which are NOT Architecture: all, and tests have been requested on %s, running tests for this package',
+                                     src,
+                                     arch)
         except Exception as e:
             self.logger.error('i386 useless autopkgtest check failed with: %s', e)
 
