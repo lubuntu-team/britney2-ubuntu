@@ -706,7 +706,7 @@ class AutopkgtestPolicy(BasePolicy):
             if arch == "i386":
                 all_binaries_arch_all = True
                 for package_name in binaries_info.keys():
-                    if binaries_info[package_name].architecture != "all":
+                    if self.britney.all_binaries[package_name].architecture != 'all':
                         all_binaries_arch_all = False
                         break
                 if all_binaries_arch_all:
