@@ -32,6 +32,7 @@ import sqlite3
 import sys
 import hashlib
 import time
+import traceback
 import urllib.parse
 from urllib.error import HTTPError
 from urllib.request import urlopen
@@ -706,7 +707,8 @@ class AutopkgtestPolicy(BasePolicy):
             if arch == "i386":
                 all_binaries_arch_all = True
                 for package_name in binaries_info.keys():
-                    if self.britney.all_binaries[package_name].architecture != 'all':
+                    bin_arch = binaries_info[package_name].architecture or 'all'
+                    if bin_arch != 'all':
                         all_binaries_arch_all = False
                         break
                 if all_binaries_arch_all:
@@ -718,8 +720,8 @@ class AutopkgtestPolicy(BasePolicy):
                     self.logger.info('Source package %s has binaries which are NOT Architecture: all, and tests have been requested on %s, running tests for this package',
                                      src,
                                      arch)
-        except Exception as e:
-            self.logger.error('i386 useless autopkgtest check failed with: %s', e)
+        except Exception:
+            self.logger.error('i386 useless autopkgtest check failed with: %s', traceback.format_exc())
 
         # gcc-N triggers tons of tests via libgcc1, but this is mostly in vain:
         # gcc already tests itself during build, and it is being used from
