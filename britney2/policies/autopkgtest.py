@@ -752,16 +752,7 @@ class AutopkgtestPolicy(BasePolicy):
             if arch == "i386":
                 all_binaries_arch_all = True
                 for pkg_id in srcinfo.binaries:
-                    self.logger.info('Binary %s has arch %s for source package %s',
-                                     pkg_id.package_name,
-                                     pkg_id.architecture,
-                                     src,
-                    )
-                    self.logger.info('binaries_info reports arch as %s for binary package %s',
-                                     binaries_info[pkg_id.package_name].architecture,
-                                     pkg_id.package_name,
-                                     )
-                    if pkg_id.architecture != 'all':
+                    if binaries_info[pkg_id.package_name].architecture != 'all':
                         all_binaries_arch_all = False
                         break
                 if all_binaries_arch_all:
