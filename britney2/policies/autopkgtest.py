@@ -700,29 +700,6 @@ class AutopkgtestPolicy(BasePolicy):
         reported_pkgs = set()
 
         tests = []
-        # We don't want to run tests for src packages on i386 if all of the binary packages
-        # have Architecture: all. These are redundant for real world use cases as these deps
-        # are satisfied by amd64 binaries
-        try:
-            if arch == "i386":
-                all_binaries_arch_all = True
-                for package_name in binaries_info.keys():
-                    bin_arch = binaries_info[package_name].architecture or 'all'
-                    self.logger.info('Binary has arch %s for binary %s', bin_arch, package_name)
-                    if bin_arch != 'all':
-                        all_binaries_arch_all = False
-                        break
-                if all_binaries_arch_all:
-                    self.logger.info('Source package %s has binaries which are all Architecture: all, and tests have been requested on %s, not running any tests for this src package',
-                                     src,
-                                     arch)
-                    return []
-                else:
-                    self.logger.info('Source package %s has binaries which are NOT Architecture: all, and tests have been requested on %s, running tests for this package',
-                                     src,
-                                     arch)
-        except Exception:
-            self.logger.error('i386 useless autopkgtest check failed with: %s', traceback.format_exc())
 
         # gcc-N triggers tons of tests via libgcc1, but this is mostly in vain:
         # gcc already tests itself during build, and it is being used from
@@ -768,6 +745,37 @@ class AutopkgtestPolicy(BasePolicy):
         # we want to test the package itself, if it still has a test in unstable
         # but only if the package actually exists on this arch
         srcinfo = source_suite.sources[src]
+        # We don't want to run tests for src packages on i386 if all of the binary packages
+        # have Architecture: all. These are redundant for real world use cases as these deps
+        # are satisfied by amd64 binaries
+        try:
+            if arch == "i386":
+                all_binaries_arch_all = True
+                for pkg_id in srcinfo.binaries:
+                    self.logger.info('Binary %s has arch %s for source package %s',
+                                     pkg_id.package_name,
+                                     pkg_id.architecture,
+                                     src,
+                    )
+                    self.logger.info('binaries_info reports arch as %s for binary package %s',
+                                     binaries_info[pkg_id.package_name].architecture,
+                                     pkg_id.package_name,
+                                     )
+                    if pkg_id.architecture != 'all':
+                        all_binaries_arch_all = False
+                        break
+                if all_binaries_arch_all:
+                    self.logger.info('Source package %s has binaries which are all Architecture: all, and tests have been requested on %s, not running any tests for this src package',
+                                     src,
+                                     arch)
+                    return []
+                else:
+                    self.logger.info('Source package %s has binaries which are NOT Architecture: all, and tests have been requested on %s, running tests for this package',
+                                     src,
+                                     arch)
+        except Exception:
+            self.logger.error('i386 useless autopkgtest check failed with: %s', traceback.format_exc())
+
         if ('autopkgtest' in srcinfo.testsuite or self.has_autodep8(srcinfo, binaries_info)) and \
            len(excuse.packages[arch]) > 0:
             reported_pkgs.add(src)
