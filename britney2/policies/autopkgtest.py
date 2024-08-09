@@ -708,6 +708,7 @@ class AutopkgtestPolicy(BasePolicy):
                 all_binaries_arch_all = True
                 for package_name in binaries_info.keys():
                     bin_arch = binaries_info[package_name].architecture or 'all'
+                    self.logger.info('Binary has arch %s for binary %s', bin_arch, package_name)
                     if bin_arch != 'all':
                         all_binaries_arch_all = False
                         break
