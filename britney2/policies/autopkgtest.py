@@ -764,6 +764,8 @@ class AutopkgtestPolicy(BasePolicy):
                     self.logger.info('Source package %s has binaries which are NOT Architecture: all, and tests have been requested on %s, running tests for this package',
                                      src,
                                      arch)
+        except KeyError as err:
+            self.logger.error('i386 useless autopkgtest check failed with: KeyError: %s', err)
         except Exception:
             self.logger.error('i386 useless autopkgtest check failed with: %s', traceback.format_exc())
 
