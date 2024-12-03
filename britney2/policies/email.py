@@ -5,7 +5,7 @@ import math
 import socket
 import smtplib
 
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import unquote
 from collections import defaultdict
 
@@ -188,7 +188,7 @@ class EmailPolicy(BasePolicy, Rest):
                     "version": version,
                 },
             )
-        except urllib.error.URLError as e:
+        except URLError as e:
             self.logger.error("Error getting uploader from Launchpad for %s/%s: %s",
                               pkg, version, e.reason)
         try:
