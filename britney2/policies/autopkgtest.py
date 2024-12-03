@@ -876,7 +876,11 @@ class AutopkgtestPolicy(BasePolicy):
                 continue
             if run_id > latest_run_id:
                 latest_run_id = run_id
-        self.latest_run_for_package._cache[arch] = latest_run_id
+        try:
+            self.latest_run_for_package._cache[src][arch] = latest_run_id
+        except KeyError:
+            self.latest_run_for_package._cache[src] = {arch: latest_run_id}
+
         return latest_run_id
 
     latest_run_for_package._cache = collections.defaultdict(dict)
