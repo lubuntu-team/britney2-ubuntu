@@ -191,6 +191,7 @@ class EmailPolicy(BasePolicy, Rest):
         except URLError as e:
             self.logger.error("Error getting uploader from Launchpad for %s/%s: %s",
                               pkg, version, e.reason)
+            return []
         try:
             source = next(reversed(data["entries"]))
         # IndexError means no packages in -proposed matched this name/version,
