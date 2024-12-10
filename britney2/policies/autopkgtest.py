@@ -1177,7 +1177,7 @@ class AutopkgtestPolicy(BasePolicy):
                 self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params,
                                                              delivery_mode=2),  # persistent
                                                 routing_key=qname)
-            except ConnectionResetError:
+            except (ConnectionResetError, BrokenPipeError):
                 return False
         else:
             # for file-based submission, triggers are space separated
