@@ -4,7 +4,7 @@ import urllib.request
 import urllib.parse
 
 from collections import defaultdict
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 
 LAUNCHPAD_URL = "https://api.launchpad.net/1.0/"
@@ -39,7 +39,7 @@ class Rest:
                     % (url, 5 - retry - 1)
                 )
                 exc = e
-            except HTTPError as e:
+            except (HTTPError, URLError) as e:
                 if e.code not in (503, 502):
                     raise
                 self.logger.info(
