@@ -841,6 +841,10 @@ class AutopkgtestPolicy(BasePolicy):
                                     pass
                             break
 
+        # Filter tests to main packages on riscv64
+        if arch == "riscv64":
+            tests = [(src, version) for (src, version) in tests if sources_info[src].component == "main"]
+
         tests.sort(key=lambda s_v: s_v[0])
         return tests
 
@@ -1500,6 +1504,8 @@ class AutopkgtestPolicy(BasePolicy):
         '''Check if src/ver/arch has a force-badtest hint'''
 
         hints = self.hints.search('force-badtest', package=src)
+        if arch == 'riscv64':
+            return True # riscv64 is force-badtested implictly
         if hints:
             self.logger.info('Checking hints for %s/%s/%s: %s', src, ver, arch, [str(h) for h in hints])
             for hint in hints:
