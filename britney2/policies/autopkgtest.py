@@ -842,8 +842,12 @@ class AutopkgtestPolicy(BasePolicy):
                             break
 
         # Filter tests to main packages on riscv64
-        if arch == "riscv64":
-            tests = [(src, version) for (src, version) in tests if sources_info[src].component == "main"]
+        try:
+            # Filter tests to main packages on riscv64
+            if arch == "riscv64":
+                tests = [(src, version) for (src, version) in tests if sources_info[src].component == "main"]
+        except KeyError:  # Sometimes™, sources_info[src] raises KeyError
+            pass
 
         tests.sort(key=lambda s_v: s_v[0])
         return tests
