@@ -841,7 +841,10 @@ class AutopkgtestPolicy(BasePolicy):
                                     pass
                             break
 
-        # Filter tests to main packages on riscv64
+        # This block filtering riscv64 is kind of temporary:
+        # The goal is to stress test the autopkgtest infrastructure by having
+        # britney throw some tests at it, but we don't want the whole universe to come
+        # there either, hence the filtering on main.
         try:
             # Filter tests to main packages on riscv64
             if arch == "riscv64":
