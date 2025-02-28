@@ -845,12 +845,18 @@ class AutopkgtestPolicy(BasePolicy):
         # The goal is to stress test the autopkgtest infrastructure by having
         # britney throw some tests at it, but we don't want the whole universe to come
         # there either, hence the filtering on main.
+        self.logger.info(f"[riscv64] Checking if we should run a riscv64 test, arch is {arch}")
         try:
             # Filter tests to main packages on riscv64
             if arch == "riscv64":
+                self.logger.info("[riscv64] Arch detected as riscv64")
+                self.logger.info("[riscv64] pre-filtering tests: %s", tests)
                 tests = [(src, version) for (src, version) in tests if sources_info[src].component == "main"]
+                self.logger.info("[riscv64] post-filtering tests: %s", tests)
         except KeyError:  # Sometimes™, sources_info[src] raises KeyError
+            self.logger.info("[riscv64] KeyError while checking component")
             pass
+        self.logger.info("[riscv64] done checking for riscv64")
 
         tests.sort(key=lambda s_v: s_v[0])
         return tests
