@@ -851,7 +851,7 @@ class AutopkgtestPolicy(BasePolicy):
             if arch == "riscv64":
                 self.logger.info("[riscv64] Arch detected as riscv64")
                 self.logger.info("[riscv64] pre-filtering tests: %s", tests)
-                tests = [(src, version) for (src, version) in tests if sources_info[src].component == "main"]
+                tests = [(src, version) for (src, version) in tests if ((self.logger.info("[riscv64] souces info: %s", sources_info[src]) or True) and sources_info[src].component == "main")]
                 self.logger.info("[riscv64] post-filtering tests: %s", tests)
         except KeyError:  # Sometimes™, sources_info[src] raises KeyError
             self.logger.info("[riscv64] KeyError while checking component")
