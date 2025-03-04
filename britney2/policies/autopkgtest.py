@@ -38,7 +38,6 @@ from urllib.error import HTTPError
 from urllib.request import urlopen
 
 import apt_pkg
-import distro_info
 
 import britney2.hints
 
@@ -849,7 +848,7 @@ class AutopkgtestPolicy(BasePolicy):
         try:
             # Filter tests to main packages on riscv64 for Noble+
             if arch == "riscv64":
-                if self.options.series >= distro_info.UbuntuDistroInfo().codename("noble"):
+                if self.options.series not in ["focal", "jammy"]:
                     tests = [(src, version) for (src, version) in tests if sources_info[src].component == UbuntuComponent.MAIN]
                 else:
                     tests = []
