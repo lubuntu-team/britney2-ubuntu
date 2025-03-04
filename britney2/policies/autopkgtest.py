@@ -43,7 +43,7 @@ import britney2.hints
 
 from britney2 import SuiteClass
 from britney2.policies.policy import BasePolicy, PolicyVerdict
-from britney2.utils import iter_except
+from britney2.utils import iter_except, UbuntuComponent
 
 
 class Result(Enum):
@@ -845,18 +845,12 @@ class AutopkgtestPolicy(BasePolicy):
         # The goal is to stress test the autopkgtest infrastructure by having
         # britney throw some tests at it, but we don't want the whole universe to come
         # there either, hence the filtering on main.
-        self.logger.info(f"[riscv64] Checking if we should run a riscv64 test, arch is {arch}")
         try:
             # Filter tests to main packages on riscv64
             if arch == "riscv64":
-                self.logger.info("[riscv64] Arch detected as riscv64")
-                self.logger.info("[riscv64] pre-filtering tests: %s", tests)
-                tests = [(src, version) for (src, version) in tests if ((self.logger.info("[riscv64] sources info: %s - component: %s", sources_info[src], sources_info[src].component) or True) and sources_info[src].component == "main")]
-                self.logger.info("[riscv64] post-filtering tests: %s", tests)
+                tests = [(src, version) for (src, version) in tests if sources_info[src].component == UbuntuComponent.MAIN]
         except KeyError:  # Sometimes™, sources_info[src] raises KeyError
-            self.logger.info("[riscv64] KeyError while checking component")
             pass
-        self.logger.info("[riscv64] done checking for riscv64")
 
         tests.sort(key=lambda s_v: s_v[0])
         return tests
