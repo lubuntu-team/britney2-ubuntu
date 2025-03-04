@@ -38,6 +38,7 @@ from urllib.error import HTTPError
 from urllib.request import urlopen
 
 import apt_pkg
+import distro_info
 
 import britney2.hints
 
@@ -846,9 +847,12 @@ class AutopkgtestPolicy(BasePolicy):
         # britney throw some tests at it, but we don't want the whole universe to come
         # there either, hence the filtering on main.
         try:
-            # Filter tests to main packages on riscv64
+            # Filter tests to main packages on riscv64 for Noble+
             if arch == "riscv64":
-                tests = [(src, version) for (src, version) in tests if sources_info[src].component == UbuntuComponent.MAIN]
+                if self.options.series >= distro_info.UbuntuDistroInfo().codename("noble"):
+                    tests = [(src, version) for (src, version) in tests if sources_info[src].component == UbuntuComponent.MAIN]
+                else:
+                    tests = []
         except KeyError:  # Sometimes™, sources_info[src] raises KeyError
             pass
 
