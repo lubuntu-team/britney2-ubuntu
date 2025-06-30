@@ -359,6 +359,9 @@ def old_libraries(mi_factory, suite_info, outofsync_arches=frozenset()):
     for arch in binaries_t:
         for pkg_name in binaries_t[arch]:
             pkg = binaries_t[arch][pkg_name]
+            # FIXME: If linux-meta packages are old we break the suite consistency.
+            if pkg.source.startswith("linux-meta"):
+                continue
             if sources_t[pkg.source].version != pkg.source_version and \
                     (arch not in outofsync_arches or pkg_name not in binaries_s[arch]):
                 removals.append(mi_factory.generate_removal_for_cruft_item(pkg.pkg_id))
