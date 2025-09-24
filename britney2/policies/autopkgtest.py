@@ -788,6 +788,15 @@ class AutopkgtestPolicy(BasePolicy):
                     except KeyError:
                         pass
 
+        # Nothing actually depends on rust-coreutils. so pretend we
+        # build the actual coreutils binary which some stuff depends
+        # on, so new versions get testing.
+        if src == "rust-coreutils":
+            try:
+                extra_bins.append(binaries_info['coreutils'].pkg_id)
+            except KeyError:
+                pass
+
         pkg_universe = self.britney.pkg_universe
         # plus all direct reverse dependencies and test triggers of its
         # binaries which have an autopkgtest
