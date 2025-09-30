@@ -382,6 +382,11 @@ class DebMirrorLikeSuiteContentLoader(SuiteContentLoader):
                 provides = []
 
             raw_arch = intern(get_field('Architecture'))
+            # FIXME: Make this configurable.
+            # If a base architecture is used in an architecture variant package file, promote
+            # it to the variant architecture.
+            if arch == "amd64v3" and raw_arch == "amd64":
+                raw_arch = "amd64v3"
             if raw_arch not in {'all', arch}:  # pragma: no cover
                 raise AssertionError("%s has wrong architecture (%s) - should be either %s or all" % (
                     str(pkg_id), raw_arch, arch))
