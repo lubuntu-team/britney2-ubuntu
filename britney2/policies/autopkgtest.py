@@ -861,6 +861,10 @@ class AutopkgtestPolicy(BasePolicy):
                     tests = [(src, version) for (src, version) in tests if sources_info[src].component == UbuntuComponent.MAIN]
                 else:
                     tests = []
+
+            # Drop *all* the riscv64 tests for now. To be dropped once
+            # we get a working autopkgtest infra for riscv64.
+            tests = []
         except KeyError:  # Sometimes™, sources_info[src] raises KeyError
             pass
 
