@@ -41,6 +41,7 @@ class Rest:
                 exc = e
             except (HTTPError, URLError) as e:
                 if e.code not in (503, 502):
+                    self.logger.error("Caught error %d downloading '%s'", e.code, url)
                     raise
                 self.logger.info(
                     "Caught error %d downloading '%s', will retry %d more times."
