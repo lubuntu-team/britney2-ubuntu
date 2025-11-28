@@ -158,11 +158,17 @@ class EmailPolicy(BasePolicy, Rest):
                 return None
             return address
         except HTTPError as e:
-            if e.code != 410:  # suspended user
+            if e.code == 404:  # missing user
+                self.logger.warning(
+                    "Person %s missing from Ubuntu keyserver" % person
+                )
+            elif e.code == 410:  # suspended user
+                self.logger.info(
+                    "Ignoring person %s as suspended in Launchpad" % person
+                )
+            else:
                 raise
-            self.logger.info(
-                "Ignoring person %s as suspended in Launchpad" % person
-            )
+
             return None
 
     def scrape_gpg_emails(self, people):
