@@ -24,7 +24,7 @@ Please visit the excuses page listed below and investigate the failures, proceed
 
 https://ubuntu-archive-team.ubuntu.com/proposed-migration/{series_name}/update_excuses.html#{source_name}
 
-[1] https://wiki.ubuntu.com/StableReleaseUpdates#Autopkgtest_Regressions
+[1] https://documentation.ubuntu.com/project/SRU/howto/autopkgtest-failure/
 
 Thank you!
 """  # noqa:E501

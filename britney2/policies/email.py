@@ -43,7 +43,7 @@ You either sponsored or uploaded this package, please investigate why it hasn't 
 
 https://ubuntu-archive-team.ubuntu.com/proposed-migration/{series}/update_excuses.html#{source_name}
 
-https://wiki.ubuntu.com/ProposedMigration
+https://documentation.ubuntu.com/project/how-ubuntu-is-made/processes/proposed-migration/
 
 If you have any questions about this email, please ask them in #ubuntu-release channel on libera.chat.
 
