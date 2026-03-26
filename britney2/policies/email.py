@@ -41,9 +41,9 @@ It has been stuck in {series}-proposed for {age} day{plural}.
 
 You either sponsored or uploaded this package, please investigate why it hasn't been approved for migration.
 
-http://people.canonical.com/~ubuntu-archive/proposed-migration/{series}/update_excuses.html#{source_name}
+https://ubuntu-archive-team.ubuntu.com/proposed-migration/{series}/update_excuses.html#{source_name}
 
-https://wiki.ubuntu.com/ProposedMigration
+https://documentation.ubuntu.com/project/how-ubuntu-is-made/processes/proposed-migration/
 
 If you have any questions about this email, please ask them in #ubuntu-release channel on libera.chat.
 

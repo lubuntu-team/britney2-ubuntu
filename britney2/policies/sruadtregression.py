@@ -22,9 +22,9 @@ The following regressions have been reported in tests triggered by the package:
 
 Please visit the excuses page listed below and investigate the failures, proceeding afterwards as per the StableReleaseUpdates policy regarding autopkgtest regressions [1].
 
-https://people.canonical.com/~ubuntu-archive/proposed-migration/{series_name}/update_excuses.html#{source_name}
+https://ubuntu-archive-team.ubuntu.com/proposed-migration/{series_name}/update_excuses.html#{source_name}
 
-[1] https://wiki.ubuntu.com/StableReleaseUpdates#Autopkgtest_Regressions
+[1] https://documentation.ubuntu.com/project/SRU/howto/autopkgtest-failure/
 
 Thank you!
 """  # noqa:E501
