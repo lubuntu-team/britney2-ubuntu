@@ -1430,14 +1430,12 @@ class AutopkgtestPolicy(BasePolicy):
                                    run_id,
                                    'log.gz')
             else:
-                url = os.path.join(self.options.adt_swift_url,
-                                   self.swift_container,
+                url = os.path.join(self.options.adt_ci_url,
+                                   'packages',
+                                   src,
                                    self.options.series,
                                    arch,
-                                   srchash(src),
-                                   src,
-                                   run_id,
-                                   'log.gz')
+                                   run_id)
         except KeyError:
             # no result for src/arch; still running?
             if arch in self.pending_tests.get(trigger, {}).get(src, []):
