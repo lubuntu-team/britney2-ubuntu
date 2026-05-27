@@ -1521,8 +1521,6 @@ class AutopkgtestPolicy(BasePolicy):
         '''Check if src/ver/arch has a force-badtest hint'''
 
         hints = self.hints.search('force-badtest', package=src)
-        if arch == 'riscv64':
-            return True # riscv64 is force-badtested implictly
         if hints:
             self.logger.info('Checking hints for %s/%s/%s: %s', src, ver, arch, [str(h) for h in hints])
             for hint in hints:
