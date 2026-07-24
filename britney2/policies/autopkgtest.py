@@ -850,23 +850,22 @@ class AutopkgtestPolicy(BasePolicy):
                                     pass
                             break
 
-        # This block filtering riscv64 is kind of temporary:
-        # The goal is to stress test the autopkgtest infrastructure by having
-        # britney throw some tests at it, but we don't want the whole universe to come
-        # there either, hence the filtering on main.
-        try:
-            # Filter tests to main packages on riscv64 for Noble+
-            if arch == "riscv64":
-                if self.options.series not in ["focal", "jammy"]:
-                    tests = [(src, version) for (src, version) in tests if sources_info[src].component == UbuntuComponent.MAIN]
-                else:
-                    tests = []
-
-                # Drop *all* the riscv64 tests for now. To be dropped once
-                # we get a working autopkgtest infra for riscv64.
+        # Run only selected riscv64 tests.
+        if arch == "riscv64":
+            if self.options.series in ["focal", "jammy"]:
+                # We don't run tests for riscv64 packages in Focal, Jammy.
                 tests = []
-        except KeyError:  # Sometimes™, sources_info[src] raises KeyError
-            pass
+            else:
+                # Only tests riscv64 packages in main, due to slowness of emulated testbeds.
+                tests = [
+                    (src, version)
+                    for (src, version) in tests
+                    if src in sources_info and sources_info[src].component == UbuntuComponent.MAIN
+                ]
+
+            # Drop *all* the riscv64 tests for now. To be dropped once
+            # we get a working autopkgtest infra for riscv64.
+            tests = []
 
         tests.sort(key=lambda s_v: s_v[0])
         return tests
