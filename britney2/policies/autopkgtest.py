@@ -850,6 +850,15 @@ class AutopkgtestPolicy(BasePolicy):
                                     pass
                             break
 
+        # Run only selected s390x tests.
+        if arch == "s390x":
+            # Only tests s390x packages in main, due to current infrastructure issues
+            tests = [
+                (src, version)
+                for (src, version) in tests
+                if src in sources_info and sources_info[src].component == UbuntuComponent.MAIN
+            ]
+
         # Run only selected riscv64 tests.
         if arch == "riscv64":
             if self.options.series in ["focal", "jammy"]:
