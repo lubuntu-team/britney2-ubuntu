@@ -686,6 +686,9 @@ class AutopkgtestPolicy(BasePolicy):
 
         for (testsrc, testver) in tests:
             self.pkg_test_request(testsrc, arch, triggers_list, huge=is_huge)
+            if arch == "riscv64":
+                # Enqueue only: riscv64 results neither block nor are waited for
+                continue
             (result, real_ver, run_id, url) = self.pkg_test_result(testsrc, testver, arch, trigger)
             pkg_arch_result[(testsrc, real_ver)][arch] = (result, run_id, url)
 
@@ -871,10 +874,6 @@ class AutopkgtestPolicy(BasePolicy):
                     for (src, version) in tests
                     if src in sources_info and sources_info[src].component == UbuntuComponent.MAIN
                 ]
-
-            # Drop *all* the riscv64 tests for now. To be dropped once
-            # we get a working autopkgtest infra for riscv64.
-            tests = []
 
         tests.sort(key=lambda s_v: s_v[0])
         return tests
