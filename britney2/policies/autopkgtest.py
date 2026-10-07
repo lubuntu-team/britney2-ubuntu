@@ -253,8 +253,7 @@ class AutopkgtestPolicy(BasePolicy):
         if self.options.adt_swift_user:
             if (not self.options.adt_swift_pass or
                     not self.options.adt_swift_auth_url or
-                    not self.options.adt_swift_project or
-                    not self.options.adt_swift_region):
+                    not self.options.adt_swift_project):
                 raise RuntimeError('Incomplete swift credentials given')
 
             # once swift credentials are given, the results will be published
