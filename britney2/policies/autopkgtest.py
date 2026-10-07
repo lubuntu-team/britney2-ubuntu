@@ -32,7 +32,7 @@ import sqlite3
 import sys
 import time
 import urllib.parse
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 import apt_pkg
@@ -924,7 +924,7 @@ class AutopkgtestPolicy(BasePolicy):
                 code = req.getcode()
                 if not code or 200 <= code < 300:
                     return req
-            except socket.timeout as e:
+            except (socket.timeout, URLError) as e:
                 self.logger.info(
                     "Timeout downloading '%s', will retry %d more times."
                     % (url, 5 - retry - 1)
