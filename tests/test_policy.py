@@ -1,7 +1,12 @@
 import apt_pkg
+import http.client
 import os
+import socket
+import sys
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError, URLError
 
 from britney2 import Suites, Suite, SuiteClass, SourcePackage, BinaryPackageId, BinaryPackage
 from britney2.excuse import Excuse
@@ -74,6 +79,34 @@ def initialize_policy(test_name, policy_class, *args, **kwargs):
     hint_parser.parse_hints(TEST_HINTER, HINTS_ALL, 'test-%s' % test_name, hints)
     policy.hints = hint_parser.hints
     return policy
+
+
+def fake_clock(testcase):
+    '''Make time.sleep() advance time.monotonic() instead of waiting
+
+    The current time is testcase.now, the delays slept are in testcase.sleeps.
+    '''
+    testcase.now = 0
+    testcase.sleeps = []
+
+    def sleep(delay):
+        testcase.sleeps.append(delay)
+        testcase.now += delay
+
+    for name, fake in (('monotonic', lambda: testcase.now), ('sleep', sleep)):
+        patcher = patch('time.' + name, side_effect=fake)
+        patcher.start()
+        testcase.addCleanup(patcher.stop)
+
+
+def http_response(code, content=b'', read_error=None):
+    '''Mock what urlopen() returns'''
+    response = MagicMock()
+    response.__enter__.return_value = response
+    response.getcode.return_value = code
+    response.read.return_value = content
+    response.read.side_effect = read_error
+    return response
 
 
 def create_excuse(name, pkgs):
@@ -614,6 +647,164 @@ class TestAutopkgtestPolicy(unittest.TestCase):
             'packages/' + src_name[0] + '/' + src_name + '/testing/amd64'
         amqp = self.read_amqp()
         assert 'migration-reference/0' in amqp
+
+
+class TestAutopkgtestAMQP(unittest.TestCase):
+
+    def setUp(self):
+        # amqplib is not necessarily installed, and we don't want to talk to a
+        # real AMQP server anyway
+        self.amqp = MagicMock()
+        self.amqp.Connection.side_effect = lambda *args, **kwargs: MagicMock()
+        modules = patch.dict(sys.modules, {'amqplib': MagicMock(client_0_8=self.amqp),
+                                           'amqplib.client_0_8': self.amqp})
+        modules.start()
+        self.addCleanup(modules.stop)
+        fake_clock(self)
+        self.policy = initialize_policy('autopkgtest/pass-to-pass', AutopkgtestPolicy,
+                                        adt_amqp='amqp://user:pass@localhost')
+        self.con = self.policy.amqp_con
+
+    def test_reconnect_on_connection_reset(self):
+        self.con.channel.return_value.basic_publish.side_effect = \
+            ConnectionResetError(104, 'Connection reset by peer')
+        dead_sock = self.con.transport.sock
+
+        assert self.policy.send_test_request('pkg', ARCH, ['pkg/2.0'])
+
+        dead_sock.close.assert_called_once_with()
+        assert self.con.transport.sock is None
+        assert self.amqp.Connection.call_count == 2
+        assert self.amqp.Connection.call_args[1]['connect_timeout'] == 30
+        assert self.policy.amqp_con is not self.con
+        self.policy.amqp_con.transport.sock.settimeout.assert_called_once_with(30)
+        new_channel = self.policy.amqp_con.channel.return_value
+        new_channel.basic_publish.assert_called_once_with(self.amqp.Message.return_value,
+                                                          routing_key='debci-testing-' + ARCH)
+        assert self.amqp.Message.call_args[0][0].startswith('pkg\n{"triggers": ["pkg/2.0"]')
+        assert self.sleeps == []
+
+    def test_retry_reconnecting(self):
+        self.con.channel.return_value.basic_publish.side_effect = \
+            ConnectionResetError(104, 'Connection reset by peer')
+        flaky_con = MagicMock()
+        flaky_con.channel.return_value.basic_publish.side_effect = BrokenPipeError(32, 'Broken pipe')
+        flaky_sock = flaky_con.transport.sock
+        good_con = MagicMock()
+        self.amqp.Connection.side_effect = [ConnectionRefusedError(111, 'Connection refused'),
+                                            flaky_con, good_con]
+
+        assert self.policy.send_test_request('pkg', ARCH, ['pkg/2.0'])
+
+        assert self.sleeps == [5, 10]
+        flaky_sock.close.assert_called_once_with()
+        assert flaky_con.transport.sock is None
+        assert self.policy.amqp_con is good_con
+        good_con.channel.return_value.basic_publish.assert_called_once_with(
+            self.amqp.Message.return_value, routing_key='debci-testing-' + ARCH)
+
+    def test_give_up_when_reconnect_fails(self):
+        self.con.channel.return_value.basic_publish.side_effect = BrokenPipeError(32, 'Broken pipe')
+        # what amqplib raises when the connection is refused
+        self.amqp.Connection.side_effect = UnboundLocalError("local variable 'msg' referenced before assignment")
+
+        assert not self.policy.send_test_request('pkg', ARCH, ['pkg/2.0'])
+        # we tried to reconnect for up to 3 minutes
+        assert self.sleeps == [5, 10, 20, 40, 60]
+        assert self.amqp.Connection.call_count == 1 + 6
+        assert not self.policy.send_test_request('pkg', ARCH, ['pkg/2.0'])
+
+        # we didn't try to reconnect again
+        assert self.amqp.Connection.call_count == 1 + 6
+        assert self.con.channel.return_value.basic_publish.call_count == 1
+
+    def test_retry_connecting(self):
+        self.amqp.Connection.side_effect = [UnboundLocalError("local variable 'msg' referenced before assignment"),
+                                            MagicMock()]
+
+        policy = initialize_policy('autopkgtest/pass-to-pass', AutopkgtestPolicy,
+                                   adt_amqp=self.policy.options.adt_amqp)
+
+        assert policy.amqp_channel is policy.amqp_con.channel.return_value
+        assert self.sleeps == [5]
+
+    def test_unsent_request_holds_back(self):
+        src_name = 'pkg'
+        policy = initialize_policy(
+            'autopkgtest/pass-to-new',
+            AutopkgtestPolicy,
+            adt_amqp=self.policy.options.adt_amqp,
+            adt_show_irrelevant=False,
+            pkg_universe=simple_universe,
+            inst_tester=simple_inst_tester)
+        # ignore the pending tests left behind by other tests
+        policy.pending_tests = {}
+        con = policy.amqp_con
+        con.channel.return_value.basic_publish.side_effect = BrokenPipeError(32, 'Broken pipe')
+        self.amqp.Connection.side_effect = UnboundLocalError("local variable 'msg' referenced before assignment")
+
+        autopkgtest_policy_info = apply_src_policy(policy, PolicyVerdict.REJECTED_TEMPORARILY, src_name)
+
+        con.channel.return_value.basic_publish.assert_called_once()
+        assert autopkgtest_policy_info[src_name][ARCH][0] == 'RUNNING'
+        # not pending, so that the next run requests it
+        assert ARCH not in policy.pending_tests.get(src_name + '/2.0', {}).get(src_name, [])
+
+
+class TestAutopkgtestDownloadRetry(unittest.TestCase):
+
+    URL = 'https://objectstorage.example.com/results.tar'
+
+    def setUp(self):
+        fake_clock(self)
+        self.policy = initialize_policy('autopkgtest/pass-to-pass', AutopkgtestPolicy,
+                                        adt_amqp='file:///dev/null')
+        urlopen = patch('britney2.policies.autopkgtest.urlopen')
+        self.urlopen = urlopen.start()
+        self.addCleanup(urlopen.stop)
+
+    def test_retry_transient_errors(self):
+        self.urlopen.side_effect = [
+            URLError(ConnectionRefusedError(111, 'Connection refused')),
+            HTTPError(self.URL, 503, 'Service Unavailable', {}, None),
+            http_response(200, read_error=http.client.IncompleteRead(b'partial')),
+            http_response(200, b'results'),
+        ]
+
+        assert self.policy.download_retry(self.URL) == (200, b'results')
+        assert self.sleeps == [5, 10, 20]
+        self.urlopen.assert_called_with(self.URL, timeout=30)
+
+    def test_no_retry_on_permanent_errors(self):
+        for error in (HTTPError(self.URL, 404, 'Not Found', {}, None),
+                      URLError(FileNotFoundError(2, 'No such file or directory'))):
+            self.urlopen.side_effect = error
+            with self.assertRaises(URLError) as cm:
+                self.policy.download_retry(self.URL)
+            assert cm.exception is error
+        assert self.urlopen.call_count == 2
+        assert self.sleeps == []
+
+    def test_give_up_after_3_minutes(self):
+        def time_out(url, timeout):
+            self.now += timeout
+            raise socket.timeout('timed out')
+        self.urlopen.side_effect = time_out
+
+        with self.assertRaises(IOError):
+            self.policy.download_retry(self.URL)
+        assert self.urlopen.call_count == 4
+        assert self.sleeps == [5, 10, 20]
+        assert self.now <= 3 * 60
+
+    def test_broken_responses_raised_as_ioerror(self):
+        # the only errors the fetch_*() callers handle
+        self.urlopen.side_effect = http.client.BadStatusLine('')
+
+        with self.assertRaises(IOError) as cm:
+            self.policy.download_retry(self.URL)
+        assert isinstance(cm.exception.reason, http.client.BadStatusLine)
+        assert self.sleeps == [5, 10, 20, 40, 60]
 
 
 if __name__ == '__main__':
