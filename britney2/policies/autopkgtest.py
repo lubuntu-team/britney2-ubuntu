@@ -21,13 +21,13 @@ import collections
 from copy import deepcopy
 from datetime import datetime
 from enum import Enum
+import http.client
 import os
 import json
 import tarfile
 import io
 import itertools
 import re
-import socket
 import sqlite3
 import sys
 import time
@@ -72,6 +72,28 @@ EXCUSES_LABELS = {
 REF_TRIG = 'migration-reference/0'
 
 SECPERDAY = 24 * 60 * 60
+
+# Transient network or server errors (downloading results, sending test
+# requests) are retried with an exponential backoff (RETRY_FIRST_DELAY seconds,
+# doubled after each failure up to RETRY_MAX_DELAY), as long as the next
+# attempt can time out within RETRY_TIMEOUT seconds from the first one
+RETRY_TIMEOUT = 180
+RETRY_FIRST_DELAY = 5
+RETRY_MAX_DELAY = 60
+# timeout of a single network operation (connecting, waiting for data)
+NETWORK_TIMEOUT = 30
+
+
+def is_transient_download_error(error):
+    '''Return whether a download error is worth retrying'''
+
+    # HTTP client errors (4XX) are permanent, unlike server ones (5XX)
+    if isinstance(error, HTTPError):
+        return error.code >= 500
+    # missing files (file:// URLs) won't appear by waiting
+    if isinstance(error, URLError) and isinstance(error.reason, FileNotFoundError):
+        return False
+    return isinstance(error, (OSError, http.client.HTTPException))
 
 
 def srchash(src):
@@ -122,6 +144,9 @@ class AutopkgtestPolicy(BasePolicy):
         # tests requested in this and previous runs
         # trigger -> src -> [arch]
         self.pending_tests = None
+        # (trigger, src, arch) of tests we could not request in this run; they
+        # are not saved in pending_tests, so that the next run requests them
+        self.unsent_requests = set()
         self.pending_tests_file = os.path.join(self.state_dir, 'autopkgtest-pending.json')
         self.testsuite_triggers = {}
         self.result_in_baseline_cache = collections.defaultdict(dict)
@@ -182,7 +207,10 @@ class AutopkgtestPolicy(BasePolicy):
     def fetch_db(self):
         f = None
         try:
-            f = self.download_retry(self.options.adt_db_url)
+            # not download_retry(): the database is too big to be read in memory
+            f = self.retry_transient("Downloading '%s'" % self.options.adt_db_url,
+                                     lambda: urlopen(self.options.adt_db_url, timeout=NETWORK_TIMEOUT),
+                                     is_transient_download_error)
             http_code = f.getcode()
             # file:/// urls don't have the http niceties
             if not http_code or http_code == 200:
@@ -200,7 +228,7 @@ class AutopkgtestPolicy(BasePolicy):
                     os.rename(new_file, self.database_path)
             else:
                 self.logger.error('Failure to fetch autopkgtest results %s: HTTP code=%d', self.options.adt_db_url, f.getcode())
-        except IOError as e:
+        except (IOError, http.client.HTTPException) as e:
             self.logger.error('Failure to fetch autopkgtest results %s: %s', self.options.adt_db_url, str(e))
         finally:
             if f is not None:
@@ -347,6 +375,7 @@ class AutopkgtestPolicy(BasePolicy):
         self.britney = britney
 
         # Initialize AMQP connection
+        self.amqp_con = None
         self.amqp_channel = None
         self.amqp_file = None
         if self.options.dry_run:
@@ -355,18 +384,37 @@ class AutopkgtestPolicy(BasePolicy):
         amqp_url = self.options.adt_amqp
 
         if amqp_url.startswith('amqp://'):
-            import amqplib.client_0_8 as amqp
             # depending on the setup we connect to a AMQP server
-            creds = urllib.parse.urlsplit(amqp_url, allow_fragments=False)
-            self.amqp_con = amqp.Connection(creds.hostname, userid=creds.username,
-                                            password=creds.password)
-            self.amqp_channel = self.amqp_con.channel()
-            self.logger.info('Connected to AMQP server')
+            self.retry_transient('Connecting to AMQP server', self._amqp_connect)
         elif amqp_url.startswith('file://'):
             # or in Debian and in testing mode, adt_amqp will be a file:// URL
             self.amqp_file = amqp_url[7:]
         else:
             raise RuntimeError('Unknown ADT_AMQP schema %s' % amqp_url.split(':', 1)[0])
+
+    def _amqp_connect(self):
+        '''(Re)connect to the AMQP server and open the channel test requests are sent to
+
+        Beware that amqplib doesn't only raise OSError, but also e. g.
+        UnboundLocalError when the connection is refused, or AMQPException on
+        protocol errors.
+        '''
+        import amqplib.client_0_8 as amqp
+        if self.amqp_con is not None and self.amqp_con.transport.sock is not None:
+            # amqplib can't close a dead connection cleanly, drop its socket
+            # ourselves or its finalizer complains about it with
+            # "OSError: [Errno 107] Transport endpoint is not connected"
+            self.amqp_con.transport.sock.close()
+            self.amqp_con.transport.sock = None
+        creds = urllib.parse.urlsplit(self.options.adt_amqp, allow_fragments=False)
+        self.amqp_con = amqp.Connection(creds.hostname, userid=creds.username,
+                                        password=creds.password,
+                                        connect_timeout=NETWORK_TIMEOUT)
+        # amqplib only has a timeout for establishing the TCP connection, don't
+        # wait forever on an unresponsive server afterwards either
+        self.amqp_con.transport.sock.settimeout(NETWORK_TIMEOUT)
+        self.amqp_channel = self.amqp_con.channel()
+        self.logger.info('Connected to AMQP server')
 
     def check_and_upgrade_cache(self, test_results):
         for result in all_leaf_results(test_results):
@@ -917,29 +965,43 @@ class AutopkgtestPolicy(BasePolicy):
 
     latest_run_for_package._cache = collections.defaultdict(dict)
 
-    def download_retry(self, url):
-        for retry in range(5):
+    def retry_transient(self, description, attempt, is_transient_error=lambda error: True):
+        '''Return attempt(), retrying it on transient errors
+
+        Errors for which is_transient_error(error) is true (by default, all of
+        them) are retried with an exponential backoff, as long as the next
+        attempt can time out (NETWORK_TIMEOUT) within RETRY_TIMEOUT seconds
+        from the first one. Other errors, and the last transient one, are
+        raised.
+        '''
+        deadline = time.monotonic() + RETRY_TIMEOUT
+        delay = RETRY_FIRST_DELAY
+        while True:
             try:
-                req = urlopen(url, timeout=30)
-                code = req.getcode()
-                if not code or 200 <= code < 300:
-                    return req
-            except (socket.timeout, URLError) as e:
-                self.logger.info(
-                    "Timeout downloading '%s', will retry %d more times."
-                    % (url, 5 - retry - 1)
-                )
-                exc = e
-            except HTTPError as e:
-                if e.code not in (503, 502):
+                return attempt()
+            except Exception as e:
+                if not is_transient_error(e) or time.monotonic() + delay + NETWORK_TIMEOUT > deadline:
                     raise
-                self.logger.info(
-                    "Caught error %d downloading '%s', will retry %d more times."
-                    % (e.code, url, 5 - retry - 1)
-                )
-                exc = e
-        else:
-            raise exc
+                self.logger.info('%s failed (%r), retrying in %s seconds', description, e, delay)
+            time.sleep(delay)
+            delay = min(2 * delay, RETRY_MAX_DELAY)
+
+    def download_retry(self, url):
+        '''Download url, retrying on transient errors (see retry_transient())
+
+        Return the HTTP status code and the content. Errors are raised as
+        IOError (HTTPError for HTTP ones).
+        '''
+        def download():
+            try:
+                with urlopen(url, timeout=NETWORK_TIMEOUT) as f:
+                    return f.getcode(), f.read()
+            except http.client.HTTPException as e:
+                # broken response, or connection lost while reading it
+                # (IncompleteRead): raise it like urllib does network errors
+                raise URLError(e) from e
+
+        return self.retry_transient("Downloading '%s'" % url, download, is_transient_download_error)
 
     def fetch_swift_results(self, swift_url, src, arch):
         '''Download new results for source package/arch from swift'''
@@ -991,19 +1053,18 @@ class AutopkgtestPolicy(BasePolicy):
             url = os.path.join(swift_url, self.swift_container)
             # XXX: Workaround for PS5 swift deployment - container name needs to be suffixed with /
             url += '/?' + urllib.parse.urlencode(query)
-            f = None
             try:
-                f = self.download_retry(url)
-                if f.getcode() == 200:
-                    result_paths = f.read().decode().strip().splitlines()
-                elif f.getcode() == 204:  # No content
+                code, content = self.download_retry(url)
+                if code == 200:
+                    result_paths = content.decode().strip().splitlines()
+                elif code == 204:  # No content
                     result_paths = []
                 else:
                     # we should not ever end up here as we expect a HTTPError in
                     # other cases; e. g. 3XX is something that tells us to adjust
                     # our URLS, so fail hard on those
                     raise NotImplementedError('fetch_swift_results(%s): cannot handle HTTP code %i' %
-                                              (url, f.getcode()))
+                                              (url, code))
             except IOError as e:
                 # 401 "Unauthorized" is swift's way of saying "container does not exist"
                 if hasattr(e, 'code') and (e.code == 401 or e.code == 404):
@@ -1012,9 +1073,6 @@ class AutopkgtestPolicy(BasePolicy):
                 # same as above in the swift authenticated case
                 self.logger.error('Failure to fetch swift results from %s: %s', url, str(e))
                 sys.exit(1)
-            finally:
-                if f is not None:
-                    f.close()
 
         for p in result_paths:
             self.fetch_one_result(
@@ -1028,7 +1086,6 @@ class AutopkgtestPolicy(BasePolicy):
         Remove matching pending_tests entries.
         '''
 
-        f = None
         try:
             if self.swift_conn:
                 from swiftclient.exceptions import ClientException
@@ -1047,12 +1104,12 @@ class AutopkgtestPolicy(BasePolicy):
                 tar_bytes = io.BytesIO(contents)
             else:
                 url = os.path.join(swift_url, container, path, name)
-                f = self.download_retry(url)
-                if f.getcode() == 200:
-                    tar_bytes = io.BytesIO(f.read())
+                code, content = self.download_retry(url)
+                if code == 200:
+                    tar_bytes = io.BytesIO(content)
                 else:
                     raise NotImplementedError('fetch_one_result(%s): cannot handle HTTP code %i' %
-                                              (url, f.getcode()))
+                                              (url, code))
         except IOError as e:
             self.logger.error('Failure to fetch %s: %s', url, str(e))
             # we tolerate "not found" (something went wrong on uploading the
@@ -1060,9 +1117,6 @@ class AutopkgtestPolicy(BasePolicy):
             if hasattr(e, 'code') and e.code == 404:
                 return
             sys.exit(1)
-        finally:
-            if f is not None:
-                f.close()
         try:
             with tarfile.open(None, 'r', tar_bytes) as tar:
                 exitcode = int(tar.extractfile('exitcode').read().strip())
@@ -1255,12 +1309,31 @@ class AutopkgtestPolicy(BasePolicy):
         if self.amqp_channel:
             import amqplib.client_0_8 as amqp
             params = json.dumps(params)
+            message = amqp.Message(src + '\n' + params, delivery_mode=2)  # persistent
             try:
-                self.amqp_channel.basic_publish(amqp.Message(src + '\n' + params,
-                                                             delivery_mode=2),  # persistent
-                                                routing_key=qname)
-            except (ConnectionResetError, BrokenPipeError):
-                return False
+                self.amqp_channel.basic_publish(message, routing_key=qname)
+            except OSError as e:
+                # amqplib can't reconnect by itself, and a connection whose
+                # socket died can't be reused: open a new one and retry
+                self.logger.warning('Lost connection to AMQP server (%r), reconnecting', e)
+
+                # We use a closure to allow for the retry in the case the
+                # connect works but the basic_publish fails again.
+                def reconnect_and_publish():
+                    self._amqp_connect()
+                    self.amqp_channel.basic_publish(message, routing_key=qname)
+
+                try:
+                    self.retry_transient('Reconnecting to AMQP server', reconnect_and_publish)
+                except Exception as e:
+                    self.logger.error('Could not reconnect to AMQP server (%r), '
+                                      'not requesting any more tests in this run', e)
+                    self.amqp_channel = None
+                    return False
+        elif self.amqp_con:
+            # we gave up on the AMQP server, the tests will be requested again
+            # in the next run
+            return False
         else:
             # for file-based submission, triggers are space separated
             params['triggers'] = [' '.join(params['triggers'])]
@@ -1344,6 +1417,10 @@ class AutopkgtestPolicy(BasePolicy):
                 arch_list.append(arch)
                 arch_list.sort()
                 self.save_pending_json()
+            else:
+                self.logger.warning('Could not request %s autopkgtest on %s to verify %s, '
+                                    'will try again in the next run', src, arch, trigger)
+                self.unsent_requests.add((trigger, src, arch))
 
     def result_in_baseline(self, src, arch):
         '''Get the result for src on arch in the baseline
@@ -1496,8 +1573,10 @@ class AutopkgtestPolicy(BasePolicy):
                                    run_id,
                                    'log.gz')
         except KeyError:
-            # no result for src/arch; still running?
-            if arch in self.pending_tests.get(trigger, {}).get(src, []):
+            # no result for src/arch; still running? Tests we could not request
+            # in this run are considered so, to hold their trigger back
+            if arch in self.pending_tests.get(trigger, {}).get(src, []) or \
+                    (trigger, src, arch) in self.unsent_requests:
                 baseline_result = self.result_in_baseline(src, arch)[0]
                 if baseline_result != Result.FAIL and not self.has_force_badtest(src, ver, arch):
                     result = 'RUNNING'
