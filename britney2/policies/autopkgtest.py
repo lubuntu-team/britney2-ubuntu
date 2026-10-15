@@ -82,6 +82,9 @@ RETRY_FIRST_DELAY = 5
 RETRY_MAX_DELAY = 60
 # timeout of a single network operation (connecting, waiting for data)
 NETWORK_TIMEOUT = 30
+# when fetching results failed for that many src/arch in a row (about an hour
+# of retries), stop fetching results from swift for the rest of the run
+MAX_CONSECUTIVE_FETCH_FAILURES = 24
 
 
 def is_transient_download_error(error):
@@ -147,6 +150,11 @@ class AutopkgtestPolicy(BasePolicy):
         # (trigger, src, arch) of tests we could not request in this run; they
         # are not saved in pending_tests, so that the next run requests them
         self.unsent_requests = set()
+        # "src/arch" -> error, for results we could not fetch in this run
+        self.fetch_failures = {}
+        self.consecutive_fetch_failures = 0
+        self.max_fetch_failures_hit = False
+        self.fetch_failures_file = os.path.join(self.state_dir, 'autopkgtest-fetch-failures.json')
         self.pending_tests_file = os.path.join(self.state_dir, 'autopkgtest-pending.json')
         self.testsuite_triggers = {}
         self.result_in_baseline_cache = collections.defaultdict(dict)
@@ -503,6 +511,12 @@ class AutopkgtestPolicy(BasePolicy):
             os.rename(self.results_cache_file + '.new', self.results_cache_file)
 
         self.save_pending_json()
+
+        if self.fetch_failures:
+            self.logger.warning('Could not fetch the results of %d src/arch, see %s',
+                                len(self.fetch_failures), self.fetch_failures_file)
+        with open(self.fetch_failures_file, 'w') as f:
+            json.dump(self.fetch_failures, f, indent=2)
 
     def apply_src_policy_impl(self, tests_info, item, source_data_tdist, source_data_srcdist, excuse):
         # initialize
@@ -1003,6 +1017,20 @@ class AutopkgtestPolicy(BasePolicy):
 
         return self.retry_transient("Downloading '%s'" % url, download, is_transient_download_error)
 
+    def fetch_failed(self, src, arch, url, error):
+        '''Record that fetching results for src/arch from url failed
+
+        No test gets requested for src/arch in this run, as the results we
+        could not fetch might already cover it (see
+        request_test_if_not_queued()); the next run tries again.
+        '''
+        self.fetch_failures[src + '/' + arch] = '%s: %s' % (url, error)
+        self.consecutive_fetch_failures += 1
+        if self.consecutive_fetch_failures >= MAX_CONSECUTIVE_FETCH_FAILURES and not self.max_fetch_failures_hit:
+            self.logger.error('Fetching results failed for %d src/arch in a row, not fetching any more in this run',
+                              self.consecutive_fetch_failures)
+            self.max_fetch_failures_hit = True
+
     def fetch_swift_results(self, swift_url, src, arch):
         '''Download new results for source package/arch from swift'''
 
@@ -1012,6 +1040,11 @@ class AutopkgtestPolicy(BasePolicy):
         if done_entry in self.fetch_swift_results._done:
             return
         self.fetch_swift_results._done.add(done_entry)
+
+        # If this is true, no more fetching
+        if self.max_fetch_failures_hit:
+            self.fetch_failures[done_entry] = 'not fetched, as fetching results kept failing'
+            return
 
         # prepare query: get all runs with a timestamp later than the latest
         # run_id for this package/arch; '@' is at the end of each run id, to
@@ -1045,9 +1078,11 @@ class AutopkgtestPolicy(BasePolicy):
                 # Other status codes are usually a transient
                 # network/infrastructure failure. Ignoring this can lead to
                 # re-requesting tests which we already have results for, so
-                # fail hard on this and let the next run retry.
+                # record it to not request any test for src/arch in this run,
+                # and let the next run retry.
                 self.logger.error('Failure to fetch swift results from %s: %s', self.swift_container, str(e))
-                sys.exit(1)
+                self.fetch_failed(src, arch, self.swift_container, e)
+                return
             result_paths = [p['subdir'] for p in returned_paths]
         else:
             url = os.path.join(swift_url, self.swift_container)
@@ -1072,11 +1107,17 @@ class AutopkgtestPolicy(BasePolicy):
                     return
                 # same as above in the swift authenticated case
                 self.logger.error('Failure to fetch swift results from %s: %s', url, str(e))
-                sys.exit(1)
+                self.fetch_failed(src, arch, url, e)
+                return
 
         for p in result_paths:
             self.fetch_one_result(
                 swift_url, self.swift_container, p, 'result.tar', src, arch)
+            if done_entry in self.fetch_failures:
+                # don't process any newer result: as we only list the results
+                # after the latest one we know, the next run gets this one again
+                return
+        self.consecutive_fetch_failures = 0
 
     fetch_swift_results._done = set()
 
@@ -1100,7 +1141,8 @@ class AutopkgtestPolicy(BasePolicy):
                                       url, container, str(e))
                     if e.http_status == 404:
                         return
-                    sys.exit(1)
+                    self.fetch_failed(src, arch, url, e)
+                    return
                 tar_bytes = io.BytesIO(contents)
             else:
                 url = os.path.join(swift_url, container, path, name)
@@ -1116,7 +1158,8 @@ class AutopkgtestPolicy(BasePolicy):
             # result), but other things indicate infrastructure problems
             if hasattr(e, 'code') and e.code == 404:
                 return
-            sys.exit(1)
+            self.fetch_failed(src, arch, url, e)
+            return
         try:
             with tarfile.open(None, 'r', tar_bytes) as tar:
                 exitcode = int(tar.extractfile('exitcode').read().strip())
@@ -1409,6 +1452,11 @@ class AutopkgtestPolicy(BasePolicy):
         arch_list = self.pending_tests.setdefault(trigger, {}).setdefault(src, [])
         if arch in arch_list:
             self.logger.info('Test %s/%s for %s is already pending, not queueing', src, arch, trigger)
+        elif src + '/' + arch in self.fetch_failures:
+            # the results we could not fetch might already cover it
+            self.logger.info('Not requesting %s autopkgtest on %s to verify %s as fetching its results failed, '
+                             'will try again in the next run', src, arch, trigger)
+            self.unsent_requests.add((trigger, src, arch))
         else:
             self.logger.info('Requesting %s autopkgtest on %s to verify %s', src, arch, trigger)
             if self.send_test_request(src, arch, full_triggers, huge=huge):
