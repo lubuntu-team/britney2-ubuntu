@@ -1,8 +1,11 @@
 import apt_pkg
 import http.client
+import io
+import json
 import os
 import socket
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
@@ -805,6 +808,88 @@ class TestAutopkgtestDownloadRetry(unittest.TestCase):
             self.policy.download_retry(self.URL)
         assert isinstance(cm.exception.reason, http.client.BadStatusLine)
         assert self.sleeps == [5, 10, 20, 40, 60]
+
+
+def result_tar(testpkg_version, triggers):
+    '''Return the contents of a result.tar of a passed test'''
+    tar_bytes = io.BytesIO()
+    with tarfile.open(None, 'w', tar_bytes) as tar:
+        for name, contents in (('exitcode', '0'),
+                               ('testpkg-version', testpkg_version),
+                               ('testinfo.json', json.dumps({'custom_environment': ['ADT_TEST_TRIGGERS=' + triggers]}))):
+            info = tarfile.TarInfo(name)
+            info.size = len(contents)
+            tar.addfile(info, io.BytesIO(contents.encode()))
+    return tar_bytes.getvalue()
+
+
+class TestAutopkgtestFetchFailures(unittest.TestCase):
+
+    SWIFT_URL = 'https://objectstorage.example.com'
+
+    def setUp(self):
+        fake_clock(self)
+        self.policy = initialize_policy('autopkgtest/pass-to-pass', AutopkgtestPolicy,
+                                        adt_amqp='file:///dev/null')
+        self.policy.options.adt_swift_url = self.SWIFT_URL
+        urlopen = patch('britney2.policies.autopkgtest.urlopen')
+        self.urlopen = urlopen.start()
+        self.addCleanup(urlopen.stop)
+        # results are fetched once per src/arch and process, not per policy
+        done = patch.object(AutopkgtestPolicy.fetch_swift_results, '_done', set())
+        done.start()
+        self.addCleanup(done.stop)
+
+    def test_no_request_when_fetching_fails(self):
+        self.urlopen.side_effect = URLError(ConnectionRefusedError(111, 'Connection refused'))
+
+        with patch.object(self.policy, 'send_test_request') as send_test_request:
+            self.policy.pkg_test_request('foo', ARCH, ['bar/1'])
+
+        # the results we could not fetch might already cover it
+        send_test_request.assert_not_called()
+        assert ('bar/1', 'foo', ARCH) in self.policy.unsent_requests
+        with tempfile.TemporaryDirectory() as state_dir:
+            for name in ('results_cache_file', 'pending_tests_file', 'fetch_failures_file'):
+                setattr(self.policy, name, os.path.join(state_dir, name))
+            self.policy.save_state(None)
+            with open(self.policy.fetch_failures_file) as f:
+                assert list(json.load(f)) == ['foo/' + ARCH]
+
+    def test_stop_at_failed_result(self):
+        runs = ['testing/amd64/f/foo/20261007_00000%i_abcde@' % i for i in (1, 2, 3)]
+        self.urlopen.side_effect = [
+            http_response(200, '\n'.join(runs).encode()),
+            http_response(200, result_tar('foo 1', 'bar/1')),
+            HTTPError(self.SWIFT_URL, 403, 'Forbidden', {}, None),
+        ]
+
+        self.policy.fetch_swift_results(self.SWIFT_URL, 'foo', ARCH)
+
+        # the next run lists the results after the last one we fetched
+        assert self.urlopen.call_count == 3
+        assert self.policy.latest_run_for_package('foo', ARCH) == '20261007_000001_abcde@'
+        assert list(self.policy.fetch_failures) == ['foo/' + ARCH]
+
+    @patch('britney2.policies.autopkgtest.MAX_CONSECUTIVE_FETCH_FAILURES', 2)
+    def test_stop_fetching_when_it_keeps_failing(self):
+        self.urlopen.side_effect = [HTTPError(self.SWIFT_URL, 403, 'Forbidden', {}, None),
+                                    http_response(204),
+                                    HTTPError(self.SWIFT_URL, 403, 'Forbidden', {}, None),
+                                    HTTPError(self.SWIFT_URL, 403, 'Forbidden', {}, None)]
+
+        for src in ('a', 'b', 'c'):
+            self.policy.fetch_swift_results(self.SWIFT_URL, src, ARCH)
+
+        assert not self.policy.max_fetch_failures_hit
+        self.policy.fetch_swift_results(self.SWIFT_URL, 'd', ARCH)
+        assert self.policy.max_fetch_failures_hit
+        self.policy.fetch_swift_results(self.SWIFT_URL, 'e', ARCH)
+
+        # b succeeded, so it took c and d failing in a row to give up on e
+        assert self.urlopen.call_count == 4
+        assert sorted(self.policy.fetch_failures) == [src + '/' + ARCH for src in ('a', 'c', 'd', 'e')]
+        assert self.policy.fetch_failures['e/' + ARCH] == 'not fetched, as fetching results kept failing'
 
 
 if __name__ == '__main__':
